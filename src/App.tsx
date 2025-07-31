@@ -16,6 +16,10 @@ import BuiltWithFastn from "./pages/BuiltWithFastn";
 import Community from "./pages/Community";
 import WriteTutorial from "./pages/WriteTutorial";
 import AllTutorials from "./pages/AllTutorials";
+import AnswerEarn from "./pages/AnswerEarn";
+import Leaderboard from "./pages/Leaderboard";
+import OpenQuestions from "./pages/OpenQuestions";
+import UnifiedForm from "./pages/UnifiedForm";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +42,10 @@ const App = () => (
           <Route path="/community" element={<Community />} />
           <Route path="/write-tutorial" element={<WriteTutorial />} />
           <Route path="/all-tutorials" element={<AllTutorials />} />
+          <Route path="/answer-earn" element={<AnswerEarn />} />
+          <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/open-questions" element={<OpenQuestions />} />
+          <Route path="/create" element={<UnifiedForm />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
