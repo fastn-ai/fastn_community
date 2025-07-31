@@ -13,6 +13,9 @@ import Tutorials from "./pages/Tutorials";
 import Announcements from "./pages/Announcements";
 import Questions from "./pages/Questions";
 import BuiltWithFastn from "./pages/BuiltWithFastn";
+import Community from "./pages/Community";
+import WriteTutorial from "./pages/WriteTutorial";
+import AllTutorials from "./pages/AllTutorials";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +35,9 @@ const App = () => (
           <Route path="/announcements" element={<Announcements />} />
           <Route path="/questions" element={<Questions />} />
           <Route path="/built-with-fastn" element={<BuiltWithFastn />} />
+          <Route path="/community" element={<Community />} />
+          <Route path="/write-tutorial" element={<WriteTutorial />} />
+          <Route path="/all-tutorials" element={<AllTutorials />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

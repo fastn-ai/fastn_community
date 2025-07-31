@@ -1,9 +1,12 @@
+import { useNavigate } from "react-router-dom";
 import { MessageSquare, Eye, Clock, Pin, Star, Users, Heart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 
 const TopicList = () => {
+  const navigate = useNavigate();
+  
   const topics = [
     {
       id: 1,
@@ -106,8 +109,12 @@ const TopicList = () => {
             <Button variant="ghost" size="sm">Categories</Button>
             <Button variant="ghost" size="sm">Top</Button>
           </div>
-          <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-primary-foreground" asChild>
-            <a href="/new-topic">+ New Topic</a>
+          <Button 
+            variant="outline" 
+            className="border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+            onClick={() => navigate("/new-topic")}
+          >
+            + New Topic
           </Button>
         </div>
 
@@ -124,10 +131,10 @@ const TopicList = () => {
       <div className="p-6">
         <div className="space-y-4 max-w-5xl">
           {topics.map((topic) => (
-            <a
+            <div
               key={topic.id}
-              href={`/topic/${topic.id}`}
               className="grid grid-cols-12 gap-4 p-4 rounded-lg border border-border hover:bg-accent transition-colors group cursor-pointer"
+              onClick={() => navigate(`/topic/${topic.id}`)}
             >
               {/* Topic Info */}
               <div className="col-span-6 space-y-2">
@@ -189,7 +196,7 @@ const TopicList = () => {
                   <span className="text-sm">{topic.lastActivity}</span>
                 </div>
               </div>
-            </a>
+            </div>
           ))}
         </div>
       </div>

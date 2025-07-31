@@ -8,65 +8,58 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Dark theme inspired by fastn.ai */
-    --background: 220 26% 14%;
-    --foreground: 220 10% 96%;
+    /* Light theme as default */
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
 
-    --card: 220 26% 16%;
-    --card-foreground: 220 10% 96%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
 
-    --popover: 220 26% 16%;
-    --popover-foreground: 220 10% 96%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
 
     /* fastn.ai brand colors - purple/blue gradient */
     --primary: 262 83% 58%;
-    --primary-foreground: 220 10% 96%;
+    --primary-foreground: 0 0% 98%;
     --primary-glow: 252 83% 68%;
 
-    --secondary: 220 26% 20%;
-    --secondary-foreground: 220 10% 96%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
 
-    --muted: 220 26% 18%;
-    --muted-foreground: 220 10% 65%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
 
-    --accent: 220 26% 22%;
-    --accent-foreground: 220 10% 96%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 220 10% 96%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 220 26% 22%;
-    --input: 220 26% 18%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
     --ring: 262 83% 58%;
 
     --radius: 0.75rem;
 
     /* Custom design tokens for fastn community */
     --gradient-primary: linear-gradient(135deg, hsl(262 83% 58%), hsl(252 83% 68%));
-    --gradient-subtle: linear-gradient(180deg, hsl(220 26% 16%), hsl(220 26% 14%));
+    --gradient-subtle: linear-gradient(180deg, hsl(0 0% 100%), hsl(240 4.8% 95.9%));
     --shadow-glow: 0 0 30px hsl(262 83% 58% / 0.3);
-    --shadow-elegant: 0 10px 25px -5px hsl(220 26% 8% / 0.5);
+    --shadow-elegant: 0 10px 25px -5px hsl(240 5.9% 10% / 0.1);
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
-    /* Enhanced dark theme */
+    /* Dark theme */
     --background: 220 26% 12%;
     --foreground: 220 10% 98%;
 

@@ -1,3 +1,7 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Menu } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import Header from "@/components/community/Header";
 import Sidebar from "@/components/community/Sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +17,9 @@ import {
 } from "lucide-react";
 
 const Categories = () => {
+  const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   const categories = [
     {
       icon: Megaphone,
@@ -21,7 +28,8 @@ const Categories = () => {
       topics: 5,
       posts: 12,
       color: "text-red-400",
-      bgColor: "bg-red-500/10"
+      bgColor: "bg-red-500/10",
+      path: "/announcements"
     },
     {
       icon: HelpCircle,
@@ -30,7 +38,8 @@ const Categories = () => {
       topics: 142,
       posts: 456,
       color: "text-blue-400",
-      bgColor: "bg-blue-500/10"
+      bgColor: "bg-blue-500/10",
+      path: "/questions"
     },
     {
       icon: BookOpen,
@@ -39,7 +48,8 @@ const Categories = () => {
       topics: 28,
       posts: 89,
       color: "text-green-400",
-      bgColor: "bg-green-500/10"
+      bgColor: "bg-green-500/10",
+      path: "/tutorials"
     },
     {
       icon: Code,
@@ -48,7 +58,8 @@ const Categories = () => {
       topics: 67,
       posts: 234,
       color: "text-purple-400",
-      bgColor: "bg-purple-500/10"
+      bgColor: "bg-purple-500/10",
+      path: "/built-with-fastn"
     },
     {
       icon: Users,
@@ -57,7 +68,8 @@ const Categories = () => {
       topics: 89,
       posts: 312,
       color: "text-orange-400",
-      bgColor: "bg-orange-500/10"
+      bgColor: "bg-orange-500/10",
+      path: "/community"
     },
   ];
 
@@ -65,8 +77,33 @@ const Categories = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <div className="flex">
+        {/* Mobile Sidebar Toggle */}
+        <div className="md:hidden fixed top-20 left-4 z-50">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="bg-card"
+          >
+            <Menu className="w-4 h-4" />
+          </Button>
+        </div>
+
+        {/* Mobile Sidebar */}
+        {sidebarOpen && (
+          <div className="md:hidden fixed inset-0 z-40">
+            <div className="fixed inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
+            <div className="fixed left-0 top-0 h-full w-64 bg-card border-r border-border z-50">
+              <Sidebar />
+            </div>
+          </div>
+        )}
+
+        {/* Desktop Sidebar */}
         <Sidebar />
-        <div className="flex-1 bg-background">
+        
+        {/* Main Content */}
+        <div className="flex-1 md:ml-64">
           {/* Header */}
           <div className="p-6 border-b border-border bg-gradient-subtle">
             <div className="max-w-4xl">
@@ -83,7 +120,11 @@ const Categories = () => {
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl">
               {categories.map((category) => (
-                <Card key={category.name} className="hover:shadow-elegant transition-all cursor-pointer border-border/50 hover:border-primary/50">
+                <Card 
+                  key={category.name} 
+                  className="hover:shadow-elegant transition-all cursor-pointer border-border/50 hover:border-primary/50"
+                  onClick={() => navigate(category.path)}
+                >
                   <CardHeader className="pb-4">
                     <div className="flex items-center space-x-4">
                       <div className={`p-3 rounded-lg ${category.bgColor}`}>

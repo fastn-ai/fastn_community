@@ -1,6 +1,8 @@
+import { useState } from "react";
+import { Menu } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import Header from "@/components/community/Header";
 import Sidebar from "@/components/community/Sidebar";
-import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -20,6 +22,8 @@ import {
 } from "lucide-react";
 
 const TopicDetail = () => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   const topic = {
     id: 1,
     title: "🚀 We Need Your Help! [Answer & Earn]",
@@ -82,8 +86,33 @@ Thank you for being part of our amazing community! 🙏`,
     <div className="min-h-screen bg-background">
       <Header />
       <div className="flex">
+        {/* Mobile Sidebar Toggle */}
+        <div className="md:hidden fixed top-20 left-4 z-50">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="bg-card"
+          >
+            <Menu className="w-4 h-4" />
+          </Button>
+        </div>
+
+        {/* Mobile Sidebar */}
+        {sidebarOpen && (
+          <div className="md:hidden fixed inset-0 z-40">
+            <div className="fixed inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
+            <div className="fixed left-0 top-0 h-full w-64 bg-card border-r border-border z-50">
+              <Sidebar />
+            </div>
+          </div>
+        )}
+
+        {/* Desktop Sidebar */}
         <Sidebar />
-        <div className="flex-1 bg-background">
+        
+        {/* Main Content */}
+        <div className="flex-1 md:ml-64">
           {/* Topic Header */}
           <div className="p-6 border-b border-border">
             <div className="max-w-4xl">
