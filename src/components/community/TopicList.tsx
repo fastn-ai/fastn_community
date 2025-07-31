@@ -106,8 +106,8 @@ const TopicList = () => {
             <Button variant="ghost" size="sm">Categories</Button>
             <Button variant="ghost" size="sm">Top</Button>
           </div>
-          <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-primary-foreground">
-            + New Topic
+          <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-primary-foreground" asChild>
+            <a href="/new-topic">+ New Topic</a>
           </Button>
         </div>
 
@@ -124,8 +124,9 @@ const TopicList = () => {
       <div className="p-6">
         <div className="space-y-4 max-w-5xl">
           {topics.map((topic) => (
-            <div
+            <a
               key={topic.id}
+              href={`/topic/${topic.id}`}
               className="grid grid-cols-12 gap-4 p-4 rounded-lg border border-border hover:bg-accent transition-colors group cursor-pointer"
             >
               {/* Topic Info */}
@@ -188,7 +189,7 @@ const TopicList = () => {
                   <span className="text-sm">{topic.lastActivity}</span>
                 </div>
               </div>
-            </div>
+            </a>
           ))}
         </div>
       </div>

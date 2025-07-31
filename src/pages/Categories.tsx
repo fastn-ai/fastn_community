@@ -1,0 +1,131 @@
+import Header from "@/components/community/Header";
+import Sidebar from "@/components/community/Sidebar";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Megaphone, 
+  HelpCircle, 
+  BookOpen, 
+  Code, 
+  Users,
+  MessageSquare,
+  Eye
+} from "lucide-react";
+
+const Categories = () => {
+  const categories = [
+    {
+      icon: Megaphone,
+      name: "Announcements",
+      description: "Official announcements and updates from the fastn team",
+      topics: 5,
+      posts: 12,
+      color: "text-red-400",
+      bgColor: "bg-red-500/10"
+    },
+    {
+      icon: HelpCircle,
+      name: "Questions",
+      description: "Get help with fastn integration and troubleshooting",
+      topics: 142,
+      posts: 456,
+      color: "text-blue-400",
+      bgColor: "bg-blue-500/10"
+    },
+    {
+      icon: BookOpen,
+      name: "Tutorials",
+      description: "Step-by-step guides and learning resources",
+      topics: 28,
+      posts: 89,
+      color: "text-green-400",
+      bgColor: "bg-green-500/10"
+    },
+    {
+      icon: Code,
+      name: "Built with fastn",
+      description: "Showcase your projects and integrations built with fastn",
+      topics: 67,
+      posts: 234,
+      color: "text-purple-400",
+      bgColor: "bg-purple-500/10"
+    },
+    {
+      icon: Users,
+      name: "Community",
+      description: "General discussions and community conversations",
+      topics: 89,
+      posts: 312,
+      color: "text-orange-400",
+      bgColor: "bg-orange-500/10"
+    },
+  ];
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Header />
+      <div className="flex">
+        <Sidebar />
+        <div className="flex-1 bg-background">
+          {/* Header */}
+          <div className="p-6 border-b border-border bg-gradient-subtle">
+            <div className="max-w-4xl">
+              <h1 className="text-3xl font-bold text-foreground mb-2">
+                Categories
+              </h1>
+              <p className="text-muted-foreground">
+                Browse discussions by category to find what you're looking for.
+              </p>
+            </div>
+          </div>
+
+          {/* Categories Grid */}
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl">
+              {categories.map((category) => (
+                <Card key={category.name} className="hover:shadow-elegant transition-all cursor-pointer border-border/50 hover:border-primary/50">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center space-x-4">
+                      <div className={`p-3 rounded-lg ${category.bgColor}`}>
+                        <category.icon className={`w-6 h-6 ${category.color}`} />
+                      </div>
+                      <div className="flex-1">
+                        <CardTitle className="text-foreground">{category.name}</CardTitle>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {category.description}
+                        </p>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="flex items-center justify-between">
+                      <div className="flex space-x-4">
+                        <div className="flex items-center space-x-1">
+                          <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm text-foreground font-medium">
+                            {category.topics} topics
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <Eye className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm text-foreground font-medium">
+                            {category.posts} posts
+                          </span>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className={`${category.color} border-current`}>
+                        Browse
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Categories;

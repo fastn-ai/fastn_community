@@ -16,10 +16,10 @@ const Header = () => {
           </div>
           
           <nav className="hidden md:flex items-center space-x-6">
-            <a href="#" className="text-foreground hover:text-primary transition-colors">Community</a>
-            <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Product</a>
-            <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Docs</a>
-            <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">Integrations</a>
+            <a href="/" className="text-foreground hover:text-primary transition-colors">Latest</a>
+            <a href="/categories" className="text-muted-foreground hover:text-foreground transition-colors">Categories</a>
+            <a href="/top" className="text-muted-foreground hover:text-foreground transition-colors">Top</a>
+            <a href="/tutorials" className="text-muted-foreground hover:text-foreground transition-colors">Tutorials</a>
           </nav>
         </div>
 
@@ -39,6 +39,9 @@ const Header = () => {
           </Button>
           
           <div className="hidden md:flex items-center space-x-2">
+            <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-primary-foreground" asChild>
+              <a href="/new-topic">+ New Topic</a>
+            </Button>
             <Button variant="outline" className="border-border">Log in</Button>
             <Button className="bg-gradient-primary hover:shadow-glow transition-all duration-300">
               Sign up

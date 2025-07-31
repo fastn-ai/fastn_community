@@ -5,6 +5,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import Categories from "./pages/Categories";
+import Top from "./pages/Top";
+import NewTopic from "./pages/NewTopic";
+import TopicDetail from "./pages/TopicDetail";
+import Tutorials from "./pages/Tutorials";
+import Announcements from "./pages/Announcements";
+import Questions from "./pages/Questions";
+import BuiltWithFastn from "./pages/BuiltWithFastn";
 
 const queryClient = new QueryClient();
 
@@ -16,6 +24,14 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/categories" element={<Categories />} />
+          <Route path="/top" element={<Top />} />
+          <Route path="/new-topic" element={<NewTopic />} />
+          <Route path="/topic/:id" element={<TopicDetail />} />
+          <Route path="/tutorials" element={<Tutorials />} />
+          <Route path="/announcements" element={<Announcements />} />
+          <Route path="/questions" element={<Questions />} />
+          <Route path="/built-with-fastn" element={<BuiltWithFastn />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
