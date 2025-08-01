@@ -20,6 +20,9 @@ import AnswerEarn from "./pages/AnswerEarn";
 import Leaderboard from "./pages/Leaderboard";
 import OpenQuestions from "./pages/OpenQuestions";
 import UnifiedForm from "./pages/UnifiedForm";
+import UserProfile from "./pages/UserProfile";
+import Settings from "./pages/Settings";
+import Dashboard from "./pages/Dashboard";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +49,9 @@ const App = () => (
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/open-questions" element={<OpenQuestions />} />
           <Route path="/create" element={<UnifiedForm />} />
+          <Route path="/user/:id" element={<UserProfile />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
