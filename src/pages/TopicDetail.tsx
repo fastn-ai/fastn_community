@@ -18,11 +18,14 @@ import {
   Bookmark,
   ThumbsUp,
   ThumbsDown,
-  Reply
+  Reply,
+  ArrowLeft
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const TopicDetail = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const navigate = useNavigate();
 
   const topic = {
     id: 1,
@@ -113,6 +116,25 @@ Thank you for being part of our amazing community! 🙏`,
         
         {/* Main Content */}
         <div className="flex-1 md:ml-64">
+          {/* Header */}
+          <div className="p-6 border-b border-border bg-gradient-subtle">
+            <div className="max-w-4xl">
+              <div className="flex items-center space-x-4 mb-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate(-1)}
+                  className="flex items-center space-x-2"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back</span>
+                </Button>
+              </div>
+              <h1 className="text-3xl font-bold text-foreground mb-2">Topic Details</h1>
+              <p className="text-muted-foreground">View and discuss this topic</p>
+            </div>
+          </div>
+
           {/* Topic Header */}
           <div className="p-6 border-b border-border">
             <div className="max-w-4xl">

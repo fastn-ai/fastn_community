@@ -1,105 +1,220 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Users, UserPlus, MessageSquare, Heart, Share2, Bookmark, MoreHorizontal, Menu } from "lucide-react";
+import { Menu, Users, MessageSquare, Calendar, TrendingUp, Star, Award, ExternalLink, ArrowRight, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import Header from "@/components/community/Header";
 import Sidebar from "@/components/community/Sidebar";
 
 const Community = () => {
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterType, setFilterType] = useState("all");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const communityMembers = [
+  const communityStats = [
+    {
+      title: "Total Members",
+      value: "12,847",
+      icon: Users,
+      color: "text-blue-500",
+      change: "+234 this week"
+    },
+    {
+      title: "Active Discussions",
+      value: "1,234",
+      icon: MessageSquare,
+      color: "text-purple-500",
+      change: "+45 today"
+    },
+    {
+      title: "Events This Month",
+      value: "8",
+      icon: Calendar,
+      color: "text-indigo-500",
+      change: "2 upcoming"
+    },
+    {
+      title: "Top Contributors",
+      value: "156",
+      icon: Star,
+      color: "text-pink-500",
+      change: "+12 new"
+    }
+  ];
+
+  const recentActivities = [
+    {
+      id: 1,
+      type: "topic",
+      title: "New topic created",
+      description: "Sarah Chen created 'How to implement OAuth2 with fastn?'",
+      time: "2 hours ago",
+      avatar: "SC",
+      category: "Questions"
+    },
+    {
+      id: 2,
+      type: "reply",
+      title: "Topic replied to",
+      description: "Alex Rodriguez replied to 'Best practices for handling large datasets'",
+      time: "4 hours ago",
+      avatar: "AR",
+      category: "Best Practices"
+    },
+    {
+      id: 3,
+      type: "tutorial",
+      title: "New tutorial published",
+      description: "Michael Park published 'Setting up webhook endpoints'",
+      time: "6 hours ago",
+      avatar: "MP",
+      category: "Tutorials"
+    },
+    {
+      id: 4,
+      type: "announcement",
+      title: "Community announcement",
+      description: "New Answer & Earn program launched",
+      time: "1 day ago",
+      avatar: "FA",
+      category: "Announcements"
+    }
+  ];
+
+  const topContributors = [
     {
       id: 1,
       name: "Sarah Chen",
-      role: "Core Contributor",
-      avatar: "/avatars/sarah.jpg",
-      bio: "Full-stack developer passionate about fastn and open source",
-      posts: 45,
-      followers: 234,
-      following: 89,
-      isOnline: true,
-      badges: ["Fastn Expert", "Community Leader"]
+      avatar: "SC",
+      points: 2847,
+      topics: 45,
+      replies: 156,
+      rank: 1
     },
     {
       id: 2,
       name: "Alex Rodriguez",
-      role: "Developer Advocate",
-      avatar: "/avatars/alex.jpg",
-      bio: "Helping developers build amazing things with fastn",
-      posts: 32,
-      followers: 189,
-      following: 156,
-      isOnline: true,
-      badges: ["Fastn Expert", "Speaker"]
+      avatar: "AR",
+      points: 2156,
+      topics: 32,
+      replies: 134,
+      rank: 2
     },
     {
       id: 3,
-      name: "Emma Thompson",
-      role: "Community Member",
-      avatar: "/avatars/emma.jpg",
-      bio: "Learning fastn and sharing my journey",
-      posts: 12,
-      followers: 67,
-      following: 45,
-      isOnline: false,
-      badges: ["Fastn Learner"]
+      name: "Michael Park",
+      avatar: "MP",
+      points: 1892,
+      topics: 28,
+      replies: 98,
+      rank: 3
     },
     {
       id: 4,
-      name: "Michael Park",
-      role: "Core Contributor",
-      avatar: "/avatars/michael.jpg",
-      bio: "Building scalable applications with fastn",
-      posts: 78,
-      followers: 456,
-      following: 123,
-      isOnline: true,
-      badges: ["Fastn Expert", "Core Team"]
+      name: "Emma Thompson",
+      avatar: "ET",
+      points: 1654,
+      topics: 25,
+      replies: 87,
+      rank: 4
     },
     {
       id: 5,
-      name: "Lisa Wang",
-      role: "Community Member",
-      avatar: "/avatars/lisa.jpg",
-      bio: "Exploring the possibilities of fastn development",
-      posts: 8,
-      followers: 34,
-      following: 67,
-      isOnline: false,
-      badges: ["Fastn Learner"]
-    },
-    {
-      id: 6,
       name: "David Kim",
-      role: "Developer Advocate",
-      avatar: "/avatars/david.jpg",
-      bio: "Creating tutorials and helping newcomers",
-      posts: 56,
-      followers: 298,
-      following: 134,
-      isOnline: true,
-      badges: ["Fastn Expert", "Tutorial Creator"]
+      avatar: "DK",
+      points: 1432,
+      topics: 22,
+      replies: 76,
+      rank: 5
     }
   ];
 
-  const filteredMembers = communityMembers.filter(member => {
-    const matchesSearch = member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         member.bio.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = filterType === "all" || 
-                         (filterType === "online" && member.isOnline) ||
-                         (filterType === "contributors" && member.role.includes("Contributor")) ||
-                         (filterType === "advocates" && member.role.includes("Advocate"));
-    return matchesSearch && matchesFilter;
-  });
+  const socialPlatforms = [
+    {
+      name: "Slack",
+      description: "Join our Slack workspace for real-time discussions",
+      icon: "💬",
+      color: "bg-blue-500",
+      url: "https://slack.fastn.ai",
+      members: "2,847"
+    },
+    {
+      name: "Discord",
+      description: "Connect with developers in our Discord server",
+      icon: "🎮",
+      color: "bg-purple-500",
+      url: "https://discord.gg/fastn",
+      members: "1,234"
+    },
+    {
+      name: "LinkedIn",
+      description: "Follow us for professional updates and networking",
+      icon: "💼",
+      color: "bg-indigo-500",
+      url: "https://linkedin.com/company/fastn",
+      members: "5,678"
+    },
+    {
+      name: "Instagram",
+      description: "Stay updated with visual content and stories",
+      icon: "📸",
+      color: "bg-pink-500",
+      url: "https://instagram.com/fastn_ai",
+      members: "3,456"
+    }
+  ];
+
+  const upcomingEvents = [
+    {
+      id: 1,
+      title: "Fastn Community Meetup",
+      date: "Dec 15, 2024",
+      time: "2:00 PM UTC",
+      type: "Virtual",
+      attendees: 156
+    },
+    {
+      id: 2,
+      title: "API Integration Workshop",
+      date: "Dec 20, 2024",
+      time: "3:00 PM UTC",
+      type: "Workshop",
+      attendees: 89
+    },
+    {
+      id: 3,
+      title: "Q&A Session with Core Team",
+      date: "Dec 25, 2024",
+      time: "1:00 PM UTC",
+      type: "Q&A",
+      attendees: 234
+    }
+  ];
+
+  const getCategoryBadge = (category: string) => {
+    const colors = {
+      "Questions": "bg-blue-100 text-blue-800",
+      "Best Practices": "bg-green-100 text-green-800",
+      "Tutorials": "bg-purple-100 text-purple-800",
+      "Announcements": "bg-red-100 text-red-800"
+    };
+    return (
+      <Badge className={colors[category as keyof typeof colors] || "bg-gray-100 text-gray-800"}>
+        {category}
+      </Badge>
+    );
+  };
+
+  const getActivityIcon = (type: string) => {
+    const icons = {
+      "topic": MessageSquare,
+      "reply": TrendingUp,
+      "tutorial": Star,
+      "announcement": Award
+    };
+    return icons[type as keyof typeof icons] || MessageSquare;
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -132,155 +247,190 @@ const Community = () => {
         
         {/* Main Content */}
         <div className="flex-1 md:ml-64">
-          <div className="container mx-auto px-4 py-6">
-            {/* Page Header */}
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-foreground mb-2">Community</h1>
-              <p className="text-muted-foreground">Connect with fastn developers</p>
+          {/* Header */}
+          <div className="p-6 border-b border-border bg-gradient-subtle">
+            <div className="max-w-4xl">
+             
+              <h1 className="text-3xl font-bold text-foreground mb-2">
+                Community
+              </h1>
+              <p className="text-muted-foreground">
+                Connect with fellow fastn developers, share knowledge, and grow together.
+              </p>
             </div>
+          </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-2">
-                    <Users className="w-5 h-5 text-primary" />
-                    <div>
-                      <p className="text-2xl font-bold">{communityMembers.length}</p>
-                      <p className="text-sm text-muted-foreground">Total Members</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-2">
-                    <MessageSquare className="w-5 h-5 text-green-500" />
-                    <div>
-                      <p className="text-2xl font-bold">
-                        {communityMembers.filter(m => m.isOnline).length}
-                      </p>
-                      <p className="text-sm text-muted-foreground">Online Now</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-2">
-                    <Heart className="w-5 h-5 text-red-500" />
-                    <div>
-                      <p className="text-2xl font-bold">
-                        {communityMembers.reduce((sum, m) => sum + m.posts, 0)}
-                      </p>
-                      <p className="text-sm text-muted-foreground">Total Posts</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-2">
-                    <UserPlus className="w-5 h-5 text-blue-500" />
-                    <div>
-                      <p className="text-2xl font-bold">12</p>
-                      <p className="text-sm text-muted-foreground">New This Week</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <div className="flex-1">
-                <Input
-                  placeholder="Search members..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="max-w-md"
-                />
-              </div>
-              <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger className="w-full sm:w-48">
-                  <SelectValue placeholder="Filter by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Members</SelectItem>
-                  <SelectItem value="online">Online Now</SelectItem>
-                  <SelectItem value="contributors">Core Contributors</SelectItem>
-                  <SelectItem value="advocates">Developer Advocates</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Members Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredMembers.map((member) => (
-                <Card key={member.id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="relative">
-                          <Avatar className="w-12 h-12">
-                            <AvatarImage src={member.avatar} alt={member.name} />
-                            <AvatarFallback>{member.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                          </Avatar>
-                          {member.isOnline && (
-                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
-                          )}
-                        </div>
+          <div className="p-6">
+            <div className="max-w-6xl mx-auto space-y-6">
+              
+              {/* Stats Overview */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {communityStats.map((stat, index) => (
+                  <Card key={index}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center space-x-2">
+                        <stat.icon className={`w-5 h-5 ${stat.color}`} />
                         <div>
-                          <CardTitle className="text-lg">{member.name}</CardTitle>
-                          <CardDescription className="text-sm">{member.role}</CardDescription>
+                          <p className="text-2xl font-bold">
+                            {stat.value}
+                          </p>
+                          <p className="text-sm text-muted-foreground">{stat.title}</p>
                         </div>
                       </div>
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <p className="text-sm text-muted-foreground">{member.bio}</p>
-                    
-                    <div className="flex flex-wrap gap-1">
-                      {member.badges.map((badge, index) => (
-                        <Badge key={index} variant="secondary" className="text-xs">
-                          {badge}
-                        </Badge>
-                      ))}
-                    </div>
-
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      <span>{member.posts} posts</span>
-                      <span>{member.followers} followers</span>
-                      <span>{member.following} following</span>
-                    </div>
-
-                    <div className="flex space-x-2">
-                      <Button variant="outline" size="sm" className="flex-1">
-                        <MessageSquare className="w-4 h-4 mr-2" />
-                        Message
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <Share2 className="w-4 h-4" />
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <Bookmark className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            {filteredMembers.length === 0 && (
-              <div className="text-center py-12">
-                <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No members found</h3>
-                <p className="text-muted-foreground">Try adjusting your search or filters</p>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
-            )}
+
+              {/* Social Platforms */}
+              <div>
+                <h2 className="text-2xl font-bold text-foreground mb-6">Connect With Us</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {socialPlatforms.map((platform, index) => (
+                    <Card key={index} className="hover:shadow-lg transition-shadow cursor-pointer">
+                      <CardContent className="p-6">
+                        <div className="text-center space-y-4">
+                          <div className={`w-16 h-16 ${platform.color} rounded-full flex items-center justify-center mx-auto text-2xl`}>
+                            {platform.icon}
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-semibold text-foreground mb-2">{platform.name}</h3>
+                            <p className="text-sm text-muted-foreground mb-3">{platform.description}</p>
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-muted-foreground">{platform.members} members</span>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => window.open(platform.url, "_blank")}
+                              >
+                                Join
+                                <ExternalLink className="w-3 h-3 ml-1" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                
+                {/* Recent Activity */}
+                <div>
+                  <h2 className="text-2xl font-bold text-foreground mb-6">Recent Activity</h2>
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="space-y-4">
+                        {recentActivities.map((activity) => {
+                          const ActivityIcon = getActivityIcon(activity.type);
+                          return (
+                            <div key={activity.id} className="flex items-start space-x-3">
+                              <Avatar className="w-8 h-8">
+                                <AvatarFallback className="text-xs">{activity.avatar}</AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center space-x-2 mb-1">
+                                  <ActivityIcon className="w-4 h-4 text-muted-foreground" />
+                                  <span className="text-sm font-medium text-foreground">{activity.title}</span>
+                                  {getCategoryBadge(activity.category)}
+                                </div>
+                                <p className="text-sm text-muted-foreground mb-1">{activity.description}</p>
+                                <span className="text-xs text-muted-foreground">{activity.time}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Top Contributors */}
+                <div>
+                  <h2 className="text-2xl font-bold text-foreground mb-6">Top Contributors</h2>
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="space-y-4">
+                        {topContributors.map((contributor) => (
+                          <div key={contributor.id} className="flex items-center space-x-3">
+                            <div className="flex items-center space-x-2">
+                              <Avatar className="w-8 h-8">
+                                <AvatarFallback className="text-xs">{contributor.avatar}</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-sm font-medium text-foreground">{contributor.name}</span>
+                                  {contributor.rank <= 3 && (
+                                    <Badge className="bg-yellow-100 text-yellow-800 text-xs">
+                                      #{contributor.rank}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                                  <span>{contributor.points} points</span>
+                                  <span>{contributor.topics} topics</span>
+                                  <span>{contributor.replies} replies</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+
+              {/* Upcoming Events */}
+              <div>
+                <h2 className="text-2xl font-bold text-foreground mb-6">Upcoming Events</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {upcomingEvents.map((event) => (
+                    <Card key={event.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+                      <CardContent className="p-6">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <Badge variant="outline">{event.type}</Badge>
+                            <span className="text-xs text-muted-foreground">{event.attendees} attending</span>
+                          </div>
+                          <h3 className="font-semibold text-foreground">{event.title}</h3>
+                          <div className="space-y-1 text-sm text-muted-foreground">
+                            <div className="flex items-center space-x-2">
+                              <Calendar className="w-4 h-4" />
+                              <span>{event.date}</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <TrendingUp className="w-4 h-4" />
+                              <span>{event.time}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+
+              {/* Call to Action */}
+              <Card className="bg-muted/50">
+                <CardContent className="p-8 text-center">
+                  <h2 className="text-2xl font-bold mb-2">Join the Fastn Community</h2>
+                  <p className="text-muted-foreground mb-6">
+                    Connect with developers, share your knowledge, and help build the future of AI-powered applications.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                    <Button onClick={() => navigate("/create")}>
+                      Start a Discussion
+                    </Button>
+                    <Button variant="outline" onClick={() => navigate("/answer-earn")}>
+                      Answer & Earn
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </div>

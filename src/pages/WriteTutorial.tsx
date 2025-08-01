@@ -141,6 +141,17 @@ const WriteTutorial = () => {
           {/* Header */}
           <div className="p-6 border-b border-border bg-gradient-subtle">
             <div className="max-w-4xl">
+              <div className="flex items-center space-x-4 mb-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate(-1)}
+                  className="flex items-center space-x-2"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back</span>
+                </Button>
+              </div>
               <h1 className="text-3xl font-bold text-foreground mb-2">Write Tutorial</h1>
               <p className="text-muted-foreground">Share your knowledge with the community</p>
             </div>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Menu, Upload, X, Eye, EyeOff } from "lucide-react";
+import { Menu, Upload, X, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/community/Header";
 import Sidebar from "@/components/community/Sidebar";
@@ -119,12 +119,19 @@ const NewTopic = () => {
           {/* Header */}
           <div className="p-6 border-b border-border bg-gradient-subtle">
             <div className="max-w-4xl">
-              <h1 className="text-3xl font-bold text-foreground mb-2">
-                Create New Topic
-              </h1>
-              <p className="text-muted-foreground">
-                Share your question, tutorial, or showcase your fastn project.
-              </p>
+              <div className="flex items-center space-x-4 mb-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate(-1)}
+                  className="flex items-center space-x-2"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back</span>
+                </Button>
+              </div>
+              <h1 className="text-3xl font-bold text-foreground mb-2">Create New Topic</h1>
+              <p className="text-muted-foreground">Start a new discussion in the community</p>
             </div>
           </div>
 

@@ -1,18 +1,15 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Menu } from "lucide-react";
+import { ArrowLeft, BookOpen, Clock, User, Star, Filter, Search, Plus, Menu, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Header from "@/components/community/Header";
-import Sidebar from "@/components/community/Sidebar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import Header from "@/components/community/Header";
+import Sidebar from "@/components/community/Sidebar";
 import { 
-  BookOpen, 
-  Clock, 
-  Eye, 
-  Star,
-  User,
   Calendar
 } from "lucide-react";
 
@@ -158,12 +155,19 @@ const Tutorials = () => {
           {/* Header */}
           <div className="p-6 border-b border-border bg-gradient-subtle">
             <div className="max-w-4xl">
-              <h1 className="text-3xl font-bold text-foreground mb-2">
-                Tutorials
-              </h1>
-              <p className="text-muted-foreground">
-                Learn fastn with our comprehensive tutorials and guides.
-              </p>
+              <div className="flex items-center space-x-4 mb-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate(-1)}
+                  className="flex items-center space-x-2"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back</span>
+                </Button>
+              </div>
+              <h1 className="text-3xl font-bold text-foreground mb-2">Tutorials</h1>
+              <p className="text-muted-foreground">Learn fastn with our comprehensive tutorials and guides</p>
               <div className="flex space-x-4 mt-4">
                 <Button 
                   variant={selectedFilter === "all" ? "default" : "ghost"} 

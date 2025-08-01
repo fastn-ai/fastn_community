@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Menu } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/community/Header";
 import Sidebar from "@/components/community/Sidebar";
@@ -7,6 +8,7 @@ import TopicList from "@/components/community/TopicList";
 
 const BuiltWithFastn = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-background">
@@ -39,6 +41,14 @@ const BuiltWithFastn = () => {
         
         {/* Main Content */}
         <div className="flex-1 md:ml-64">
+          {/* Header */}
+          <div className="p-6 border-b border-border bg-gradient-subtle">
+            <div className="max-w-4xl">
+            
+              <h1 className="text-3xl font-bold text-foreground mb-2">Built with fastn</h1>
+              <p className="text-muted-foreground">Showcase your fastn projects</p>
+            </div>
+          </div>
           <TopicList />
         </div>
       </div>

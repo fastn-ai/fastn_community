@@ -209,13 +209,17 @@ const AllTutorials = () => {
         
         {/* Main Content */}
         <div className="flex-1 md:ml-64">
+          {/* Header */}
+          <div className="p-6 border-b border-border bg-gradient-subtle">
+            <div className="max-w-4xl">
+            
+              <h1 className="text-3xl font-bold text-foreground mb-2">All Tutorials</h1>
+              <p className="text-muted-foreground">Browse all tutorials by difficulty level</p>
+            </div>
+          </div>
           <div className="container mx-auto px-4 py-6">
             {/* Page Header */}
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-foreground mb-2">All Tutorials</h1>
-              <p className="text-muted-foreground">Learn fastn with our comprehensive tutorials</p>
-            </div>
-
+           
             {/* Stats */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
               <Card>

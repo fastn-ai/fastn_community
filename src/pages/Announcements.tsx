@@ -201,177 +201,192 @@ const Announcements = () => {
         
         {/* Main Content */}
         <div className="flex-1 md:ml-64">
-          <div className="container mx-auto px-4 py-6">
-            {/* Page Header */}
-            <div className="mb-8">
+          {/* Header */}
+          <div className="p-6 border-b border-border bg-gradient-subtle">
+            <div className="max-w-4xl">
+              <div className="flex items-center space-x-4 mb-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate(-1)}
+                  className="flex items-center space-x-2"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back</span>
+                </Button>
+              </div>
               <h1 className="text-3xl font-bold text-foreground mb-2">Announcements</h1>
               <p className="text-muted-foreground">Stay updated with the latest news and updates</p>
             </div>
+          </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-2">
-                    <Megaphone className="w-5 h-5 text-primary" />
-                    <div>
-                      <p className="text-2xl font-bold">{announcements.length}</p>
-                      <p className="text-sm text-muted-foreground">Total Announcements</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-2">
-                    <Heart className="w-5 h-5 text-red-500" />
-                    <div>
-                      <p className="text-2xl font-bold">
-                        {announcements.reduce((sum, a) => sum + a.likes, 0)}
-                      </p>
-                      <p className="text-sm text-muted-foreground">Total Likes</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-2">
-                    <Share2 className="w-5 h-5 text-blue-500" />
-                    <div>
-                      <p className="text-2xl font-bold">
-                        {announcements.reduce((sum, a) => sum + a.shares, 0)}
-                      </p>
-                      <p className="text-sm text-muted-foreground">Total Shares</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-2">
-                    <Bookmark className="w-5 h-5 text-green-500" />
-                    <div>
-                      <p className="text-2xl font-bold">
-                        {announcements.reduce((sum, a) => sum + a.bookmarks, 0)}
-                      </p>
-                      <p className="text-sm text-muted-foreground">Total Bookmarks</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <div className="flex-1">
-                <Input
-                  placeholder="Search announcements..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="max-w-md"
-                />
-              </div>
-              <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger className="w-full sm:w-48">
-                  <SelectValue placeholder="Filter by type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="release">Releases</SelectItem>
-                  <SelectItem value="update">Updates</SelectItem>
-                  <SelectItem value="tutorial">Tutorials</SelectItem>
-                  <SelectItem value="event">Events</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Announcements List */}
-            <div className="space-y-6">
-              {filteredAnnouncements.map((announcement) => (
-                <Card key={announcement.id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-2">
-                          {getPriorityBadge(announcement.priority)}
-                          {getTypeBadge(announcement.type)}
-                        </div>
-                        <CardTitle className="text-xl">{announcement.title}</CardTitle>
-                        <CardDescription className="mt-2">
-                          {announcement.content}
-                        </CardDescription>
-                      </div>
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <Avatar className="w-8 h-8">
-                          <AvatarImage src={announcement.authorAvatar} alt={announcement.author} />
-                          <AvatarFallback>{announcement.author.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                          <span className="flex items-center">
-                            <User className="w-4 h-4 mr-1" />
-                            {announcement.author}
-                          </span>
-                          <span className="flex items-center">
-                            <Calendar className="w-4 h-4 mr-1" />
-                            {announcement.publishedAt}
-                          </span>
-                          <span>{announcement.readTime}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleLike(announcement.id)}
-                          className={announcement.isLiked ? "text-red-500" : ""}
-                        >
-                          <Heart className={`w-4 h-4 mr-1 ${announcement.isLiked ? "fill-current" : ""}`} />
-                          {announcement.likes}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleShare(announcement.id)}
-                        >
-                          <Share2 className="w-4 h-4 mr-1" />
-                          {announcement.shares}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleBookmark(announcement.id)}
-                          className={announcement.isBookmarked ? "text-blue-500" : ""}
-                        >
-                          <Bookmark className={`w-4 h-4 mr-1 ${announcement.isBookmarked ? "fill-current" : ""}`} />
-                          {announcement.bookmarks}
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <MessageSquare className="w-4 h-4 mr-1" />
-                          {announcement.comments}
-                        </Button>
+          <div className="p-6">
+            <div className="max-w-6xl mx-auto space-y-6">
+              {/* Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-2">
+                      <Megaphone className="w-5 h-5 text-primary" />
+                      <div>
+                        <p className="text-2xl font-bold">{announcements.length}</p>
+                        <p className="text-sm text-muted-foreground">Total Announcements</p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-              ))}
-            </div>
-
-            {filteredAnnouncements.length === 0 && (
-              <div className="text-center py-12">
-                <Megaphone className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No announcements found</h3>
-                <p className="text-muted-foreground">Try adjusting your search or filters</p>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-2">
+                      <Heart className="w-5 h-5 text-red-500" />
+                      <div>
+                        <p className="text-2xl font-bold">
+                          {announcements.reduce((sum, a) => sum + a.likes, 0)}
+                        </p>
+                        <p className="text-sm text-muted-foreground">Total Likes</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-2">
+                      <Share2 className="w-5 h-5 text-blue-500" />
+                      <div>
+                        <p className="text-2xl font-bold">
+                          {announcements.reduce((sum, a) => sum + a.shares, 0)}
+                        </p>
+                        <p className="text-sm text-muted-foreground">Total Shares</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-2">
+                      <Bookmark className="w-5 h-5 text-green-500" />
+                      <div>
+                        <p className="text-2xl font-bold">
+                          {announcements.reduce((sum, a) => sum + a.bookmarks, 0)}
+                        </p>
+                        <p className="text-sm text-muted-foreground">Total Bookmarks</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-            )}
+
+              {/* Filters */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <Input
+                    placeholder="Search announcements..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+                <Select value={filterType} onValueChange={setFilterType}>
+                  <SelectTrigger className="w-full sm:w-48">
+                    <SelectValue placeholder="Filter by type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="release">Releases</SelectItem>
+                    <SelectItem value="update">Updates</SelectItem>
+                    <SelectItem value="tutorial">Tutorials</SelectItem>
+                    <SelectItem value="event">Events</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Announcements List */}
+              <div className="space-y-4">
+                {filteredAnnouncements.map((announcement) => (
+                  <Card key={announcement.id} className="hover:shadow-lg transition-shadow">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-2">
+                            {getPriorityBadge(announcement.priority)}
+                            {getTypeBadge(announcement.type)}
+                          </div>
+                          <CardTitle className="text-xl">{announcement.title}</CardTitle>
+                          <CardDescription className="mt-2">
+                            {announcement.content}
+                          </CardDescription>
+                        </div>
+                        <Button variant="ghost" size="sm">
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <Avatar className="w-8 h-8">
+                            <AvatarImage src={announcement.authorAvatar} alt={announcement.author} />
+                            <AvatarFallback>{announcement.author.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                            <span className="flex items-center">
+                              <User className="w-4 h-4 mr-1" />
+                              {announcement.author}
+                            </span>
+                            <span className="flex items-center">
+                              <Calendar className="w-4 h-4 mr-1" />
+                              {announcement.publishedAt}
+                            </span>
+                            <span>{announcement.readTime}</span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleLike(announcement.id)}
+                            className={announcement.isLiked ? "text-red-500" : ""}
+                          >
+                            <Heart className={`w-4 h-4 mr-1 ${announcement.isLiked ? "fill-current" : ""}`} />
+                            {announcement.likes}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleShare(announcement.id)}
+                          >
+                            <Share2 className="w-4 h-4 mr-1" />
+                            {announcement.shares}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleBookmark(announcement.id)}
+                            className={announcement.isBookmarked ? "text-blue-500" : ""}
+                          >
+                            <Bookmark className={`w-4 h-4 mr-1 ${announcement.isBookmarked ? "fill-current" : ""}`} />
+                            {announcement.bookmarks}
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            <MessageSquare className="w-4 h-4 mr-1" />
+                            {announcement.comments}
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {filteredAnnouncements.length === 0 && (
+                <div className="text-center py-12">
+                  <Megaphone className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No announcements found</h3>
+                  <p className="text-muted-foreground">Try adjusting your search or filters</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
