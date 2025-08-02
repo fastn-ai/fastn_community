@@ -40,7 +40,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
       
       // Fetch both topics and categories in parallel
       const [fetchedTopics, fetchedCategories] = await Promise.all([
-        ApiService.getAllTopics(), // Reverted back to getAllTopics
+        ApiService.getAllTopics(),
         ApiService.getAllCategories()
       ]);
       

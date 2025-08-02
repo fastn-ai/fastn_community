@@ -119,7 +119,7 @@ const Header = () => {
             className="hidden sm:flex items-center space-x-2"
           >
             <Plus className="w-4 h-4" />
-            <span>New Topic</span>
+            <span>New Topic </span>
           </Button>
 
           {/* Notifications */}
