@@ -1,26 +1,56 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Menu, ArrowLeft, Upload, X, Tag, Clock, Star, BookOpen, MessageSquare, Code, Megaphone, HelpCircle } from "lucide-react";
+import {
+  Menu,
+  ArrowLeft,
+  Upload,
+  X,
+  Tag,
+  Clock,
+  Star,
+  BookOpen,
+  MessageSquare,
+  Code,
+  Megaphone,
+  HelpCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import Header from "@/components/community/Header";
 import Sidebar from "@/components/community/Sidebar";
+import { useApi } from "@/services/api";
 
 const UnifiedForm = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { createTopic } = useApi();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("topic");
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [customTag, setCustomTag] = useState("");
   const [tags, setTags] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Form data that adapts based on category
   const [formData, setFormData] = useState({
@@ -35,19 +65,32 @@ const UnifiedForm = () => {
     allowRating: true,
     featured: false,
     tags: [] as string[],
-    mediaFiles: [] as File[]
+    mediaFiles: [] as File[],
   });
 
   const categoryOptions = [
-    { value: "topic", label: "Topic", icon: MessageSquare, description: "Create a discussion topic" },
-    { value: "tutorial", label: "Tutorial", icon: BookOpen, description: "Write a tutorial guide" }
+    {
+      value: "topic",
+      label: "Topic",
+      icon: MessageSquare,
+      description: "Create a discussion topic",
+    },
+    {
+      value: "tutorial",
+      label: "Tutorial",
+      icon: BookOpen,
+      description: "Write a tutorial guide",
+    },
   ];
 
-  const topicCategories = [
-    "Announcements",
-    "Questions", 
-    "Built with fastn"
-  ];
+  const topicCategories = ["Announcements", "Questions", "Built with fastn"];
+
+  // Category ID mapping (you may need to adjust these based on your actual category IDs)
+  const categoryIdMapping: { [key: string]: string } = {
+    Announcements: "id_1754163675_740242", // Default category ID
+    Questions: "id_1754163675_740242", // Default category ID
+    "Built with fastn": "id_1754163675_740242", // Default category ID
+  };
 
   const tutorialCategories = [
     "Getting Started",
@@ -59,18 +102,27 @@ const UnifiedForm = () => {
     "Deployment",
     "Testing",
     "Performance",
-    "Security"
+    "Security",
   ];
 
   const difficulties = [
     { value: "beginner", label: "Beginner", color: "text-green-500" },
     { value: "intermediate", label: "Intermediate", color: "text-orange-500" },
-    { value: "advanced", label: "Advanced", color: "text-red-500" }
+    { value: "advanced", label: "Advanced", color: "text-red-500" },
   ];
 
   const predefinedTags = [
-    "fastn", "api", "integration", "workflow", "database", "authentication",
-    "deployment", "testing", "performance", "security", "best-practices"
+    "fastn",
+    "api",
+    "integration",
+    "workflow",
+    "database",
+    "authentication",
+    "deployment",
+    "testing",
+    "performance",
+    "security",
+    "best-practices",
   ];
 
   const handleCategoryChange = (category: string) => {
@@ -88,7 +140,7 @@ const UnifiedForm = () => {
       allowRating: true,
       featured: false,
       tags: [],
-      mediaFiles: []
+      mediaFiles: [],
     });
     setTags([]);
     setUploadedFiles([]);
@@ -96,59 +148,97 @@ const UnifiedForm = () => {
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
-    setUploadedFiles(prev => [...prev, ...files]);
-    setFormData(prev => ({
+    setUploadedFiles((prev) => [...prev, ...files]);
+    setFormData((prev) => ({
       ...prev,
-      mediaFiles: [...prev.mediaFiles, ...files]
+      mediaFiles: [...prev.mediaFiles, ...files],
     }));
   };
 
   const removeFile = (index: number) => {
-    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
-    setFormData(prev => ({
+    setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
+    setFormData((prev) => ({
       ...prev,
-      mediaFiles: prev.mediaFiles.filter((_, i) => i !== index)
+      mediaFiles: prev.mediaFiles.filter((_, i) => i !== index),
     }));
   };
 
   const addCustomTag = () => {
     if (customTag.trim() && !tags.includes(customTag.trim())) {
       const newTag = customTag.trim();
-      setTags(prev => [...prev, newTag]);
-      setFormData(prev => ({
+      setTags((prev) => [...prev, newTag]);
+      setFormData((prev) => ({
         ...prev,
-        tags: [...prev.tags, newTag]
+        tags: [...prev.tags, newTag],
       }));
       setCustomTag("");
     }
   };
 
   const removeTag = (tagToRemove: string) => {
-    setTags(prev => prev.filter(tag => tag !== tagToRemove));
-    setFormData(prev => ({
+    setTags((prev) => prev.filter((tag) => tag !== tagToRemove));
+    setFormData((prev) => ({
       ...prev,
-      tags: prev.tags.filter(tag => tag !== tagToRemove)
+      tags: prev.tags.filter((tag) => tag !== tagToRemove),
     }));
   };
 
   const addPredefinedTag = (tag: string) => {
     if (!tags.includes(tag)) {
-      setTags(prev => [...prev, tag]);
-      setFormData(prev => ({
+      setTags((prev) => [...prev, tag]);
+      setFormData((prev) => ({
         ...prev,
-        tags: [...prev.tags, tag]
+        tags: [...prev.tags, tag],
       }));
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Form submitted:", formData);
-    // Handle form submission based on category
-    if (selectedCategory === "topic") {
-      navigate("/");
-    } else {
-      navigate("/all-tutorials");
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      if (selectedCategory === "topic") {
+        // Create topic using the API
+        const topicData = {
+          title: formData.title,
+          description: formData.description,
+          content: formData.content,
+          category_id:
+            categoryIdMapping[formData.category] || "id_1754163675_740242", // Map category name to ID
+          is_featured: formData.featured,
+          is_hot: false,
+          is_new: true,
+          view_count: 0,
+          reply_count: 0,
+          like_count: 0,
+          bookmark_count: 0,
+          share_count: 0,
+          tags: formData.tags, // Include tags array
+        };
+
+        console.log("Creating topic with data:", topicData);
+        console.log("Tags being sent:", formData.tags);
+        const createdTopic = await createTopic(topicData);
+        console.log("Topic created successfully:", createdTopic);
+
+        // Navigate to the community page after successful creation
+        navigate("/community");
+      } else {
+        // Handle tutorial creation (placeholder for now)
+        console.log("Tutorial creation not implemented yet");
+        navigate("/all-tutorials");
+      }
+    } catch (error) {
+      console.error("Error creating topic:", error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to create topic. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -174,7 +264,10 @@ const UnifiedForm = () => {
         {/* Mobile Sidebar */}
         {sidebarOpen && (
           <div className="md:hidden fixed inset-0 z-40">
-            <div className="fixed inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
+            <div
+              className="fixed inset-0 bg-black/50"
+              onClick={() => setSidebarOpen(false)}
+            />
             <div className="fixed left-0 top-0 h-full w-64 bg-card border-r border-border z-50">
               <Sidebar />
             </div>
@@ -183,7 +276,7 @@ const UnifiedForm = () => {
 
         {/* Desktop Sidebar */}
         <Sidebar />
-        
+
         {/* Main Content */}
         <div className="flex-1 md:ml-64">
           {/* Header */}
@@ -204,18 +297,23 @@ const UnifiedForm = () => {
                 {isTopic ? "Create New Topic" : "Write Tutorial"}
               </h1>
               <p className="text-sm md:text-base text-muted-foreground">
-                {isTopic 
+                {isTopic
                   ? "Start a new discussion topic in the fastn community."
-                  : "Share your knowledge by writing a tutorial for the community."
-                }
+                  : "Share your knowledge by writing a tutorial for the community."}
               </p>
             </div>
           </div>
 
           <div className="p-4 md:p-6">
             <div className="max-w-6xl mx-auto">
+              {error && (
+                <Alert className="mb-6 border-red-200 bg-red-50">
+                  <AlertDescription className="text-red-800">
+                    {error}
+                  </AlertDescription>
+                </Alert>
+              )}
               <form onSubmit={handleSubmit} className="space-y-6">
-                
                 {/* Category Selection */}
                 {/*<Card>
                   <CardHeader>
@@ -251,10 +349,8 @@ const UnifiedForm = () => {
 
                 {/* Main Form */}
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                  
                   {/* Main Form Fields */}
                   <div className="xl:col-span-2 space-y-6">
-                    
                     {/* Basic Information */}
                     <Card>
                       <CardHeader>
@@ -265,20 +361,38 @@ const UnifiedForm = () => {
                           <Label htmlFor="title">Title *</Label>
                           <Input
                             id="title"
-                            placeholder={isTopic ? "Enter your topic title..." : "Enter tutorial title..."}
+                            placeholder={
+                              isTopic
+                                ? "Enter your topic title..."
+                                : "Enter tutorial title..."
+                            }
                             value={formData.title}
-                            onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                title: e.target.value,
+                              }))
+                            }
                             required
                           />
                         </div>
-                        
+
                         <div>
                           <Label htmlFor="description">Description *</Label>
                           <Textarea
                             id="description"
-                            placeholder={isTopic ? "Brief description of your topic..." : "Brief description of your tutorial..."}
+                            placeholder={
+                              isTopic
+                                ? "Brief description of your topic..."
+                                : "Brief description of your tutorial..."
+                            }
                             value={formData.description}
-                            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                description: e.target.value,
+                              }))
+                            }
                             rows={3}
                             required
                           />
@@ -286,12 +400,23 @@ const UnifiedForm = () => {
 
                         <div>
                           <Label htmlFor="category">Category *</Label>
-                          <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
+                          <Select
+                            value={formData.category}
+                            onValueChange={(value) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                category: value,
+                              }))
+                            }
+                          >
                             <SelectTrigger>
                               <SelectValue placeholder="Select category" />
                             </SelectTrigger>
                             <SelectContent>
-                              {(isTopic ? topicCategories : tutorialCategories).map((category) => (
+                              {(isTopic
+                                ? topicCategories
+                                : tutorialCategories
+                              ).map((category) => (
                                 <SelectItem key={category} value={category}>
                                   {category}
                                 </SelectItem>
@@ -303,17 +428,35 @@ const UnifiedForm = () => {
                         {isTutorial && (
                           <>
                             <div>
-                              <Label htmlFor="difficulty">Difficulty Level</Label>
-                              <Select value={formData.difficulty} onValueChange={(value) => setFormData(prev => ({ ...prev, difficulty: value }))}>
+                              <Label htmlFor="difficulty">
+                                Difficulty Level
+                              </Label>
+                              <Select
+                                value={formData.difficulty}
+                                onValueChange={(value) =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    difficulty: value,
+                                  }))
+                                }
+                              >
                                 <SelectTrigger>
                                   <SelectValue placeholder="Select difficulty" />
                                 </SelectTrigger>
                                 <SelectContent>
                                   {difficulties.map((difficulty) => (
-                                    <SelectItem key={difficulty.value} value={difficulty.value}>
+                                    <SelectItem
+                                      key={difficulty.value}
+                                      value={difficulty.value}
+                                    >
                                       <div className="flex items-center space-x-2">
                                         <span>{difficulty.label}</span>
-                                        <div className={`w-2 h-2 rounded-full ${difficulty.color.replace('text-', 'bg-')}`} />
+                                        <div
+                                          className={`w-2 h-2 rounded-full ${difficulty.color.replace(
+                                            "text-",
+                                            "bg-"
+                                          )}`}
+                                        />
                                       </div>
                                     </SelectItem>
                                   ))}
@@ -322,22 +465,36 @@ const UnifiedForm = () => {
                             </div>
 
                             <div>
-                              <Label htmlFor="estimatedTime">Estimated Time</Label>
+                              <Label htmlFor="estimatedTime">
+                                Estimated Time
+                              </Label>
                               <Input
                                 id="estimatedTime"
                                 placeholder="e.g., 15 minutes, 1 hour"
                                 value={formData.estimatedTime}
-                                onChange={(e) => setFormData(prev => ({ ...prev, estimatedTime: e.target.value }))}
+                                onChange={(e) =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    estimatedTime: e.target.value,
+                                  }))
+                                }
                               />
                             </div>
 
                             <div>
-                              <Label htmlFor="prerequisites">Prerequisites</Label>
+                              <Label htmlFor="prerequisites">
+                                Prerequisites
+                              </Label>
                               <Textarea
                                 id="prerequisites"
                                 placeholder="What should readers know before starting this tutorial?"
                                 value={formData.prerequisites}
-                                onChange={(e) => setFormData(prev => ({ ...prev, prerequisites: e.target.value }))}
+                                onChange={(e) =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    prerequisites: e.target.value,
+                                  }))
+                                }
                                 rows={2}
                               />
                             </div>
@@ -351,7 +508,9 @@ const UnifiedForm = () => {
                       <CardHeader>
                         <CardTitle>Content</CardTitle>
                         <CardDescription>
-                          {isTopic ? "Write your topic content..." : "Write your tutorial content..."}
+                          {isTopic
+                            ? "Write your topic content..."
+                            : "Write your tutorial content..."}
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
@@ -359,9 +518,18 @@ const UnifiedForm = () => {
                           <Label htmlFor="content">Content *</Label>
                           <Textarea
                             id="content"
-                            placeholder={isTopic ? "Write your topic content here..." : "Write your tutorial content here..."}
+                            placeholder={
+                              isTopic
+                                ? "Write your topic content here..."
+                                : "Write your tutorial content here..."
+                            }
                             value={formData.content}
-                            onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
+                            onChange={(e) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                content: e.target.value,
+                              }))
+                            }
                             rows={12}
                             required
                           />
@@ -374,7 +542,8 @@ const UnifiedForm = () => {
                       <CardHeader>
                         <CardTitle>Media Files</CardTitle>
                         <CardDescription>
-                          Upload images, videos, or other files to support your {isTopic ? "topic" : "tutorial"}
+                          Upload images, videos, or other files to support your{" "}
+                          {isTopic ? "topic" : "tutorial"}
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
@@ -392,19 +561,29 @@ const UnifiedForm = () => {
                               className="hidden"
                               id="file-upload"
                             />
-                            <Label htmlFor="file-upload" className="cursor-pointer">
+                            <Label
+                              htmlFor="file-upload"
+                              className="cursor-pointer"
+                            >
                               <Button variant="outline" size="sm">
                                 Choose Files
                               </Button>
                             </Label>
                           </div>
-                          
+
                           {uploadedFiles.length > 0 && (
                             <div className="space-y-2">
-                              <h4 className="text-sm font-medium">Uploaded Files:</h4>
+                              <h4 className="text-sm font-medium">
+                                Uploaded Files:
+                              </h4>
                               {uploadedFiles.map((file, index) => (
-                                <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
-                                  <span className="text-sm truncate">{file.name}</span>
+                                <div
+                                  key={index}
+                                  className="flex items-center justify-between p-2 bg-muted rounded"
+                                >
+                                  <span className="text-sm truncate">
+                                    {file.name}
+                                  </span>
                                   <Button
                                     variant="ghost"
                                     size="sm"
@@ -423,13 +602,13 @@ const UnifiedForm = () => {
 
                   {/* Sidebar Settings */}
                   <div className="space-y-6">
-                    
                     {/* Tags */}
                     <Card>
                       <CardHeader>
                         <CardTitle>Tags</CardTitle>
                         <CardDescription>
-                          Add tags to help others find your {isTopic ? "topic" : "tutorial"}
+                          Add tags to help others find your{" "}
+                          {isTopic ? "topic" : "tutorial"}
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4">
@@ -438,22 +617,36 @@ const UnifiedForm = () => {
                             placeholder="Add custom tag..."
                             value={customTag}
                             onChange={(e) => setCustomTag(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addCustomTag())}
+                            onKeyPress={(e) =>
+                              e.key === "Enter" &&
+                              (e.preventDefault(), addCustomTag())
+                            }
                           />
-                          <Button type="button" size="sm" onClick={addCustomTag} className="sm:w-auto">
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={addCustomTag}
+                            className="sm:w-auto"
+                          >
                             Add
                           </Button>
                         </div>
-                        
+
                         <div className="space-y-2">
                           <h4 className="text-sm font-medium">Popular Tags:</h4>
                           <div className="flex flex-wrap gap-1">
                             {predefinedTags.map((tag) => (
                               <Badge
                                 key={tag}
-                                variant={tags.includes(tag) ? "default" : "outline"}
+                                variant={
+                                  tags.includes(tag) ? "default" : "outline"
+                                }
                                 className="cursor-pointer text-xs"
-                                onClick={() => tags.includes(tag) ? removeTag(tag) : addPredefinedTag(tag)}
+                                onClick={() =>
+                                  tags.includes(tag)
+                                    ? removeTag(tag)
+                                    : addPredefinedTag(tag)
+                                }
                               >
                                 {tag}
                               </Badge>
@@ -463,7 +656,9 @@ const UnifiedForm = () => {
 
                         {tags.length > 0 && (
                           <div className="space-y-2">
-                            <h4 className="text-sm font-medium">Selected Tags:</h4>
+                            <h4 className="text-sm font-medium">
+                              Selected Tags:
+                            </h4>
                             <div className="flex flex-wrap gap-1">
                               {tags.map((tag) => (
                                 <Badge
@@ -491,15 +686,21 @@ const UnifiedForm = () => {
                           <div className="space-y-0.5">
                             <Label>Allow Rating</Label>
                             <p className="text-xs text-muted-foreground">
-                              Allow users to rate this {isTopic ? "topic" : "tutorial"}
+                              Allow users to rate this{" "}
+                              {isTopic ? "topic" : "tutorial"}
                             </p>
                           </div>
                           <Switch
                             checked={formData.allowRating}
-                            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, allowRating: checked }))}
+                            onCheckedChange={(checked) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                allowRating: checked,
+                              }))
+                            }
                           />
                         </div>
-                        
+
                         <div className="flex items-center justify-between">
                           <div className="space-y-0.5">
                             <Label>Featured</Label>
@@ -509,7 +710,12 @@ const UnifiedForm = () => {
                           </div>
                           <Switch
                             checked={formData.featured}
-                            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, featured: checked }))}
+                            onCheckedChange={(checked) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                featured: checked,
+                              }))
+                            }
                           />
                         </div>
                       </CardContent>
@@ -521,13 +727,31 @@ const UnifiedForm = () => {
                         <CardTitle>Actions</CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-3">
-                        <Button type="submit" className="w-full" size="lg">
-                          {isTopic ? "Create Topic" : "Publish Tutorial"}
+                        <Button
+                          type="submit"
+                          className="w-full"
+                          size="lg"
+                          disabled={isSubmitting}
+                        >
+                          {isSubmitting
+                            ? "Creating..."
+                            : isTopic
+                            ? "Create Topic"
+                            : "Publish Tutorial"}
                         </Button>
-                        <Button type="button" variant="outline" className="w-full">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full"
+                        >
                           Save Draft
                         </Button>
-                        <Button type="button" variant="ghost" className="w-full" onClick={() => navigate(-1)}>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="w-full"
+                          onClick={() => navigate(-1)}
+                        >
                           Cancel
                         </Button>
                       </CardContent>
@@ -543,4 +767,4 @@ const UnifiedForm = () => {
   );
 };
 
-export default UnifiedForm; 
+export default UnifiedForm;

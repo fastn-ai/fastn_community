@@ -1,17 +1,17 @@
 // API Service for fastn community platform
-const API_BASE_URL = 'https://qa.fastn.ai/api/v1';
-const API_KEY = '59b01ec6-8f4b-490f-8be4-cd2263d36584';
+const API_BASE_URL = "https://qa.fastn.ai/api/v1";
+const API_KEY = "59b01ec6-8f4b-490f-8be4-cd2263d36584";
 
 const getHeaders = () => ({
-  'Content-Type': 'application/json',
-  'x-fastn-api-key': API_KEY,
-  'x-fastn-space-id': 'ee032b0c-ebb1-45cb-9cb3-a835d276a8e4',
-  'x-fastn-space-tenantid': '',
-  'stage': 'DRAFT'
+  "Content-Type": "application/json",
+  "x-fastn-api-key": API_KEY,
+  "x-fastn-space-id": "ee032b0c-ebb1-45cb-9cb3-a835d276a8e4",
+  "x-fastn-space-tenantid": "",
+  stage: "DRAFT",
 });
 
 const waitForRateLimit = async () => {
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  await new Promise((resolve) => setTimeout(resolve, 1000));
 };
 
 const retryWithBackoff = async <T>(
@@ -24,12 +24,12 @@ const retryWithBackoff = async <T>(
       return await fn();
     } catch (error) {
       if (attempt === maxRetries) throw error;
-      
+
       const delay = baseDelay * Math.pow(2, attempt);
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
-  throw new Error('Max retries exceeded');
+  throw new Error("Max retries exceeded");
 };
 
 // Interfaces
@@ -40,8 +40,10 @@ export interface Topic {
   content?: string;
   author_username: string;
   author_avatar?: string;
+  author_id?: string;
   category_name: string;
   category_color?: string;
+  category_id?: string;
   status?: string;
   is_featured?: boolean;
   is_hot?: boolean;
@@ -51,7 +53,7 @@ export interface Topic {
   like_count: number;
   bookmark_count: number;
   share_count: number;
-  tags?: string;
+  tags?: string[]; // Changed to array of strings
   created_at: string;
   updated_at?: string;
 }
@@ -139,16 +141,18 @@ export class ApiService {
   static async getAllCategories(): Promise<Category[]> {
     return retryWithBackoff(async () => {
       await waitForRateLimit();
-      
+
       try {
         const response = await fetch(`${API_BASE_URL}/getAllcategories`, {
-          method: 'POST',
+          method: "POST",
           headers: getHeaders(),
-          body: JSON.stringify({ input: {} })
+          body: JSON.stringify({ input: {} }),
         });
 
         if (response.status === 429) {
-          throw new Error(`HTTP error! status: ${response.status} - Rate limited`);
+          throw new Error(
+            `HTTP error! status: ${response.status} - Rate limited`
+          );
         }
 
         if (!response.ok) {
@@ -156,17 +160,17 @@ export class ApiService {
         }
 
         const result = await response.json();
-        
+
         if (result.data) {
           return Array.isArray(result.data) ? result.data : [result.data];
         } else if (Array.isArray(result)) {
           return result;
         } else {
-          console.warn('Unexpected API response format:', result);
+          console.warn("Unexpected API response format:", result);
           return [];
         }
       } catch (error) {
-        console.error('Error fetching categories:', error);
+        console.error("Error fetching categories:", error);
         throw error;
       }
     });
@@ -176,16 +180,18 @@ export class ApiService {
   static async getAllTopics(): Promise<Topic[]> {
     return retryWithBackoff(async () => {
       await waitForRateLimit();
-      
+
       try {
         const response = await fetch(`${API_BASE_URL}/getAllTopics`, {
-          method: 'POST',
+          method: "POST",
           headers: getHeaders(),
-          body: JSON.stringify({ input: {} })
+          body: JSON.stringify({ input: {} }),
         });
 
         if (response.status === 429) {
-          throw new Error(`HTTP error! status: ${response.status} - Rate limited`);
+          throw new Error(
+            `HTTP error! status: ${response.status} - Rate limited`
+          );
         }
 
         if (!response.ok) {
@@ -193,38 +199,63 @@ export class ApiService {
         }
 
         const result = await response.json();
-        
+
         if (result.data) {
           return Array.isArray(result.data) ? result.data : [result.data];
         } else if (Array.isArray(result)) {
           return result;
         } else {
-          console.warn('Unexpected API response format:', result);
+          console.warn("Unexpected API response format:", result);
           return [];
         }
       } catch (error) {
-        console.error('Error fetching topics:', error);
+        console.error("Error fetching topics:", error);
         throw error;
       }
     });
   }
 
-  // Create topic
+  // Create topic using crudTopics endpoint
   static async createTopic(topicData: Partial<Topic>): Promise<Topic> {
     return retryWithBackoff(async () => {
       await waitForRateLimit();
-      
+
       try {
-        const response = await fetch(`${API_BASE_URL}/createTopic`, {
-          method: 'POST',
-          headers: getHeaders(),
-          body: JSON.stringify({ 
-            input: topicData 
-          })
+        const response = await fetch(`${API_BASE_URL}/crudTopics`, {
+          method: "POST",
+          headers: {
+            ...getHeaders(),
+            "x-fastn-custom-auth": "true",
+          },
+          body: JSON.stringify({
+            input: {
+              action: "insert",
+              topics: [
+                {
+                  title: topicData.title,
+                  description: topicData.description,
+                  content: topicData.content,
+                  author_id: topicData.author_id || "id_1754164424_145800", // Default author ID
+                  category_id: topicData.category_id || "id_1754163675_740242", // Default category ID
+                  is_featured: topicData.is_featured || false,
+                  is_hot: topicData.is_hot || false,
+                  is_new: topicData.is_new || true,
+                  view_count: topicData.view_count || 0,
+                  reply_count: topicData.reply_count || 0,
+                  like_count: topicData.like_count || 0,
+                  bookmark_count: topicData.bookmark_count || 0,
+                  share_count: topicData.share_count || 0,
+                  tags: topicData.tags || [], // Include tags as array
+                },
+              ],
+            },
+          }),
         });
 
         if (response.status === 429) {
-          throw new Error(`HTTP error! status: ${response.status} - Rate limited`);
+          throw new Error(
+            `HTTP error! status: ${response.status} - Rate limited`
+          );
         }
 
         if (!response.ok) {
@@ -234,7 +265,7 @@ export class ApiService {
         const result = await response.json();
         return result.data;
       } catch (error) {
-        console.error('Error creating topic:', error);
+        console.error("Error creating topic:", error);
         throw error;
       }
     });
@@ -244,20 +275,22 @@ export class ApiService {
   static async getTopicsByCategory(categoryId: string): Promise<Topic[]> {
     return retryWithBackoff(async () => {
       await waitForRateLimit();
-      
+
       try {
         const response = await fetch(`${API_BASE_URL}/getTopicsByCategory`, {
-          method: 'POST',
+          method: "POST",
           headers: getHeaders(),
-          body: JSON.stringify({ 
-            input: { 
-              category_id: categoryId 
-            } 
-          })
+          body: JSON.stringify({
+            input: {
+              category_id: categoryId,
+            },
+          }),
         });
 
         if (response.status === 429) {
-          throw new Error(`HTTP error! status: ${response.status} - Rate limited`);
+          throw new Error(
+            `HTTP error! status: ${response.status} - Rate limited`
+          );
         }
 
         if (!response.ok) {
@@ -267,7 +300,7 @@ export class ApiService {
         const result = await response.json();
         return Array.isArray(result.data) ? result.data : [result.data];
       } catch (error) {
-        console.error('Error fetching topics by category:', error);
+        console.error("Error fetching topics by category:", error);
         throw error;
       }
     });
@@ -277,20 +310,22 @@ export class ApiService {
   static async getTopicById(topicId: string): Promise<Topic> {
     return retryWithBackoff(async () => {
       await waitForRateLimit();
-      
+
       try {
         const response = await fetch(`${API_BASE_URL}/getTopicById`, {
-          method: 'POST',
+          method: "POST",
           headers: getHeaders(),
-          body: JSON.stringify({ 
-            input: { 
-              topic_id: topicId 
-            } 
-          })
+          body: JSON.stringify({
+            input: {
+              topic_id: topicId,
+            },
+          }),
         });
 
         if (response.status === 429) {
-          throw new Error(`HTTP error! status: ${response.status} - Rate limited`);
+          throw new Error(
+            `HTTP error! status: ${response.status} - Rate limited`
+          );
         }
 
         if (!response.ok) {
@@ -300,31 +335,36 @@ export class ApiService {
         const result = await response.json();
         return result.data;
       } catch (error) {
-        console.error('Error fetching topic by ID:', error);
+        console.error("Error fetching topic by ID:", error);
         throw error;
       }
     });
   }
 
   // Update topic
-  static async updateTopic(topicId: string, topicData: Partial<Topic>): Promise<Topic> {
+  static async updateTopic(
+    topicId: string,
+    topicData: Partial<Topic>
+  ): Promise<Topic> {
     return retryWithBackoff(async () => {
       await waitForRateLimit();
-      
+
       try {
         const response = await fetch(`${API_BASE_URL}/updateTopic`, {
-          method: 'POST',
+          method: "POST",
           headers: getHeaders(),
-          body: JSON.stringify({ 
-            input: { 
+          body: JSON.stringify({
+            input: {
               topic_id: topicId,
-              ...topicData 
-            } 
-          })
+              ...topicData,
+            },
+          }),
         });
 
         if (response.status === 429) {
-          throw new Error(`HTTP error! status: ${response.status} - Rate limited`);
+          throw new Error(
+            `HTTP error! status: ${response.status} - Rate limited`
+          );
         }
 
         if (!response.ok) {
@@ -334,7 +374,7 @@ export class ApiService {
         const result = await response.json();
         return result.data;
       } catch (error) {
-        console.error('Error updating topic:', error);
+        console.error("Error updating topic:", error);
         throw error;
       }
     });
@@ -344,20 +384,22 @@ export class ApiService {
   static async deleteTopic(topicId: string): Promise<boolean> {
     return retryWithBackoff(async () => {
       await waitForRateLimit();
-      
+
       try {
         const response = await fetch(`${API_BASE_URL}/deleteTopic`, {
-          method: 'POST',
+          method: "POST",
           headers: getHeaders(),
-          body: JSON.stringify({ 
-            input: { 
-              topic_id: topicId 
-            } 
-          })
+          body: JSON.stringify({
+            input: {
+              topic_id: topicId,
+            },
+          }),
         });
 
         if (response.status === 429) {
-          throw new Error(`HTTP error! status: ${response.status} - Rate limited`);
+          throw new Error(
+            `HTTP error! status: ${response.status} - Rate limited`
+          );
         }
 
         if (!response.ok) {
@@ -367,7 +409,7 @@ export class ApiService {
         const result = await response.json();
         return result.success || true;
       } catch (error) {
-        console.error('Error deleting topic:', error);
+        console.error("Error deleting topic:", error);
         throw error;
       }
     });
@@ -377,20 +419,22 @@ export class ApiService {
   static async getRepliesByTopic(topicId: string): Promise<Reply[]> {
     return retryWithBackoff(async () => {
       await waitForRateLimit();
-      
+
       try {
         const response = await fetch(`${API_BASE_URL}/getRepliesByTopic`, {
-          method: 'POST',
+          method: "POST",
           headers: getHeaders(),
-          body: JSON.stringify({ 
-            input: { 
-              topic_id: topicId 
-            } 
-          })
+          body: JSON.stringify({
+            input: {
+              topic_id: topicId,
+            },
+          }),
         });
 
         if (response.status === 429) {
-          throw new Error(`HTTP error! status: ${response.status} - Rate limited`);
+          throw new Error(
+            `HTTP error! status: ${response.status} - Rate limited`
+          );
         }
 
         if (!response.ok) {
@@ -400,7 +444,7 @@ export class ApiService {
         const result = await response.json();
         return Array.isArray(result.data) ? result.data : [result.data];
       } catch (error) {
-        console.error('Error fetching replies by topic:', error);
+        console.error("Error fetching replies by topic:", error);
         throw error;
       }
     });
@@ -410,20 +454,22 @@ export class ApiService {
   static async getReplyById(replyId: string): Promise<Reply> {
     return retryWithBackoff(async () => {
       await waitForRateLimit();
-      
+
       try {
         const response = await fetch(`${API_BASE_URL}/getReplyById`, {
-          method: 'POST',
+          method: "POST",
           headers: getHeaders(),
-          body: JSON.stringify({ 
-            input: { 
-              reply_id: replyId 
-            } 
-          })
+          body: JSON.stringify({
+            input: {
+              reply_id: replyId,
+            },
+          }),
         });
 
         if (response.status === 429) {
-          throw new Error(`HTTP error! status: ${response.status} - Rate limited`);
+          throw new Error(
+            `HTTP error! status: ${response.status} - Rate limited`
+          );
         }
 
         if (!response.ok) {
@@ -433,7 +479,7 @@ export class ApiService {
         const result = await response.json();
         return result.data;
       } catch (error) {
-        console.error('Error fetching reply by ID:', error);
+        console.error("Error fetching reply by ID:", error);
         throw error;
       }
     });
@@ -443,18 +489,20 @@ export class ApiService {
   static async createReply(replyData: Partial<Reply>): Promise<Reply> {
     return retryWithBackoff(async () => {
       await waitForRateLimit();
-      
+
       try {
         const response = await fetch(`${API_BASE_URL}/createReply`, {
-          method: 'POST',
+          method: "POST",
           headers: getHeaders(),
-          body: JSON.stringify({ 
-            input: replyData 
-          })
+          body: JSON.stringify({
+            input: replyData,
+          }),
         });
 
         if (response.status === 429) {
-          throw new Error(`HTTP error! status: ${response.status} - Rate limited`);
+          throw new Error(
+            `HTTP error! status: ${response.status} - Rate limited`
+          );
         }
 
         if (!response.ok) {
@@ -464,31 +512,36 @@ export class ApiService {
         const result = await response.json();
         return result.data;
       } catch (error) {
-        console.error('Error creating reply:', error);
+        console.error("Error creating reply:", error);
         throw error;
       }
     });
   }
 
   // Update reply
-  static async updateReply(replyId: string, replyData: Partial<Reply>): Promise<Reply> {
+  static async updateReply(
+    replyId: string,
+    replyData: Partial<Reply>
+  ): Promise<Reply> {
     return retryWithBackoff(async () => {
       await waitForRateLimit();
-      
+
       try {
         const response = await fetch(`${API_BASE_URL}/updateReply`, {
-          method: 'POST',
+          method: "POST",
           headers: getHeaders(),
-          body: JSON.stringify({ 
-            input: { 
+          body: JSON.stringify({
+            input: {
               reply_id: replyId,
-              ...replyData 
-            } 
-          })
+              ...replyData,
+            },
+          }),
         });
 
         if (response.status === 429) {
-          throw new Error(`HTTP error! status: ${response.status} - Rate limited`);
+          throw new Error(
+            `HTTP error! status: ${response.status} - Rate limited`
+          );
         }
 
         if (!response.ok) {
@@ -498,7 +551,7 @@ export class ApiService {
         const result = await response.json();
         return result.data;
       } catch (error) {
-        console.error('Error updating reply:', error);
+        console.error("Error updating reply:", error);
         throw error;
       }
     });
@@ -508,20 +561,22 @@ export class ApiService {
   static async deleteReply(replyId: string): Promise<boolean> {
     return retryWithBackoff(async () => {
       await waitForRateLimit();
-      
+
       try {
         const response = await fetch(`${API_BASE_URL}/deleteReply`, {
-          method: 'POST',
+          method: "POST",
           headers: getHeaders(),
-          body: JSON.stringify({ 
-            input: { 
-              reply_id: replyId 
-            } 
-          })
+          body: JSON.stringify({
+            input: {
+              reply_id: replyId,
+            },
+          }),
         });
 
         if (response.status === 429) {
-          throw new Error(`HTTP error! status: ${response.status} - Rate limited`);
+          throw new Error(
+            `HTTP error! status: ${response.status} - Rate limited`
+          );
         }
 
         if (!response.ok) {
@@ -531,7 +586,7 @@ export class ApiService {
         const result = await response.json();
         return result.success || true;
       } catch (error) {
-        console.error('Error deleting reply:', error);
+        console.error("Error deleting reply:", error);
         throw error;
       }
     });
@@ -541,20 +596,22 @@ export class ApiService {
   static async likeReply(replyId: string): Promise<Reply> {
     return retryWithBackoff(async () => {
       await waitForRateLimit();
-      
+
       try {
         const response = await fetch(`${API_BASE_URL}/likeReply`, {
-          method: 'POST',
+          method: "POST",
           headers: getHeaders(),
-          body: JSON.stringify({ 
-            input: { 
-              reply_id: replyId 
-            } 
-          })
+          body: JSON.stringify({
+            input: {
+              reply_id: replyId,
+            },
+          }),
         });
 
         if (response.status === 429) {
-          throw new Error(`HTTP error! status: ${response.status} - Rate limited`);
+          throw new Error(
+            `HTTP error! status: ${response.status} - Rate limited`
+          );
         }
 
         if (!response.ok) {
@@ -564,7 +621,7 @@ export class ApiService {
         const result = await response.json();
         return result.data;
       } catch (error) {
-        console.error('Error liking reply:', error);
+        console.error("Error liking reply:", error);
         throw error;
       }
     });
@@ -574,20 +631,22 @@ export class ApiService {
   static async acceptReply(replyId: string): Promise<Reply> {
     return retryWithBackoff(async () => {
       await waitForRateLimit();
-      
+
       try {
         const response = await fetch(`${API_BASE_URL}/acceptReply`, {
-          method: 'POST',
+          method: "POST",
           headers: getHeaders(),
-          body: JSON.stringify({ 
-            input: { 
-              reply_id: replyId 
-            } 
-          })
+          body: JSON.stringify({
+            input: {
+              reply_id: replyId,
+            },
+          }),
         });
 
         if (response.status === 429) {
-          throw new Error(`HTTP error! status: ${response.status} - Rate limited`);
+          throw new Error(
+            `HTTP error! status: ${response.status} - Rate limited`
+          );
         }
 
         if (!response.ok) {
@@ -597,7 +656,7 @@ export class ApiService {
         const result = await response.json();
         return result.data;
       } catch (error) {
-        console.error('Error accepting reply:', error);
+        console.error("Error accepting reply:", error);
         throw error;
       }
     });
@@ -607,16 +666,18 @@ export class ApiService {
   static async getAllTags(): Promise<Tag[]> {
     return retryWithBackoff(async () => {
       await waitForRateLimit();
-      
+
       try {
         const response = await fetch(`${API_BASE_URL}/getAllTags`, {
-          method: 'POST',
+          method: "POST",
           headers: getHeaders(),
-          body: JSON.stringify({ input: {} })
+          body: JSON.stringify({ input: {} }),
         });
 
         if (response.status === 429) {
-          throw new Error(`HTTP error! status: ${response.status} - Rate limited`);
+          throw new Error(
+            `HTTP error! status: ${response.status} - Rate limited`
+          );
         }
 
         if (!response.ok) {
@@ -624,17 +685,17 @@ export class ApiService {
         }
 
         const result = await response.json();
-        
+
         if (result.data) {
           return Array.isArray(result.data) ? result.data : [result.data];
         } else if (Array.isArray(result)) {
           return result;
         } else {
-          console.warn('Unexpected API response format:', result);
+          console.warn("Unexpected API response format:", result);
           return [];
         }
       } catch (error) {
-        console.error('Error fetching tags:', error);
+        console.error("Error fetching tags:", error);
         throw error;
       }
     });
@@ -644,20 +705,22 @@ export class ApiService {
   static async getTagsByTopic(topicId: string): Promise<Tag[]> {
     return retryWithBackoff(async () => {
       await waitForRateLimit();
-      
+
       try {
         const response = await fetch(`${API_BASE_URL}/getTagsByTopic`, {
-          method: 'POST',
+          method: "POST",
           headers: getHeaders(),
-          body: JSON.stringify({ 
-            input: { 
-              topic_id: topicId 
-            } 
-          })
+          body: JSON.stringify({
+            input: {
+              topic_id: topicId,
+            },
+          }),
         });
 
         if (response.status === 429) {
-          throw new Error(`HTTP error! status: ${response.status} - Rate limited`);
+          throw new Error(
+            `HTTP error! status: ${response.status} - Rate limited`
+          );
         }
 
         if (!response.ok) {
@@ -667,7 +730,7 @@ export class ApiService {
         const result = await response.json();
         return Array.isArray(result.data) ? result.data : [result.data];
       } catch (error) {
-        console.error('Error fetching tags by topic:', error);
+        console.error("Error fetching tags by topic:", error);
         throw error;
       }
     });
@@ -677,20 +740,22 @@ export class ApiService {
   static async getTopicsByTag(tagId: string): Promise<Topic[]> {
     return retryWithBackoff(async () => {
       await waitForRateLimit();
-      
+
       try {
         const response = await fetch(`${API_BASE_URL}/getTopicsByTag`, {
-          method: 'POST',
+          method: "POST",
           headers: getHeaders(),
-          body: JSON.stringify({ 
-            input: { 
-              tag_id: tagId 
-            } 
-          })
+          body: JSON.stringify({
+            input: {
+              tag_id: tagId,
+            },
+          }),
         });
 
         if (response.status === 429) {
-          throw new Error(`HTTP error! status: ${response.status} - Rate limited`);
+          throw new Error(
+            `HTTP error! status: ${response.status} - Rate limited`
+          );
         }
 
         if (!response.ok) {
@@ -700,31 +765,36 @@ export class ApiService {
         const result = await response.json();
         return Array.isArray(result.data) ? result.data : [result.data];
       } catch (error) {
-        console.error('Error fetching topics by tag:', error);
+        console.error("Error fetching topics by tag:", error);
         throw error;
       }
     });
   }
 
   // Add tag to topic
-  static async addTagToTopic(topicId: string, tagId: string): Promise<TopicTag> {
+  static async addTagToTopic(
+    topicId: string,
+    tagId: string
+  ): Promise<TopicTag> {
     return retryWithBackoff(async () => {
       await waitForRateLimit();
-      
+
       try {
         const response = await fetch(`${API_BASE_URL}/addTagToTopic`, {
-          method: 'POST',
+          method: "POST",
           headers: getHeaders(),
-          body: JSON.stringify({ 
-            input: { 
+          body: JSON.stringify({
+            input: {
               topic_id: topicId,
-              tag_id: tagId 
-            } 
-          })
+              tag_id: tagId,
+            },
+          }),
         });
 
         if (response.status === 429) {
-          throw new Error(`HTTP error! status: ${response.status} - Rate limited`);
+          throw new Error(
+            `HTTP error! status: ${response.status} - Rate limited`
+          );
         }
 
         if (!response.ok) {
@@ -734,31 +804,36 @@ export class ApiService {
         const result = await response.json();
         return result.data;
       } catch (error) {
-        console.error('Error adding tag to topic:', error);
+        console.error("Error adding tag to topic:", error);
         throw error;
       }
     });
   }
 
   // Remove tag from topic
-  static async removeTagFromTopic(topicId: string, tagId: string): Promise<boolean> {
+  static async removeTagFromTopic(
+    topicId: string,
+    tagId: string
+  ): Promise<boolean> {
     return retryWithBackoff(async () => {
       await waitForRateLimit();
-      
+
       try {
         const response = await fetch(`${API_BASE_URL}/removeTagFromTopic`, {
-          method: 'POST',
+          method: "POST",
           headers: getHeaders(),
-          body: JSON.stringify({ 
-            input: { 
+          body: JSON.stringify({
+            input: {
               topic_id: topicId,
-              tag_id: tagId 
-            } 
-          })
+              tag_id: tagId,
+            },
+          }),
         });
 
         if (response.status === 429) {
-          throw new Error(`HTTP error! status: ${response.status} - Rate limited`);
+          throw new Error(
+            `HTTP error! status: ${response.status} - Rate limited`
+          );
         }
 
         if (!response.ok) {
@@ -768,7 +843,7 @@ export class ApiService {
         const result = await response.json();
         return result.success || true;
       } catch (error) {
-        console.error('Error removing tag from topic:', error);
+        console.error("Error removing tag from topic:", error);
         throw error;
       }
     });
@@ -778,16 +853,18 @@ export class ApiService {
   static async getAllTopicTags(): Promise<TopicTag[]> {
     return retryWithBackoff(async () => {
       await waitForRateLimit();
-      
+
       try {
         const response = await fetch(`${API_BASE_URL}/getAllTopicTags`, {
-          method: 'POST',
+          method: "POST",
           headers: getHeaders(),
-          body: JSON.stringify({ input: {} })
+          body: JSON.stringify({ input: {} }),
         });
 
         if (response.status === 429) {
-          throw new Error(`HTTP error! status: ${response.status} - Rate limited`);
+          throw new Error(
+            `HTTP error! status: ${response.status} - Rate limited`
+          );
         }
 
         if (!response.ok) {
@@ -795,17 +872,17 @@ export class ApiService {
         }
 
         const result = await response.json();
-        
+
         if (result.data) {
           return Array.isArray(result.data) ? result.data : [result.data];
         } else if (Array.isArray(result)) {
           return result;
         } else {
-          console.warn('Unexpected API response format:', result);
+          console.warn("Unexpected API response format:", result);
           return [];
         }
       } catch (error) {
-        console.error('Error fetching topic tags:', error);
+        console.error("Error fetching topic tags:", error);
         throw error;
       }
     });
@@ -815,16 +892,18 @@ export class ApiService {
   static async getAllUsers(): Promise<User[]> {
     return retryWithBackoff(async () => {
       await waitForRateLimit();
-      
+
       try {
         const response = await fetch(`${API_BASE_URL}/getAllUsers`, {
-          method: 'POST',
+          method: "POST",
           headers: getHeaders(),
-          body: JSON.stringify({ input: {} })
+          body: JSON.stringify({ input: {} }),
         });
 
         if (response.status === 429) {
-          throw new Error(`HTTP error! status: ${response.status} - Rate limited`);
+          throw new Error(
+            `HTTP error! status: ${response.status} - Rate limited`
+          );
         }
 
         if (!response.ok) {
@@ -832,17 +911,17 @@ export class ApiService {
         }
 
         const result = await response.json();
-        
+
         if (result.data) {
           return Array.isArray(result.data) ? result.data : [result.data];
         } else if (Array.isArray(result)) {
           return result;
         } else {
-          console.warn('Unexpected API response format:', result);
+          console.warn("Unexpected API response format:", result);
           return [];
         }
       } catch (error) {
-        console.error('Error fetching users:', error);
+        console.error("Error fetching users:", error);
         throw error;
       }
     });
@@ -852,20 +931,22 @@ export class ApiService {
   static async getUserById(userId: string): Promise<User> {
     return retryWithBackoff(async () => {
       await waitForRateLimit();
-      
+
       try {
         const response = await fetch(`${API_BASE_URL}/getUserById`, {
-          method: 'POST',
+          method: "POST",
           headers: getHeaders(),
-          body: JSON.stringify({ 
-            input: { 
-              user_id: userId 
-            } 
-          })
+          body: JSON.stringify({
+            input: {
+              user_id: userId,
+            },
+          }),
         });
 
         if (response.status === 429) {
-          throw new Error(`HTTP error! status: ${response.status} - Rate limited`);
+          throw new Error(
+            `HTTP error! status: ${response.status} - Rate limited`
+          );
         }
 
         if (!response.ok) {
@@ -875,7 +956,7 @@ export class ApiService {
         const result = await response.json();
         return result.data;
       } catch (error) {
-        console.error('Error fetching user by ID:', error);
+        console.error("Error fetching user by ID:", error);
         throw error;
       }
     });
@@ -906,6 +987,6 @@ export const useApi = () => {
     removeTagFromTopic: ApiService.removeTagFromTopic,
     getAllTopicTags: ApiService.getAllTopicTags,
     getAllUsers: ApiService.getAllUsers,
-    getUserById: ApiService.getUserById
+    getUserById: ApiService.getUserById,
   };
-}; 
+};
