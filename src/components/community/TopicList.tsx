@@ -40,7 +40,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
       
       // Fetch both topics and categories in parallel
       const [fetchedTopics, fetchedCategories] = await Promise.all([
-        ApiService.getAllTopics(),
+        ApiService.getAllTopics(), // Reverted back to getAllTopics
         ApiService.getAllCategories()
       ]);
       
@@ -54,7 +54,9 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
         console.log('Sample topic:', {
           id: fetchedTopics[0].id,
           title: fetchedTopics[0].title,
-          category: fetchedTopics[0].category
+          category_name: fetchedTopics[0].category_name,
+          author_username: fetchedTopics[0].author_username,
+          tags: fetchedTopics[0].tags
         });
       }
       
@@ -102,7 +104,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
   const filteredTopics = topics.filter(topic => {
     const matchesSearch = topic.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          topic.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = selectedFilter === 'all' || topic.category === selectedFilter;
+    const matchesFilter = selectedFilter === 'all' || topic.category_name === selectedFilter;
     return matchesSearch && matchesFilter;
   });
 
@@ -155,10 +157,23 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
     }
   };
 
-  const getCategoryBadge = (categoryName: string | undefined) => {
+  const getCategoryBadge = (categoryName: string | undefined, categoryColor?: string) => {
     if (!categoryName) return 'bg-gray-100 text-gray-800 border-gray-200';
     
-    // Map category names to badge styles
+    // Use category_color if available, otherwise map by name
+    if (categoryColor) {
+      const colorMap: { [key: string]: string } = {
+        'blue': 'bg-blue-100 text-blue-800 border-blue-200',
+        'red': 'bg-red-100 text-red-800 border-red-200',
+        'green': 'bg-green-100 text-green-800 border-green-200',
+        'purple': 'bg-purple-100 text-purple-800 border-purple-200',
+        'orange': 'bg-orange-100 text-orange-800 border-orange-200',
+        'yellow': 'bg-yellow-100 text-yellow-800 border-yellow-200'
+      };
+      return colorMap[categoryColor] || 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+    
+    // Fallback to name-based mapping
     const categoryColors: { [key: string]: string } = {
       'Questions': 'bg-blue-100 text-blue-800 border-blue-200',
       'Announcements': 'bg-red-100 text-red-800 border-red-200',
@@ -181,6 +196,23 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
     return categoryName;
   };
 
+  const parseTags = (tagsString?: string): string[] => {
+    if (!tagsString) return [];
+    
+    try {
+      // Handle different tag formats: "{tag1,tag2}" or "tag1,tag2" or "tag1"
+      const cleanTags = tagsString.replace(/[{}]/g, ''); // Remove curly braces
+      return cleanTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+    } catch (error) {
+      console.error('Error parsing tags:', error);
+      return [];
+    }
+  };
+
+  const getInitials = (username: string) => {
+    return username.split('_').map(n => n[0]).join('').toUpperCase();
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -192,10 +224,6 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
     return date.toLocaleDateString();
   };
 
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
-  };
-
   const getFilterIcon = (filter: string) => {
     switch (filter) {
       case 'all': return <MessageSquare className="h-4 w-4" />;
@@ -204,6 +232,28 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
       case 'Best Practices': return <Star className="h-4 w-4" />;
       case 'Announcements': return <Megaphone className="h-4 w-4" />;
       default: return <MessageSquare className="h-4 w-4" />;
+    }
+  };
+
+  const getFilterIconColor = (filter: string) => {
+    switch (filter) {
+      case 'all': return 'text-blue-600';
+      case 'top': return 'text-yellow-600';
+      case 'Questions': return 'text-blue-600';
+      case 'Best Practices': return 'text-green-600';
+      case 'Announcements': return 'text-red-600';
+      default: return 'text-gray-600';
+    }
+  };
+
+  const getStatsIconColor = (type: string) => {
+    switch (type) {
+      case 'replies': return 'text-blue-600';
+      case 'views': return 'text-green-600';
+      case 'activity': return 'text-purple-600';
+      case 'likes': return 'text-red-600';
+      case 'bookmarks': return 'text-yellow-600';
+      default: return 'text-gray-600';
     }
   };
 
@@ -271,11 +321,11 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
           </div>
           <div className="flex gap-3">
             <Button variant="outline" className="flex items-center gap-2">
-              <FolderOpen className="h-4 w-4" />
+              <FolderOpen className="h-4 w-4 text-blue-600" />
               Categories
             </Button>
             <Button onClick={() => navigate('/new-topic')} className="bg-purple-600 hover:bg-purple-700 flex items-center gap-2">
-              <Plus className="h-4 w-4" />
+              <Plus className="h-4 w-4 text-white" />
               New Topic
             </Button>
           </div>
@@ -288,7 +338,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
             onClick={() => setSelectedFilter('all')}
             className="flex items-center gap-2"
           >
-            <MessageSquare className="h-4 w-4" />
+            <MessageSquare className={`h-4 w-4 ${selectedFilter === 'all' ? 'text-white' : getFilterIconColor('all')}`} />
             All Topics
           </Button>
           <Button 
@@ -296,7 +346,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
             onClick={() => setSelectedFilter('top')}
             className="flex items-center gap-2"
           >
-            <Trophy className="h-4 w-4" />
+            <Trophy className={`h-4 w-4 ${selectedFilter === 'top' ? 'text-white' : getFilterIconColor('top')}`} />
             Top
           </Button>
           <Button 
@@ -304,7 +354,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
             onClick={() => setSelectedFilter('Questions')}
             className="flex items-center gap-2"
           >
-            <HelpCircle className="h-4 w-4" />
+            <HelpCircle className={`h-4 w-4 ${selectedFilter === 'Questions' ? 'text-white' : getFilterIconColor('Questions')}`} />
             Questions
           </Button>
           <Button 
@@ -312,7 +362,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
             onClick={() => setSelectedFilter('Best Practices')}
             className="flex items-center gap-2"
           >
-            <Star className="h-4 w-4" />
+            <Star className={`h-4 w-4 ${selectedFilter === 'Best Practices' ? 'text-white' : getFilterIconColor('Best Practices')}`} />
             Best Practices
           </Button>
           <Button 
@@ -320,7 +370,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
             onClick={() => setSelectedFilter('Announcements')}
             className="flex items-center gap-2"
           >
-            <Megaphone className="h-4 w-4" />
+            <Megaphone className={`h-4 w-4 ${selectedFilter === 'Announcements' ? 'text-white' : getFilterIconColor('Announcements')}`} />
             Announcements
           </Button>
         </div>
@@ -329,7 +379,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
         <Card className="mb-6">
           <CardContent className="p-0">
             {/* Table Header */}
-            <div className="grid grid-cols-12 gap-4 p-4 border-b bg-gray-50 font-semibold text-sm">
+            <div className="grid grid-cols-12 gap-4 p-4 border-b font-semibold text-sm">
               <div className="col-span-6">Topic</div>
               <div className="col-span-2 text-right">Replies</div>
               <div className="col-span-2 text-right">Views</div>
@@ -358,7 +408,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                       <div className="flex items-start gap-3">
                         {/* Avatar */}
                         <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600 flex-shrink-0">
-                          {getInitials(topic.author)}
+                          {getInitials(topic.author_username)}
                         </div>
                         
                         {/* Topic Details */}
@@ -369,13 +419,13 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                             </h3>
                             {topic.is_hot && (
                               <Badge variant="secondary" className="bg-orange-100 text-orange-800 border-orange-200">
-                                <Zap className="w-3 h-3 mr-1" />
+                                <Zap className="w-3 h-3 mr-1 text-orange-600" />
                                 Hot
                               </Badge>
                             )}
                             {topic.is_featured && (
                               <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border-yellow-200">
-                                <Star className="w-3 h-3 mr-1" />
+                                <Star className="w-3 h-3 mr-1 text-yellow-600" />
                                 Featured
                               </Badge>
                             )}
@@ -386,34 +436,21 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                           </p>
                           
                           <div className="flex items-center gap-4 text-xs text-gray-500">
-                            <span className="font-medium">{topic.author}</span>
+                            <span className="font-medium">{topic.author_username}</span>
                             <span>•</span>
                             <span>{topic.created_at ? formatDate(topic.created_at) : 'Unknown'}</span>
-                            <Badge className={`${getCategoryBadge(topic.category)} text-xs`}>
-                              {getCategoryDisplayName(topic.category)}
+                            <Badge className={`${getCategoryBadge(topic.category_name, topic.category_color)} text-xs`}>
+                              {getCategoryDisplayName(topic.category_name)}
                             </Badge>
                           </div>
                           
                           {/* Tags */}
                           <div className="flex gap-1 mt-2">
-                            {topic.category && (
-                              <span className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
-                                {topic.category.toLowerCase()}
+                            {topic.tags && parseTags(topic.tags).map((tag, index) => (
+                              <span key={index} className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
+                                {tag}
                               </span>
-                            )}
-                            {topic.category === 'Questions' && (
-                              <>
-                                <span className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
-                                  oauth
-                                </span>
-                                <span className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
-                                  authentication
-                                </span>
-                                <span className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
-                                  google-api
-                                </span>
-                              </>
-                            )}
+                            ))}
                           </div>
                         </div>
                       </div>
@@ -422,7 +459,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                     {/* Replies */}
                     <div className="col-span-2 flex items-center justify-end">
                       <div className="flex items-center gap-1 text-sm text-gray-600">
-                        <MessageSquare className="h-4 w-4" />
+                        <MessageSquare className={`h-4 w-4 ${getStatsIconColor('replies')}`} />
                         <span>{topic.reply_count || 0}</span>
                       </div>
                     </div>
@@ -430,7 +467,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                     {/* Views */}
                     <div className="col-span-2 flex items-center justify-end">
                       <div className="flex items-center gap-1 text-sm text-gray-600">
-                        <Eye className="h-4 w-4" />
+                        <Eye className={`h-4 w-4 ${getStatsIconColor('views')}`} />
                         <span>{topic.view_count || 0}</span>
                       </div>
                     </div>
@@ -438,7 +475,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                     {/* Activity */}
                     <div className="col-span-2 flex items-center justify-end">
                       <div className="flex items-center gap-1 text-sm text-gray-600">
-                        <Clock className="h-4 w-4" />
+                        <Clock className={`h-4 w-4 ${getStatsIconColor('activity')}`} />
                         <span>{topic.created_at ? formatDate(topic.created_at) : 'Unknown'}</span>
                       </div>
                     </div>
