@@ -24,6 +24,9 @@ import UserProfile from "./pages/UserProfile";
 import Settings from "./pages/Settings";
 import Dashboard from "./pages/Dashboard";
 
+// Import API test (remove this in production)
+import "./utils/apiTest";
+
 const queryClient = new QueryClient();
 
 const App = () => (

@@ -1,649 +1,439 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Plus, MessageSquare, Eye, Clock, Tag, Filter, TrendingUp, Star, Zap, MoreHorizontal, Calendar, User } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+import { Heart, Share2, Bookmark, MessageSquare, Eye, Clock, User, RefreshCw, AlertCircle, TrendingUp, Star } from 'lucide-react';
+import { ApiService, Topic, Category } from '@/services/api';
 
-const TopicList = () => {
+interface TopicListProps {
+  sidebarOpen: boolean;
+}
+
+const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
   const navigate = useNavigate();
-  const [selectedFilter, setSelectedFilter] = useState("all");
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 10;
 
-  const topics = [
-    {
-      id: 1,
-      title: "How to implement OAuth2 with fastn?",
-      description: "I'm trying to integrate Google Calendar API using OAuth2 authentication in my fastn application. Can someone help me with the proper implementation steps?",
-      content: "I'm trying to integrate Google Calendar API using OAuth2 authentication in my fastn application. Can someone help me with the proper implementation steps? I've been working on this for a while and need some guidance on the best practices for OAuth2 implementation in fastn.",
-      author: "Sarah Chen",
-      authorAvatar: "/avatars/sarah.jpg",
-      replies: 12,
-      views: 156,
-      activity: "2 hours ago",
-      tags: ["oauth", "authentication", "google-api"],
-      category: "Questions",
-      isHot: true,
-      isNew: false,
-      publishedAt: "2024-01-15",
-      readTime: "3 min",
-      difficulty: null,
-      estimatedTime: null,
-      prerequisites: null,
-      mediaFiles: []
-    },
-    {
-      id: 2,
-      title: "Best practices for handling large datasets in fastn workflows",
-      description: "I'm processing datasets with 100k+ records and experiencing performance issues. Looking for optimization strategies.",
-      content: "I'm processing datasets with 100k+ records and experiencing performance issues. Looking for optimization strategies. The current implementation is taking too long and I need to improve the performance.",
-      author: "Alex Rodriguez",
-      authorAvatar: "/avatars/alex.jpg",
-      replies: 8,
-      views: 89,
-      activity: "4 hours ago",
-      tags: ["performance", "data", "workflows"],
-      category: "Best Practices",
-      isHot: false,
-      isNew: true,
-      publishedAt: "2024-01-14",
-      readTime: "2 min",
-      difficulty: null,
-      estimatedTime: null,
-      prerequisites: null,
-      mediaFiles: []
-    },
-    {
-      id: 3,
-      title: "Setting up webhook endpoints for real-time notifications",
-      description: "Need help setting up webhook endpoints to receive real-time notifications from external services.",
-      content: "Need help setting up webhook endpoints to receive real-time notifications from external services. I want to implement a system that can handle incoming webhooks and process them efficiently.",
-      author: "Michael Park",
-      authorAvatar: "/avatars/michael.jpg",
-      replies: 5,
-      views: 67,
-      activity: "6 hours ago",
-      tags: ["webhooks", "notifications", "integration"],
-      category: "Questions",
-      isHot: false,
-      isNew: false,
-      publishedAt: "2024-01-12",
-      readTime: "1 min",
-      difficulty: null,
-      estimatedTime: null,
-      prerequisites: null,
-      mediaFiles: []
-    },
-    {
-      id: 4,
-      title: "Error handling patterns for API rate limiting",
-      description: "What are the best patterns for handling API rate limiting errors in fastn? Looking for robust error handling strategies.",
-      content: "What are the best patterns for handling API rate limiting errors in fastn? Looking for robust error handling strategies that can gracefully handle rate limits and retry mechanisms.",
-      author: "Emma Thompson",
-      authorAvatar: "/avatars/emma.jpg",
-      replies: 15,
-      views: 234,
-      activity: "8 hours ago",
-      tags: ["error-handling", "rate-limiting", "api"],
-      category: "Best Practices",
-      isHot: true,
-      isNew: false,
-      publishedAt: "2024-01-10",
-      readTime: "4 min",
-      difficulty: null,
-      estimatedTime: null,
-      prerequisites: null,
-      mediaFiles: []
-    },
-    {
-      id: 5,
-      title: "Creating custom connectors for third-party services",
-      description: "I need to create a custom connector for a service that doesn't have an existing connector. Looking for guidance.",
-      content: "I need to create a custom connector for a service that doesn't have an existing connector. Looking for guidance on the best approach to implement custom connectors in fastn.",
-      author: "David Kim",
-      authorAvatar: "/avatars/david.jpg",
-      replies: 3,
-      views: 45,
-      activity: "1 day ago",
-      tags: ["connectors", "third-party", "development"],
-      category: "Questions",
-      isHot: false,
-      isNew: false,
-      publishedAt: "2024-01-08",
-      readTime: "2 min",
-      difficulty: null,
-      estimatedTime: null,
-      prerequisites: null,
-      mediaFiles: []
-    },
-    {
-      id: 6,
-      title: "Database connection pooling in fastn applications",
-      description: "How to implement connection pooling for database connections in fastn? Looking for performance optimization tips.",
-      content: "How to implement connection pooling for database connections in fastn? Looking for performance optimization tips and best practices for managing database connections efficiently.",
-      author: "Lisa Wang",
-      authorAvatar: "/avatars/lisa.jpg",
-      replies: 7,
-      views: 78,
-      activity: "1 day ago",
-      tags: ["database", "connection-pooling", "performance"],
-      category: "Questions",
-      isHot: false,
-      isNew: false,
-      publishedAt: "2024-01-05",
-      readTime: "3 min",
-      difficulty: null,
-      estimatedTime: null,
-      prerequisites: null,
-      mediaFiles: []
-    },
-    {
-      id: 7,
-      title: "Testing strategies for fastn workflows",
-      description: "What are the recommended testing strategies for fastn workflows? Looking for unit testing and integration testing approaches.",
-      content: "What are the recommended testing strategies for fastn workflows? Looking for unit testing and integration testing approaches that can ensure reliable and maintainable code.",
-      author: "James Wilson",
-      authorAvatar: "/avatars/james.jpg",
-      replies: 11,
-      views: 123,
-      activity: "2 days ago",
-      tags: ["testing", "workflows", "unit-testing"],
-      category: "Best Practices",
-      isHot: false,
-      isNew: false,
-      publishedAt: "2024-01-03",
-      readTime: "5 min",
-      difficulty: null,
-      estimatedTime: null,
-      prerequisites: null,
-      mediaFiles: []
-    },
-    {
-      id: 8,
-      title: "Deploying fastn applications to Kubernetes",
-      description: "Looking for a step-by-step guide on deploying fastn applications to Kubernetes clusters with proper configuration.",
-      content: "Looking for a step-by-step guide on deploying fastn applications to Kubernetes clusters with proper configuration. Need help with containerization and deployment strategies.",
-      author: "Maria Garcia",
-      authorAvatar: "/avatars/maria.jpg",
-      replies: 6,
-      views: 92,
-      activity: "2 days ago",
-      tags: ["deployment", "kubernetes", "containers"],
-      category: "Questions",
-      isHot: false,
-      isNew: false,
-      publishedAt: "2024-01-01",
-      readTime: "4 min",
-      difficulty: null,
-      estimatedTime: null,
-      prerequisites: null,
-      mediaFiles: []
-    },
-    {
-      id: 9,
-      title: "Community Guidelines and Rules",
-      description: "Important information about community guidelines, posting rules, and best practices for engaging with the fastn community.",
-      content: "Important information about community guidelines, posting rules, and best practices for engaging with the fastn community. This guide helps maintain a positive and productive environment.",
-      author: "Community Team",
-      authorAvatar: "/avatars/community.jpg",
-      replies: 25,
-      views: 456,
-      activity: "3 days ago",
-      tags: ["guidelines", "rules", "community"],
-      category: "Categories",
-      isHot: true,
-      isNew: false,
-      publishedAt: "2024-01-01",
-      readTime: "5 min",
-      difficulty: null,
-      estimatedTime: null,
-      prerequisites: null,
-      mediaFiles: []
-    },
-    {
-      id: 10,
-      title: "Getting Started with fastn - Complete Guide",
-      description: "A comprehensive guide for newcomers to get started with fastn development, including installation, first project, and basic concepts.",
-      content: "A comprehensive guide for newcomers to get started with fastn development, including installation, first project, and basic concepts. Perfect for beginners who want to learn fastn from scratch.",
-      author: "Fastn Team",
-      authorAvatar: "/avatars/fastn.jpg",
-      replies: 18,
-      views: 789,
-      activity: "4 days ago",
-      tags: ["getting-started", "guide", "tutorial"],
-      category: "Categories",
-      isHot: true,
-      isNew: false,
-      publishedAt: "2023-12-30",
-      readTime: "10 min",
-      difficulty: null,
-      estimatedTime: null,
-      prerequisites: null,
-      mediaFiles: []
-    },
-    {
-      id: 11,
-      title: "Advanced API Integration Patterns",
-      description: "Deep dive into advanced patterns for integrating external APIs with fastn, including authentication, caching, and error handling.",
-      content: "Deep dive into advanced patterns for integrating external APIs with fastn, including authentication, caching, and error handling. This tutorial covers complex integration scenarios.",
-      author: "Expert Developer",
-      authorAvatar: "/avatars/expert.jpg",
-      replies: 22,
-      views: 345,
-      activity: "5 days ago",
-      tags: ["api", "integration", "advanced"],
-      category: "Best Practices",
-      isHot: true,
-      isNew: false,
-      publishedAt: "2023-12-29",
-      readTime: "8 min",
-      difficulty: null,
-      estimatedTime: null,
-      prerequisites: null,
-      mediaFiles: []
+  // Fetch topics and categories from API
+  const fetchData = async (isRetry: boolean = false) => {
+    try {
+      if (isRetry) {
+        setRetrying(true);
+      } else {
+        setLoading(true);
+      }
+      setError(null);
+      
+      console.log('Fetching data from API...');
+      
+      // Fetch both topics and categories in parallel
+      const [fetchedTopics, fetchedCategories] = await Promise.all([
+        ApiService.getAllTopics(),
+        ApiService.getAllCategories()
+      ]);
+      
+      console.log('Data fetched successfully:', {
+        topics: fetchedTopics.length,
+        categories: fetchedCategories.length
+      });
+      
+      // Debug: Log sample data
+      if (fetchedTopics.length > 0) {
+        console.log('Sample topic:', {
+          id: fetchedTopics[0].id,
+          title: fetchedTopics[0].title,
+          category: fetchedTopics[0].category
+        });
+      }
+      
+      if (fetchedCategories.length > 0) {
+        console.log('Sample category:', {
+          id: fetchedCategories[0].id,
+          name: fetchedCategories[0].name
+        });
+      }
+      
+      setTopics(fetchedTopics);
+      setCategories(fetchedCategories);
+      setTotalPages(Math.ceil(fetchedTopics.length / itemsPerPage));
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      
+      let errorMessage = 'Failed to load data. Please try again later.';
+      
+      if (err instanceof Error) {
+        if (err.message.includes('429')) {
+          errorMessage = 'Too many requests. Please wait a moment and try again.';
+        } else if (err.message.includes('Network')) {
+          errorMessage = 'Network error. Please check your connection and try again.';
+        } else if (err.message.includes('401')) {
+          errorMessage = 'Authentication error. Please check your API credentials.';
+        } else if (err.message.includes('403')) {
+          errorMessage = 'Access denied. Please check your permissions.';
+        } else if (err.message.includes('500')) {
+          errorMessage = 'Server error. Please try again later.';
+        }
+      }
+      
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+      setRetrying(false);
     }
-  ];
+  };
 
-  const filters = [
-    { value: "all", label: "All Topics", icon: "📋" },
-    { value: "top", label: "Top", icon: "🏆" },
-    { value: "questions", label: "Questions", icon: "❓" },
-    { value: "best-practices", label: "Best Practices", icon: "⭐" },
-    { value: "announcements", label: "Announcements", icon: "📢" }
-  ];
+  useEffect(() => {
+    fetchData();
+  }, []);
 
+  // Filter topics based on search and category
   const filteredTopics = topics.filter(topic => {
-    if (selectedFilter === "all") return true;
-    if (selectedFilter === "top") return topic.isHot || topic.replies > 10; // Top topics are hot or have many replies
-    if (selectedFilter === "questions") return topic.category === "Questions";
-    if (selectedFilter === "best-practices") return topic.category === "Best Practices";
-    if (selectedFilter === "announcements") return topic.category === "Announcements";
-    return true;
+    const matchesSearch = topic.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         topic.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || topic.category === selectedCategory;
+    return matchesSearch && matchesCategory;
   });
 
-  // Pagination logic
-  const totalPages = Math.ceil(filteredTopics.length / itemsPerPage);
+  // Paginate topics
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentTopics = filteredTopics.slice(startIndex, endIndex);
+  const paginatedTopics = filteredTopics.slice(startIndex, endIndex);
 
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  // Handle topic interactions
+  const handleLike = async (topicId: string) => {
+    try {
+      console.log('Liking topic:', topicId);
+      setTopics(prev => prev.map(topic => 
+        topic.id === topicId 
+          ? { ...topic, like_count: (topic.like_count || 0) + 1 }
+          : topic
+      ));
+    } catch (error) {
+      console.error('Error liking topic:', error);
+    }
   };
 
-  const getCategoryBadge = (category: string) => {
-    const colors = {
-      "Questions": "bg-blue-100 text-blue-800",
-      "Best Practices": "bg-green-100 text-green-800",
-      "Announcements": "bg-red-100 text-red-800",
-      "Built with fastn": "bg-purple-100 text-purple-800",
-      "Categories": "bg-indigo-100 text-indigo-800"
+  const handleShare = async (topic: Topic) => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: topic.title,
+          text: topic.description,
+          url: `${window.location.origin}/topic/${topic.id}`
+        });
+      } else {
+        await navigator.clipboard.writeText(`${window.location.origin}/topic/${topic.id}`);
+        console.log('Link copied to clipboard');
+      }
+    } catch (error) {
+      console.error('Error sharing topic:', error);
+    }
+  };
+
+  const handleBookmark = async (topicId: string) => {
+    try {
+      console.log('Bookmarking topic:', topicId);
+      setTopics(prev => prev.map(topic => 
+        topic.id === topicId 
+          ? { ...topic, bookmark_count: (topic.bookmark_count || 0) + 1 }
+          : topic
+      ));
+    } catch (error) {
+      console.error('Error bookmarking topic:', error);
+    }
+  };
+
+  const getCategoryBadge = (categoryName: string | undefined) => {
+    if (!categoryName) return 'bg-gray-100 text-gray-800 border-gray-200';
+    
+    // Map category names to badge styles
+    const categoryColors: { [key: string]: string } = {
+      'Questions': 'bg-blue-100 text-blue-800 border-blue-200',
+      'Announcements': 'bg-red-100 text-red-800 border-red-200',
+      'Best Practices': 'bg-green-100 text-green-800 border-green-200',
+      'Built with fastn': 'bg-purple-100 text-purple-800 border-purple-200',
+      'Showcase': 'bg-orange-100 text-orange-800 border-orange-200',
+      'Tutorials': 'bg-yellow-100 text-yellow-800 border-yellow-200'
     };
-    return (
-      <Badge className={colors[category as keyof typeof colors] || "bg-gray-100 text-gray-800"}>
-        {category}
-      </Badge>
-    );
+    
+    return categoryColors[categoryName] || 'bg-gray-100 text-gray-800 border-gray-200';
   };
 
-  return (
-    <div className="space-y-4 md:space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 m-12">
-        <div>
-          <h2 className="text-xl md:text-2xl font-bold text-foreground">
-            Topics
-          </h2>
-          <p className="text-sm md:text-base text-muted-foreground">Latest discussions in the fastn community</p>
+  const getCategoryDisplayName = (categoryName: string | undefined) => {
+    if (!categoryName) {
+      console.log('Category name is undefined/null');
+      return 'Uncategorized';
+    }
+    
+    console.log(`Category name: ${categoryName}`);
+    return categoryName;
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return 'Just now';
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  if (loading) {
+    return (
+      <div className="flex-1 ml-0 md:ml-64 transition-all duration-300">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+              <p className="mt-4 text-muted-foreground">Loading topics and categories...</p>
+            </div>
+          </div>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Button 
-            variant="outline"
-            onClick={() => navigate("/categories")} 
-            className="flex items-center space-x-2 w-full sm:w-auto"
-          >
-            <span>📂</span>
-            <span>Categories</span>
-          </Button>
-          <Button 
-            onClick={() => navigate("/create")} 
-            className="flex items-center space-x-2 w-full sm:w-auto"
-          >
-            <Plus className="w-4 h-4" />
-            <span>New Topic</span>
-          </Button>
-        </div>
       </div>
+    );
+  }
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-2 m-12">
-        {filters.map((filter) => (
-          <Button
-            key={filter.value}
-            variant={selectedFilter === filter.value ? "default" : "outline"}
-            size="sm"
-            onClick={() => setSelectedFilter(filter.value)}
-            className="flex items-center space-x-2"
-          >
-            <span className="text-sm">{filter.icon}</span>
-            <span className="hidden sm:inline">{filter.label}</span>
-            <span className="sm:hidden">{filter.label.split(' ')[0]}</span>
-          </Button>
-        ))}
-      </div>
-
-      {/* Desktop Table */}
-      <div className="hidden lg:block">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[50%] font-bold">Topic</TableHead>
-              <TableHead className="w-[15%] font-bold">Replies</TableHead>
-              <TableHead className="w-[15%] font-bold">Views</TableHead>
-              <TableHead className="w-[20%] font-bold">Activity</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {currentTopics.map((topic) => (
-              <TableRow 
-                key={topic.id} 
-                className="cursor-pointer hover:bg-muted/50 transition-colors"
-                onClick={() => navigate(`/topic/${topic.id}`)}
-              >
-                <TableCell>
-                  <div className="space-y-3">
-                    <div className="flex items-start space-x-3">
-                      <Avatar className="w-10 h-10">
-                        <AvatarImage src={topic.authorAvatar} alt={topic.author} />
-                        <AvatarFallback>{topic.author.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <h3 className="font-semibold text-foreground line-clamp-1 text-lg">
-                            {topic.title}
-                          </h3>
-                          {topic.isHot && (
-                            <Badge className="bg-orange-100 text-orange-800 text-xs px-2 py-1">
-                              <Zap className="w-3 h-3 mr-1" />
-                              Hot
-                            </Badge>
-                          )}
-                          {topic.isNew && (
-                            <Badge className="bg-green-100 text-green-800 text-xs px-2 py-1">
-                              <Star className="w-3 h-3 mr-1" />
-                              New
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                          {topic.content}
-                        </p>
-                        <div className="flex items-center space-x-2 mb-3">
-                          <span className="text-xs text-muted-foreground font-medium">{topic.author}</span>
-                          <span className="text-xs text-muted-foreground">•</span>
-                          {getCategoryBadge(topic.category)}
-                          <span className="text-xs text-muted-foreground">•</span>
-                          <span className="text-xs text-muted-foreground">{topic.activity}</span>
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                          {topic.tags.map((tag, index) => (
-                            <Badge
-                              key={index}
-                              variant="outline"
-                              className="text-xs px-2 py-1"
-                            >
-                              <Tag className="w-3 h-3 mr-1" />
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                    <MessageSquare className="w-5 h-5" />
-                    <span className="font-semibold">{topic.replies}</span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                    <Eye className="w-5 h-5" />
-                    <span className="font-semibold">{topic.views}</span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                    <Clock className="w-5 h-5" />
-                    <span className="font-medium">{topic.activity}</span>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* Tablet Table */}
-      <div className="hidden md:block lg:hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[70%] font-bold">Topic</TableHead>
-              <TableHead className="w-[15%] font-bold">Replies</TableHead>
-              <TableHead className="w-[15%] font-bold">Views</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {currentTopics.map((topic) => (
-              <TableRow 
-                key={topic.id} 
-                className="cursor-pointer hover:bg-muted/50 transition-colors"
-                onClick={() => navigate(`/topic/${topic.id}`)}
-              >
-                <TableCell>
-                  <div className="space-y-2">
-                    <div className="flex items-start space-x-3">
-                      <Avatar className="w-8 h-8">
-                        <AvatarImage src={topic.authorAvatar} alt={topic.author} />
-                        <AvatarFallback className="text-xs">{topic.author.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <h3 className="font-semibold text-foreground line-clamp-1">
-                            {topic.title}
-                          </h3>
-                          {topic.isHot && (
-                            <Badge className="bg-orange-100 text-orange-800 text-xs">
-                              <Zap className="w-3 h-3 mr-1" />
-                              Hot
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground line-clamp-1 mt-1">
-                          {topic.content}
-                        </p>
-                        <div className="flex items-center space-x-2 mt-2">
-                          <span className="text-xs text-muted-foreground">{topic.author}</span>
-                          <span className="text-xs text-muted-foreground">•</span>
-                          {getCategoryBadge(topic.category)}
-                          <span className="text-xs text-muted-foreground">•</span>
-                          <span className="text-xs text-muted-foreground">{topic.activity}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center space-x-1 text-sm text-muted-foreground">
-                    <MessageSquare className="w-4 h-4" />
-                    <span className="font-semibold">{topic.replies}</span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center space-x-1 text-sm text-muted-foreground">
-                    <Eye className="w-4 h-4" />
-                    <span className="font-semibold">{topic.views}</span>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* Mobile Cards */}
-      <div className="md:hidden space-y-4">
-        {currentTopics.map((topic) => (
-          <Card
-            key={topic.id}
-            className="cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={() => navigate(`/topic/${topic.id}`)}
-          >
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2 mb-2">
-                    {getCategoryBadge(topic.category)}
-                    {topic.isHot && (
-                      <Badge className="bg-orange-100 text-orange-800 text-xs px-2 py-1">
-                        <Zap className="w-3 h-3 mr-1" />
-                        Hot
-                      </Badge>
-                    )}
-                    {topic.isNew && (
-                      <Badge className="bg-green-100 text-green-800 text-xs px-2 py-1">
-                        <Star className="w-3 h-3 mr-1" />
-                        New
-                      </Badge>
-                    )}
-                  </div>
-                  <CardTitle className="text-xl">{topic.title}</CardTitle>
-                  <CardDescription className="mt-2">
-                    {topic.description}
-                  </CardDescription>
-                </div>
-                <Button variant="ghost" size="sm">
-                  <MoreHorizontal className="w-4 h-4" />
+  if (error) {
+    return (
+      <div className="flex-1 ml-0 md:ml-64 transition-all duration-300">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center max-w-md">
+              <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Unable to Load Data</h3>
+              <p className="text-muted-foreground mb-6">{error}</p>
+              <div className="flex gap-2 justify-center">
+                <Button 
+                  onClick={() => fetchData(true)} 
+                  disabled={retrying}
+                  className="flex items-center gap-2"
+                >
+                  {retrying ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                      Retrying...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4" />
+                      Try Again
+                    </>
+                  )}
+                </Button>
+                <Button variant="outline" onClick={() => window.location.reload()}>
+                  Refresh Page
                 </Button>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <Avatar className="w-8 h-8">
-                    <AvatarImage src={topic.authorAvatar} alt={topic.author} />
-                    <AvatarFallback>{topic.author.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                    <span className="flex items-center">
-                      <User className="w-4 h-4 mr-1" />
-                      {topic.author}
-                    </span>
-                    <span className="flex items-center">
-                      <Calendar className="w-4 h-4 mr-1" />
-                      {topic.publishedAt}
-                    </span>
-                    <span>{topic.readTime}</span>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                  <span className="flex items-center">
-                    <MessageSquare className="w-4 h-4 mr-1" />
-                    {topic.replies} replies
-                  </span>
-                  <span className="flex items-center">
-                    <Eye className="w-4 h-4 mr-1" />
-                    {topic.views} views
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+            </div>
+          </div>
+        </div>
       </div>
+    );
+  }
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-center mt-8">
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious 
-                  onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                  className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                />
-              </PaginationItem>
-              
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                if (
-                  page === 1 ||
-                  page === totalPages ||
-                  (page >= currentPage - 1 && page <= currentPage + 1)
-                ) {
-                  return (
-                    <PaginationItem key={page}>
-                      <PaginationLink
-                        onClick={() => handlePageChange(page)}
-                        isActive={currentPage === page}
-                        className="cursor-pointer"
+  return (
+    <div className="flex-1 ml-0 md:ml-64 transition-all duration-300">
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-foreground mb-2">All Topics</h1>
+          <p className="text-muted-foreground">Discover and engage with the fastn community</p>
+        </div>
+
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="flex-1">
+            <Input
+              placeholder="Search topics..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="max-w-md"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value="Questions">Questions</SelectItem>
+                <SelectItem value="Announcements">Announcements</SelectItem>
+                <SelectItem value="Best Practices">Best Practices</SelectItem>
+                <SelectItem value="Built with fastn">Built with fastn</SelectItem>
+                <SelectItem value="Showcase">Showcase</SelectItem>
+                <SelectItem value="Tutorials">Tutorials</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button onClick={() => navigate('/new-topic')} className="bg-purple-600 hover:bg-purple-700">
+              New Topic
+            </Button>
+          </div>
+        </div>
+
+        {/* Topics Grid */}
+        <div className="space-y-4">
+          {paginatedTopics.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">
+                {searchQuery || selectedCategory !== 'all' 
+                  ? 'No topics match your search criteria.' 
+                  : 'No topics found.'}
+              </p>
+            </div>
+          ) : (
+            paginatedTopics.map((topic) => (
+              <Card 
+                key={topic.id} 
+                className="hover:shadow-lg transition-all duration-200 cursor-pointer border border-gray-200 hover:border-purple-300 group"
+                onClick={() => navigate(`/topic/${topic.id}`)}
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Badge className={`${getCategoryBadge(topic.category)} border`}>
+                          {getCategoryDisplayName(topic.category)}
+                        </Badge>
+                        {topic.is_featured && (
+                          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border-yellow-200">
+                            <Star className="w-3 h-3 mr-1" />
+                            Featured
+                          </Badge>
+                        )}
+                        {topic.is_hot && (
+                          <Badge variant="secondary" className="bg-red-100 text-red-800 border-red-200">
+                            <TrendingUp className="w-3 h-3 mr-1" />
+                            Hot
+                          </Badge>
+                        )}
+                        {topic.is_new && (
+                          <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                            New
+                          </Badge>
+                        )}
+                      </div>
+                      <CardTitle className="text-xl mb-2 group-hover:text-purple-600 transition-colors">
+                        {topic.title}
+                      </CardTitle>
+                      <CardDescription className="text-base text-gray-600 leading-relaxed">
+                        {topic.description}
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <User className="h-4 w-4" />
+                        <span>User</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <MessageSquare className="h-4 w-4" />
+                        <span>{topic.reply_count || 0} replies</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Eye className="h-4 w-4" />
+                        <span>{topic.view_count || 0} views</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-4 w-4" />
+                        <span>{topic.created_at ? formatDate(topic.created_at) : 'Unknown'}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleLike(topic.id);
+                        }}
+                        className="flex items-center gap-1 hover:bg-red-50 hover:text-red-600"
                       >
-                        {page}
-                      </PaginationLink>
-                    </PaginationItem>
-                  );
-                } else if (
-                  page === currentPage - 2 ||
-                  page === currentPage + 2
-                ) {
-                  return (
-                    <PaginationItem key={page}>
-                      <PaginationEllipsis />
-                    </PaginationItem>
-                  );
-                }
-                return null;
-              })}
-              
-              <PaginationItem>
-                <PaginationNext 
-                  onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+                        <Heart className="h-4 w-4" />
+                        <span>{topic.like_count || 0}</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleShare(topic);
+                        }}
+                        className="flex items-center gap-1 hover:bg-blue-50 hover:text-blue-600"
+                      >
+                        <Share2 className="h-4 w-4" />
+                        <span>{topic.share_count || 0}</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleBookmark(topic.id);
+                        }}
+                        className="flex items-center gap-1 hover:bg-yellow-50 hover:text-yellow-600"
+                      >
+                        <Bookmark className="h-4 w-4" />
+                        <span>{topic.bookmark_count || 0}</span>
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
-      )}
 
-      {filteredTopics.length === 0 && (
-        <div className="text-center py-12">
-          <MessageSquare className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-xl font-semibold mb-2">No topics found</h3>
-          <p className="text-muted-foreground mb-6">
-            Try adjusting your filters or create a new topic
-          </p>
-          <Button 
-            onClick={() => navigate("/create")}
-          >
-            Create New Topic
-          </Button>
-        </div>
-      )}
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="mt-8">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  />
+                </PaginationItem>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <PaginationItem key={page}>
+                    <PaginationLink
+                      onClick={() => setCurrentPage(page)}
+                      isActive={currentPage === page}
+                      className="cursor-pointer"
+                    >
+                      {page}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+                <PaginationItem>
+                  <PaginationNext 
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
