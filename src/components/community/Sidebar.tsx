@@ -29,7 +29,7 @@ const Sidebar = () => {
   const categories = [
     { icon: Megaphone, name: "Announcements", count: 5, color: "text-red-400", path: "/announcements" },
     { icon: HelpCircle, name: "Questions", count: 142, color: "text-blue-400", path: "/questions" },
-    { icon: BookOpen, name: "All Tutorials", count: 28, color: "text-green-400", path: "/all-tutorials" },
+    //{ icon: BookOpen, name: "All Tutorials", count: 28, color: "text-green-400", path: "/all-tutorials" },
     { icon: Code, name: "Built with fastn", count: 67, color: "text-purple-400", path: "/built-with-fastn" },
   ];
 

@@ -43,13 +43,14 @@ const Categories = () => {
     },
     {
       icon: BookOpen,
-      name: "Tutorials",
+      name: "Tutorials coming",
       description: "Step-by-step guides and learning resources",
       topics: 28,
       posts: 89,
       color: "text-green-400",
       bgColor: "bg-green-500/10",
-      path: "/tutorials"
+      isComingSoon: true,
+    //  path: "/tutorials"
     },
     {
       icon: Code,
@@ -161,9 +162,15 @@ const Categories = () => {
                           </span>
                         </div>
                       </div>
-                      <Badge variant="outline" className={`${category.color} border-current`}>
-                        Browse
-                      </Badge>
+                      {category.isComingSoon ? (
+                        <Badge variant="secondary" className="bg-orange-100 text-orange-800">
+                          Coming Soon
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className={`${category.color} border-current`}>
+                          Browse
+                        </Badge>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

@@ -217,7 +217,7 @@ const UnifiedForm = () => {
               <form onSubmit={handleSubmit} className="space-y-6">
                 
                 {/* Category Selection */}
-                <Card>
+                {/*<Card>
                   <CardHeader>
                     <CardTitle>Select Type</CardTitle>
                     <CardDescription>
@@ -247,7 +247,7 @@ const UnifiedForm = () => {
                       ))}
                     </div>
                   </CardContent>
-                </Card>
+                </Card>*/}
 
                 {/* Main Form */}
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">

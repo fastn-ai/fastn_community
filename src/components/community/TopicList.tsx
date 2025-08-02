@@ -26,7 +26,8 @@ const TopicList = () => {
     {
       id: 1,
       title: "How to implement OAuth2 with fastn?",
-      content: "I'm trying to integrate Google Calendar API using OAuth2 authentication in my fastn application. Can someone help me with the proper implementation steps?",
+      description: "I'm trying to integrate Google Calendar API using OAuth2 authentication in my fastn application. Can someone help me with the proper implementation steps?",
+      content: "I'm trying to integrate Google Calendar API using OAuth2 authentication in my fastn application. Can someone help me with the proper implementation steps? I've been working on this for a while and need some guidance on the best practices for OAuth2 implementation in fastn.",
       author: "Sarah Chen",
       authorAvatar: "/avatars/sarah.jpg",
       replies: 12,
@@ -37,12 +38,17 @@ const TopicList = () => {
       isHot: true,
       isNew: false,
       publishedAt: "2024-01-15",
-      readTime: "3 min"
+      readTime: "3 min",
+      difficulty: null,
+      estimatedTime: null,
+      prerequisites: null,
+      mediaFiles: []
     },
     {
       id: 2,
       title: "Best practices for handling large datasets in fastn workflows",
-      content: "I'm processing datasets with 100k+ records and experiencing performance issues. Looking for optimization strategies.",
+      description: "I'm processing datasets with 100k+ records and experiencing performance issues. Looking for optimization strategies.",
+      content: "I'm processing datasets with 100k+ records and experiencing performance issues. Looking for optimization strategies. The current implementation is taking too long and I need to improve the performance.",
       author: "Alex Rodriguez",
       authorAvatar: "/avatars/alex.jpg",
       replies: 8,
@@ -53,12 +59,17 @@ const TopicList = () => {
       isHot: false,
       isNew: true,
       publishedAt: "2024-01-14",
-      readTime: "2 min"
+      readTime: "2 min",
+      difficulty: null,
+      estimatedTime: null,
+      prerequisites: null,
+      mediaFiles: []
     },
     {
       id: 3,
       title: "Setting up webhook endpoints for real-time notifications",
-      content: "Need help setting up webhook endpoints to receive real-time notifications from external services.",
+      description: "Need help setting up webhook endpoints to receive real-time notifications from external services.",
+      content: "Need help setting up webhook endpoints to receive real-time notifications from external services. I want to implement a system that can handle incoming webhooks and process them efficiently.",
       author: "Michael Park",
       authorAvatar: "/avatars/michael.jpg",
       replies: 5,
@@ -69,12 +80,17 @@ const TopicList = () => {
       isHot: false,
       isNew: false,
       publishedAt: "2024-01-12",
-      readTime: "1 min"
+      readTime: "1 min",
+      difficulty: null,
+      estimatedTime: null,
+      prerequisites: null,
+      mediaFiles: []
     },
     {
       id: 4,
       title: "Error handling patterns for API rate limiting",
-      content: "What are the best patterns for handling API rate limiting errors in fastn? Looking for robust error handling strategies.",
+      description: "What are the best patterns for handling API rate limiting errors in fastn? Looking for robust error handling strategies.",
+      content: "What are the best patterns for handling API rate limiting errors in fastn? Looking for robust error handling strategies that can gracefully handle rate limits and retry mechanisms.",
       author: "Emma Thompson",
       authorAvatar: "/avatars/emma.jpg",
       replies: 15,
@@ -85,12 +101,17 @@ const TopicList = () => {
       isHot: true,
       isNew: false,
       publishedAt: "2024-01-10",
-      readTime: "4 min"
+      readTime: "4 min",
+      difficulty: null,
+      estimatedTime: null,
+      prerequisites: null,
+      mediaFiles: []
     },
     {
       id: 5,
       title: "Creating custom connectors for third-party services",
-      content: "I need to create a custom connector for a service that doesn't have an existing connector. Looking for guidance.",
+      description: "I need to create a custom connector for a service that doesn't have an existing connector. Looking for guidance.",
+      content: "I need to create a custom connector for a service that doesn't have an existing connector. Looking for guidance on the best approach to implement custom connectors in fastn.",
       author: "David Kim",
       authorAvatar: "/avatars/david.jpg",
       replies: 3,
@@ -101,12 +122,17 @@ const TopicList = () => {
       isHot: false,
       isNew: false,
       publishedAt: "2024-01-08",
-      readTime: "2 min"
+      readTime: "2 min",
+      difficulty: null,
+      estimatedTime: null,
+      prerequisites: null,
+      mediaFiles: []
     },
     {
       id: 6,
       title: "Database connection pooling in fastn applications",
-      content: "How to implement connection pooling for database connections in fastn? Looking for performance optimization tips.",
+      description: "How to implement connection pooling for database connections in fastn? Looking for performance optimization tips.",
+      content: "How to implement connection pooling for database connections in fastn? Looking for performance optimization tips and best practices for managing database connections efficiently.",
       author: "Lisa Wang",
       authorAvatar: "/avatars/lisa.jpg",
       replies: 7,
@@ -117,12 +143,17 @@ const TopicList = () => {
       isHot: false,
       isNew: false,
       publishedAt: "2024-01-05",
-      readTime: "3 min"
+      readTime: "3 min",
+      difficulty: null,
+      estimatedTime: null,
+      prerequisites: null,
+      mediaFiles: []
     },
     {
       id: 7,
       title: "Testing strategies for fastn workflows",
-      content: "What are the recommended testing strategies for fastn workflows? Looking for unit testing and integration testing approaches.",
+      description: "What are the recommended testing strategies for fastn workflows? Looking for unit testing and integration testing approaches.",
+      content: "What are the recommended testing strategies for fastn workflows? Looking for unit testing and integration testing approaches that can ensure reliable and maintainable code.",
       author: "James Wilson",
       authorAvatar: "/avatars/james.jpg",
       replies: 11,
@@ -133,12 +164,17 @@ const TopicList = () => {
       isHot: false,
       isNew: false,
       publishedAt: "2024-01-03",
-      readTime: "5 min"
+      readTime: "5 min",
+      difficulty: null,
+      estimatedTime: null,
+      prerequisites: null,
+      mediaFiles: []
     },
     {
       id: 8,
       title: "Deploying fastn applications to Kubernetes",
-      content: "Looking for a step-by-step guide on deploying fastn applications to Kubernetes clusters with proper configuration.",
+      description: "Looking for a step-by-step guide on deploying fastn applications to Kubernetes clusters with proper configuration.",
+      content: "Looking for a step-by-step guide on deploying fastn applications to Kubernetes clusters with proper configuration. Need help with containerization and deployment strategies.",
       author: "Maria Garcia",
       authorAvatar: "/avatars/maria.jpg",
       replies: 6,
@@ -149,12 +185,17 @@ const TopicList = () => {
       isHot: false,
       isNew: false,
       publishedAt: "2024-01-01",
-      readTime: "4 min"
+      readTime: "4 min",
+      difficulty: null,
+      estimatedTime: null,
+      prerequisites: null,
+      mediaFiles: []
     },
     {
       id: 9,
       title: "Community Guidelines and Rules",
-      content: "Important information about community guidelines, posting rules, and best practices for engaging with the fastn community.",
+      description: "Important information about community guidelines, posting rules, and best practices for engaging with the fastn community.",
+      content: "Important information about community guidelines, posting rules, and best practices for engaging with the fastn community. This guide helps maintain a positive and productive environment.",
       author: "Community Team",
       authorAvatar: "/avatars/community.jpg",
       replies: 25,
@@ -165,12 +206,17 @@ const TopicList = () => {
       isHot: true,
       isNew: false,
       publishedAt: "2024-01-01",
-      readTime: "5 min"
+      readTime: "5 min",
+      difficulty: null,
+      estimatedTime: null,
+      prerequisites: null,
+      mediaFiles: []
     },
     {
       id: 10,
       title: "Getting Started with fastn - Complete Guide",
-      content: "A comprehensive guide for newcomers to get started with fastn development, including installation, first project, and basic concepts.",
+      description: "A comprehensive guide for newcomers to get started with fastn development, including installation, first project, and basic concepts.",
+      content: "A comprehensive guide for newcomers to get started with fastn development, including installation, first project, and basic concepts. Perfect for beginners who want to learn fastn from scratch.",
       author: "Fastn Team",
       authorAvatar: "/avatars/fastn.jpg",
       replies: 18,
@@ -181,12 +227,17 @@ const TopicList = () => {
       isHot: true,
       isNew: false,
       publishedAt: "2023-12-30",
-      readTime: "10 min"
+      readTime: "10 min",
+      difficulty: null,
+      estimatedTime: null,
+      prerequisites: null,
+      mediaFiles: []
     },
     {
       id: 11,
       title: "Advanced API Integration Patterns",
-      content: "Deep dive into advanced patterns for integrating external APIs with fastn, including authentication, caching, and error handling.",
+      description: "Deep dive into advanced patterns for integrating external APIs with fastn, including authentication, caching, and error handling.",
+      content: "Deep dive into advanced patterns for integrating external APIs with fastn, including authentication, caching, and error handling. This tutorial covers complex integration scenarios.",
       author: "Expert Developer",
       authorAvatar: "/avatars/expert.jpg",
       replies: 22,
@@ -197,7 +248,11 @@ const TopicList = () => {
       isHot: true,
       isNew: false,
       publishedAt: "2023-12-29",
-      readTime: "8 min"
+      readTime: "8 min",
+      difficulty: null,
+      estimatedTime: null,
+      prerequisites: null,
+      mediaFiles: []
     }
   ];
 
@@ -479,7 +534,7 @@ const TopicList = () => {
                   </div>
                   <CardTitle className="text-xl">{topic.title}</CardTitle>
                   <CardDescription className="mt-2">
-                    {topic.content}
+                    {topic.description}
                   </CardDescription>
                 </div>
                 <Button variant="ghost" size="sm">
