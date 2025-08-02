@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-import { Heart, Share2, Bookmark, MessageSquare, Eye, Clock, User, RefreshCw, AlertCircle, TrendingUp, Star } from 'lucide-react';
+import { Heart, Share2, Bookmark, MessageSquare, Eye, Clock, User, RefreshCw, AlertCircle, TrendingUp, Star, FolderOpen, Plus, Trophy, HelpCircle, Zap, Megaphone } from 'lucide-react';
 import { ApiService, Topic, Category } from '@/services/api';
 
 interface TopicListProps {
@@ -21,7 +21,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
   const [error, setError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedFilter, setSelectedFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 10;
@@ -98,12 +98,12 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
     fetchData();
   }, []);
 
-  // Filter topics based on search and category
+  // Filter topics based on search and filter
   const filteredTopics = topics.filter(topic => {
     const matchesSearch = topic.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          topic.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || topic.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    const matchesFilter = selectedFilter === 'all' || topic.category === selectedFilter;
+    return matchesSearch && matchesFilter;
   });
 
   // Paginate topics
@@ -192,6 +192,21 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
     return date.toLocaleDateString();
   };
 
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  };
+
+  const getFilterIcon = (filter: string) => {
+    switch (filter) {
+      case 'all': return <MessageSquare className="h-4 w-4" />;
+      case 'top': return <Trophy className="h-4 w-4" />;
+      case 'Questions': return <HelpCircle className="h-4 w-4" />;
+      case 'Best Practices': return <Star className="h-4 w-4" />;
+      case 'Announcements': return <Megaphone className="h-4 w-4" />;
+      default: return <MessageSquare className="h-4 w-4" />;
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex-1 ml-0 md:ml-64 transition-all duration-300">
@@ -249,157 +264,190 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
     <div className="flex-1 ml-0 md:ml-64 transition-all duration-300">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">All Topics</h1>
-          <p className="text-muted-foreground">Discover and engage with the fastn community</p>
-        </div>
-
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <div className="flex-1">
-            <Input
-              placeholder="Search topics..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="max-w-md"
-            />
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground mb-2">Topics</h1>
+            <p className="text-muted-foreground">Latest discussions in the fastn community</p>
           </div>
-          <div className="flex gap-2">
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="All Categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="Questions">Questions</SelectItem>
-                <SelectItem value="Announcements">Announcements</SelectItem>
-                <SelectItem value="Best Practices">Best Practices</SelectItem>
-                <SelectItem value="Built with fastn">Built with fastn</SelectItem>
-                <SelectItem value="Showcase">Showcase</SelectItem>
-                <SelectItem value="Tutorials">Tutorials</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button onClick={() => navigate('/new-topic')} className="bg-purple-600 hover:bg-purple-700">
+          <div className="flex gap-3">
+            <Button variant="outline" className="flex items-center gap-2">
+              <FolderOpen className="h-4 w-4" />
+              Categories
+            </Button>
+            <Button onClick={() => navigate('/new-topic')} className="bg-purple-600 hover:bg-purple-700 flex items-center gap-2">
+              <Plus className="h-4 w-4" />
               New Topic
             </Button>
           </div>
         </div>
 
-        {/* Topics Grid */}
-        <div className="space-y-4">
-          {paginatedTopics.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">
-                {searchQuery || selectedCategory !== 'all' 
-                  ? 'No topics match your search criteria.' 
-                  : 'No topics found.'}
-              </p>
+        {/* Filter Buttons */}
+        <div className="flex gap-2 mb-6 overflow-x-auto">
+          <Button 
+            variant={selectedFilter === 'all' ? 'default' : 'outline'}
+            onClick={() => setSelectedFilter('all')}
+            className="flex items-center gap-2"
+          >
+            <MessageSquare className="h-4 w-4" />
+            All Topics
+          </Button>
+          <Button 
+            variant={selectedFilter === 'top' ? 'default' : 'outline'}
+            onClick={() => setSelectedFilter('top')}
+            className="flex items-center gap-2"
+          >
+            <Trophy className="h-4 w-4" />
+            Top
+          </Button>
+          <Button 
+            variant={selectedFilter === 'Questions' ? 'default' : 'outline'}
+            onClick={() => setSelectedFilter('Questions')}
+            className="flex items-center gap-2"
+          >
+            <HelpCircle className="h-4 w-4" />
+            Questions
+          </Button>
+          <Button 
+            variant={selectedFilter === 'Best Practices' ? 'default' : 'outline'}
+            onClick={() => setSelectedFilter('Best Practices')}
+            className="flex items-center gap-2"
+          >
+            <Star className="h-4 w-4" />
+            Best Practices
+          </Button>
+          <Button 
+            variant={selectedFilter === 'Announcements' ? 'default' : 'outline'}
+            onClick={() => setSelectedFilter('Announcements')}
+            className="flex items-center gap-2"
+          >
+            <Megaphone className="h-4 w-4" />
+            Announcements
+          </Button>
+        </div>
+
+        {/* Topics Table */}
+        <Card className="mb-6">
+          <CardContent className="p-0">
+            {/* Table Header */}
+            <div className="grid grid-cols-12 gap-4 p-4 border-b bg-gray-50 font-semibold text-sm">
+              <div className="col-span-6">Topic</div>
+              <div className="col-span-2 text-right">Replies</div>
+              <div className="col-span-2 text-right">Views</div>
+              <div className="col-span-2 text-right">Activity</div>
             </div>
-          ) : (
-            paginatedTopics.map((topic) => (
-              <Card 
-                key={topic.id} 
-                className="hover:shadow-lg transition-all duration-200 cursor-pointer border border-gray-200 hover:border-purple-300 group"
-                onClick={() => navigate(`/topic/${topic.id}`)}
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Badge className={`${getCategoryBadge(topic.category)} border`}>
-                          {getCategoryDisplayName(topic.category)}
-                        </Badge>
-                        {topic.is_featured && (
-                          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border-yellow-200">
-                            <Star className="w-3 h-3 mr-1" />
-                            Featured
-                          </Badge>
-                        )}
-                        {topic.is_hot && (
-                          <Badge variant="secondary" className="bg-red-100 text-red-800 border-red-200">
-                            <TrendingUp className="w-3 h-3 mr-1" />
-                            Hot
-                          </Badge>
-                        )}
-                        {topic.is_new && (
-                          <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
-                            New
-                          </Badge>
-                        )}
+
+            {/* Topics List */}
+            {paginatedTopics.length === 0 ? (
+              <div className="p-8 text-center">
+                <p className="text-muted-foreground">
+                  {searchQuery || selectedFilter !== 'all' 
+                    ? 'No topics match your search criteria.' 
+                    : 'No topics found.'}
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y">
+                {paginatedTopics.map((topic) => (
+                  <div 
+                    key={topic.id} 
+                    className="grid grid-cols-12 gap-4 p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                    onClick={() => navigate(`/topic/${topic.id}`)}
+                  >
+                    {/* Topic Content */}
+                    <div className="col-span-6">
+                      <div className="flex items-start gap-3">
+                        {/* Avatar */}
+                        <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600 flex-shrink-0">
+                          {getInitials(topic.author)}
+                        </div>
+                        
+                        {/* Topic Details */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-semibold text-foreground truncate">
+                              {topic.title}
+                            </h3>
+                            {topic.is_hot && (
+                              <Badge variant="secondary" className="bg-orange-100 text-orange-800 border-orange-200">
+                                <Zap className="w-3 h-3 mr-1" />
+                                Hot
+                              </Badge>
+                            )}
+                            {topic.is_featured && (
+                              <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border-yellow-200">
+                                <Star className="w-3 h-3 mr-1" />
+                                Featured
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          <p className="text-sm text-gray-600 line-clamp-2 mb-2">
+                            {topic.description}
+                          </p>
+                          
+                          <div className="flex items-center gap-4 text-xs text-gray-500">
+                            <span className="font-medium">{topic.author}</span>
+                            <span>•</span>
+                            <span>{topic.created_at ? formatDate(topic.created_at) : 'Unknown'}</span>
+                            <Badge className={`${getCategoryBadge(topic.category)} text-xs`}>
+                              {getCategoryDisplayName(topic.category)}
+                            </Badge>
+                          </div>
+                          
+                          {/* Tags */}
+                          <div className="flex gap-1 mt-2">
+                            {topic.category && (
+                              <span className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
+                                {topic.category.toLowerCase()}
+                              </span>
+                            )}
+                            {topic.category === 'Questions' && (
+                              <>
+                                <span className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
+                                  oauth
+                                </span>
+                                <span className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
+                                  authentication
+                                </span>
+                                <span className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
+                                  google-api
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <CardTitle className="text-xl mb-2 group-hover:text-purple-600 transition-colors">
-                        {topic.title}
-                      </CardTitle>
-                      <CardDescription className="text-base text-gray-600 leading-relaxed">
-                        {topic.description}
-                      </CardDescription>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <User className="h-4 w-4" />
-                        <span>User</span>
-                      </div>
-                      <div className="flex items-center gap-1">
+
+                    {/* Replies */}
+                    <div className="col-span-2 flex items-center justify-end">
+                      <div className="flex items-center gap-1 text-sm text-gray-600">
                         <MessageSquare className="h-4 w-4" />
-                        <span>{topic.reply_count || 0} replies</span>
+                        <span>{topic.reply_count || 0}</span>
                       </div>
-                      <div className="flex items-center gap-1">
+                    </div>
+
+                    {/* Views */}
+                    <div className="col-span-2 flex items-center justify-end">
+                      <div className="flex items-center gap-1 text-sm text-gray-600">
                         <Eye className="h-4 w-4" />
-                        <span>{topic.view_count || 0} views</span>
+                        <span>{topic.view_count || 0}</span>
                       </div>
-                      <div className="flex items-center gap-1">
+                    </div>
+
+                    {/* Activity */}
+                    <div className="col-span-2 flex items-center justify-end">
+                      <div className="flex items-center gap-1 text-sm text-gray-600">
                         <Clock className="h-4 w-4" />
                         <span>{topic.created_at ? formatDate(topic.created_at) : 'Unknown'}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleLike(topic.id);
-                        }}
-                        className="flex items-center gap-1 hover:bg-red-50 hover:text-red-600"
-                      >
-                        <Heart className="h-4 w-4" />
-                        <span>{topic.like_count || 0}</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleShare(topic);
-                        }}
-                        className="flex items-center gap-1 hover:bg-blue-50 hover:text-blue-600"
-                      >
-                        <Share2 className="h-4 w-4" />
-                        <span>{topic.share_count || 0}</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleBookmark(topic.id);
-                        }}
-                        className="flex items-center gap-1 hover:bg-yellow-50 hover:text-yellow-600"
-                      >
-                        <Bookmark className="h-4 w-4" />
-                        <span>{topic.bookmark_count || 0}</span>
-                      </Button>
-                    </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Pagination */}
         {totalPages > 1 && (
