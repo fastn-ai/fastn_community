@@ -324,10 +324,13 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
               <FolderOpen className="h-4 w-4 text-blue-600" />
               Categories
             </Button>
-            <Button onClick={() => navigate('/new-topic')} className="bg-purple-600 hover:bg-purple-700 flex items-center gap-2">
-              <Plus className="h-4 w-4 text-white" />
-              New Topic
-            </Button>
+            <Button 
+            onClick={() => navigate("/create")}
+            className="hidden sm:flex items-center space-x-2"
+          >
+            <Plus className="w-4 h-4" />
+            <span>New Topic </span>
+          </Button>
           </div>
         </div>
 
