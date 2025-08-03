@@ -7,107 +7,52 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import Header from "@/components/community/Header";
 import Sidebar from "@/components/community/Sidebar";
+import { useApi } from "@/services/api";
+import { useEffect } from "react";
 
 const Announcements = () => {
   const navigate = useNavigate();
+  const { getAllTopics } = useApi();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const announcements = [
-    {
-      id: 1,
-      title: "fastn v2.0 Release - Major Updates and New Features",
-      content: "We're excited to announce the release of fastn v2.0! This major update includes improved performance, new UI components, and enhanced developer experience. Check out the changelog for all the details.",
-      author: "Fastn Team",
-      authorAvatar: "/avatars/fastn-team.jpg",
-      type: "release",
-      priority: "high",
-      likes: 156,
-      shares: 89,
-      comments: 23,
-      bookmarks: 45,
-      isLiked: false,
-      isBookmarked: false,
-      publishedAt: "2024-01-15",
-      readTime: "3 min"
-    },
-    {
-      id: 2,
-      title: "Community Guidelines Update",
-      content: "We've updated our community guidelines to ensure a better experience for everyone. The new guidelines focus on respectful communication and constructive feedback.",
-      author: "Community Team",
-      authorAvatar: "/avatars/community-team.jpg",
-      type: "update",
-      priority: "medium",
-      likes: 89,
-      shares: 34,
-      comments: 12,
-      bookmarks: 23,
-      isLiked: true,
-      isBookmarked: false,
-      publishedAt: "2024-01-12",
-      readTime: "2 min"
-    },
-    {
-      id: 3,
-      title: "New Tutorial Series: Building Full-Stack Apps",
-      content: "We're launching a comprehensive tutorial series covering everything from basic setup to advanced deployment strategies. Perfect for developers of all skill levels.",
-      author: "Sarah Chen",
-      authorAvatar: "/avatars/sarah.jpg",
-      type: "tutorial",
-      priority: "medium",
-      likes: 234,
-      shares: 156,
-      comments: 45,
-      bookmarks: 78,
-      isLiked: false,
-      isBookmarked: true,
-      publishedAt: "2024-01-10",
-      readTime: "1 min"
-    },
-    {
-      id: 4,
-      title: "Upcoming Community Meetup - January 25th",
-      content: "Join us for our monthly community meetup! We'll be discussing the latest fastn features, sharing project showcases, and networking with fellow developers.",
-      author: "Alex Rodriguez",
-      authorAvatar: "/avatars/alex.jpg",
-      type: "event",
-      priority: "high",
-      likes: 189,
-      shares: 267,
-      comments: 34,
-      bookmarks: 56,
-      isLiked: false,
-      isBookmarked: false,
-      publishedAt: "2024-01-08",
-      readTime: "2 min"
-    },
-    {
-      id: 5,
-      title: "Documentation Site Redesign",
-      content: "Our documentation site has been completely redesigned for better navigation and improved search functionality. Check it out and let us know what you think!",
-      author: "Emma Thompson",
-      authorAvatar: "/avatars/emma.jpg",
-      type: "update",
-      priority: "low",
-      likes: 67,
-      shares: 23,
-      comments: 8,
-      bookmarks: 12,
-      isLiked: true,
-      isBookmarked: false,
-      publishedAt: "2024-01-05",
-      readTime: "1 min"
-    }
-  ];
+  // Fetch announcements data
+  useEffect(() => {
+    const fetchAnnouncements = async () => {
+      try {
+        setLoading(true);
+        const allTopics = await getAllTopics();
+        
+        // Filter topics that are announcements
+        const announcementTopics = allTopics.filter(topic => 
+          topic.category_name === "Announcements" || 
+          topic.title.toLowerCase().includes("announcement") ||
+          topic.description.toLowerCase().includes("announcement")
+        );
+        
+        setAnnouncements(announcementTopics);
+      } catch (err) {
+        console.error("Error fetching announcements:", err);
+        setError("Failed to load announcements");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAnnouncements();
+  }, [getAllTopics]);
 
   const filteredAnnouncements = announcements.filter(announcement => {
     const matchesSearch = announcement.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         announcement.content.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = filterType === "all" || announcement.type === filterType;
+                         announcement.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFilter = filterType === "all" || announcement.category_name === filterType;
     return matchesSearch && matchesFilter;
   });
 
@@ -229,7 +174,7 @@ const Announcements = () => {
                     <div className="flex items-center space-x-2">
                       <Megaphone className="w-5 h-5 text-primary" />
                       <div>
-                        <p className="text-2xl font-bold">{announcements.length}</p>
+                        <p className="text-2xl font-bold">{loading ? "..." : announcements.length}</p>
                         <p className="text-sm text-muted-foreground">Total Announcements</p>
                       </div>
                     </div>
@@ -241,7 +186,7 @@ const Announcements = () => {
                       <Heart className="w-5 h-5 text-red-500" />
                       <div>
                         <p className="text-2xl font-bold">
-                          {announcements.reduce((sum, a) => sum + a.likes, 0)}
+                          {loading ? "..." : announcements.reduce((sum, a) => sum + (a.like_count || 0), 0)}
                         </p>
                         <p className="text-sm text-muted-foreground">Total Likes</p>
                       </div>
@@ -254,7 +199,7 @@ const Announcements = () => {
                       <Share2 className="w-5 h-5 text-blue-500" />
                       <div>
                         <p className="text-2xl font-bold">
-                          {announcements.reduce((sum, a) => sum + a.shares, 0)}
+                          {loading ? "..." : announcements.reduce((sum, a) => sum + (a.share_count || 0), 0)}
                         </p>
                         <p className="text-sm text-muted-foreground">Total Shares</p>
                       </div>
@@ -267,7 +212,7 @@ const Announcements = () => {
                       <Bookmark className="w-5 h-5 text-green-500" />
                       <div>
                         <p className="text-2xl font-bold">
-                          {announcements.reduce((sum, a) => sum + a.bookmarks, 0)}
+                          {loading ? "..." : announcements.reduce((sum, a) => sum + (a.bookmark_count || 0), 0)}
                         </p>
                         <p className="text-sm text-muted-foreground">Total Bookmarks</p>
                       </div>
@@ -275,6 +220,23 @@ const Announcements = () => {
                   </CardContent>
                 </Card>
               </div>
+
+              {/* Loading State */}
+              {loading && (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  <span className="ml-2 text-muted-foreground">Loading announcements...</span>
+                </div>
+              )}
+
+              {/* Error State */}
+              {error && (
+                <Alert className="mb-6 border-red-200 bg-red-50">
+                  <AlertDescription className="text-red-800">
+                    {error}
+                  </AlertDescription>
+                </Alert>
+              )}
 
               {/* Filters */}
               <div className="flex flex-col sm:flex-row gap-4">
@@ -302,18 +264,19 @@ const Announcements = () => {
 
               {/* Announcements List */}
               <div className="space-y-4">
-                {filteredAnnouncements.map((announcement) => (
+                {!loading && !error && filteredAnnouncements.map((announcement) => (
                   <Card key={announcement.id} className="hover:shadow-lg transition-shadow">
                     <CardHeader>
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center space-x-2 mb-2">
-                            {getPriorityBadge(announcement.priority)}
-                            {getTypeBadge(announcement.type)}
+                            <Badge variant="secondary" className="text-blue-600 border-blue-600">
+                              {announcement.category_name}
+                            </Badge>
                           </div>
                           <CardTitle className="text-xl">{announcement.title}</CardTitle>
                           <CardDescription className="mt-2">
-                            {announcement.content}
+                            {announcement.description}
                           </CardDescription>
                         </div>
                         <Button variant="ghost" size="sm">
@@ -325,13 +288,12 @@ const Announcements = () => {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
                           <Avatar className="w-8 h-8">
-                            <AvatarImage src={announcement.authorAvatar} alt={announcement.author} />
-                            <AvatarFallback>{announcement.author.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                            <AvatarFallback>{announcement.author_username?.charAt(0).toUpperCase() || 'A'}</AvatarFallback>
                           </Avatar>
                           <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                             <span className="flex items-center">
                               <User className="w-4 h-4 mr-1" />
-                              {announcement.author}
+                              {announcement.author_username}
                             </span>
                             <span className="flex items-center">
                               <Calendar className="w-4 h-4 mr-1" />
