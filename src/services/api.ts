@@ -541,7 +541,6 @@ export class ApiService {
             input: {
               replies: [
                 {
-                  id: replyData.id,
                   content: replyData.content,
                   author_id: replyData.author_id || "id_1754164424_145800",
                   topic_id: replyData.topic_id,
@@ -645,6 +644,67 @@ export class ApiService {
         return result.success || true;
       } catch (error) {
         console.error("Error deleting reply:", error);
+        throw error;
+      }
+    });
+  }
+
+  // Edit reply
+  static async editReply(replyData: {
+    id: string;
+    content: string;
+    author_id: string;
+    topic_id: string;
+    tutorial_id?: string | null;
+    parent_reply_id?: string | null;
+    like_count?: number;
+    is_accepted?: boolean;
+    is_helpful?: boolean;
+  }): Promise<any> {
+    return retryWithBackoff(async () => {
+      await waitForRateLimit();
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/editReply`, {
+          method: "POST",
+          headers: getHeaders(),
+          body: JSON.stringify({
+            input: {
+              replies: [replyData],
+            },
+          }),
+        });
+
+        if (response.status === 429) {
+          throw new Error(
+            `HTTP error! status: ${response.status} - Rate limited`
+          );
+        }
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log("EditReply API response:", result); // Debug log
+        
+        // Check if the response indicates an error
+        if (result.error || result.message) {
+          throw new Error(result.message || result.error || "Edit reply failed");
+        }
+        
+        // Handle different response formats for editReply
+        if (result.data) {
+          return result.data;
+        } else if (result.success !== undefined) {
+          // If it's a success response without data, return the result itself
+          return result;
+        } else {
+          // If no data property, return the entire result
+          return result;
+        }
+      } catch (error) {
+        console.error("Error editing reply:", error);
         throw error;
       }
     });
@@ -1037,6 +1097,7 @@ export const useApi = () => {
     createReply: ApiService.createReply,
     updateReply: ApiService.updateReply,
     deleteReply: ApiService.deleteReply,
+    editReply: ApiService.editReply,
     likeReply: ApiService.likeReply,
     acceptReply: ApiService.acceptReply,
     getAllTags: ApiService.getAllTags,
