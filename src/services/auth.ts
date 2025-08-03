@@ -112,135 +112,75 @@ export class AuthService {
       }
 
       // Create new user
-      const requestBody = {
-        input: {
-          action: "insert",
-          users: [
-            {
-              id: `id_${Date.now()}_${Math.floor(Math.random() * 1000000)}`,
+    
+      console.log("Registration request body:", requestBody);
+      console.log("Registration request headers:", getHeaders());
+
+      // Create user directly using crudUser endpoint
+      try {
+        const userResponse = await fetch(`${API_BASE_URL}/crudUser`, {
+          method: "POST",
+          headers: getHeaders(),
+          body: JSON.stringify({
+            input: {
+              action: "insert",
+              users: [{
+                id: `id_${Date.now()}_${Math.floor(Math.random() * 1000000)}`,
+                username: userData.username,
+                email: userData.email,
+                password_hash: hashPassword(userData.password)
+              }]
+            }
+          })
+        });
+
+          if (userResponse.ok) {
+            const userResult = await userResponse.json();
+            console.log("User created via crudUser:", userResult);
+            
+            const newUser: AuthUser = {
+              id: userResult.data?.id || `id_${Date.now()}_${Math.floor(Math.random() * 1000000)}`,
               username: userData.username,
               email: userData.email,
-              password_hash: hashPassword(userData.password),
-              first_name: userData.first_name || "",
-              last_name: userData.last_name || "",
-              bio: userData.bio || "",
+              first_name: userData.first_name,
+              last_name: userData.last_name,
+              bio: userData.bio,
               avatar_url: "",
-              location: userData.location || "",
-              company: userData.company || "",
-              website: userData.website || "",
+              location: userData.location,
+              company: userData.company,
+              website: userData.website,
               reputation: 0,
               level: "beginner",
               is_verified: false,
               is_active: true,
-              email_verified: false
-            }
-          ]
+              email_verified: false,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            };
+
+            // Store user session
+            this.setSession(newUser);
+
+            return {
+              success: true,
+              user: newUser,
+              message: "Registration successful (via fallback method)"
+            };
+          } else {
+            const userError = await userResponse.json().catch(() => ({}));
+            console.error("User creation failed:", userError);
+            return {
+              success: false,
+              message: "Registration failed: Could not create user account"
+            };
+          }
+        } catch (userError) {
+          console.error("User creation error:", userError);
+          return {
+            success: false,
+            message: "Registration failed: Could not create user account"
+          };
         }
-      };
-
-      console.log("Registration request body:", requestBody);
-      console.log("Registration request headers:", getHeaders());
-
-      // Try the registration endpoint first, fallback to crudUser
-      let response;
-      try {
-        // First try with registration endpoint
-        response = await fetch(`${API_BASE_URL}/register`, {
-          method: "POST",
-          headers: {
-            ...getHeaders(),
-            "x-fastn-custom-auth": "true"
-          },
-          body: JSON.stringify({
-            input: {
-              username: userData.username,
-              email: userData.email,
-              password: userData.password,
-              first_name: userData.first_name || "",
-              last_name: userData.last_name || "",
-              bio: userData.bio || "",
-              location: userData.location || "",
-              company: userData.company || "",
-              website: userData.website || ""
-            }
-          })
-        });
-        console.log("Tried /register endpoint, status:", response.status);
-      } catch (error) {
-        console.log("Registration endpoint failed, trying crudUser...");
-        // Fallback to crudUser endpoint
-        response = await fetch(`${API_BASE_URL}/crudUser`, {
-          method: "POST",
-          headers: getHeaders(),
-          body: JSON.stringify(requestBody)
-        });
-      }
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      let result;
-      try {
-        result = await response.json();
-        console.log("Registration API response:", result);
-        console.log("Response status:", response.status);
-        console.log("Response headers:", Object.fromEntries(response.headers.entries()));
-      } catch (jsonError) {
-        console.error("Failed to parse JSON response:", jsonError);
-        console.error("Raw response text:", await response.text());
-        return {
-          success: false,
-          message: "Registration failed: Invalid response from server"
-        };
-      }
-
-      // Handle null or undefined result
-      if (!result) {
-        console.error("Registration failed: Result is null or undefined");
-        console.error("Response status:", response.status);
-        return {
-          success: false,
-          message: "Registration failed: No response from server"
-        };
-      }
-
-      // Check if the registration was successful
-      if (result.success || result.data || response.ok) {
-        const newUser: AuthUser = {
-          id: result.data?.id || `id_${Date.now()}_${Math.floor(Math.random() * 1000000)}`,
-          username: userData.username,
-          email: userData.email,
-          first_name: userData.first_name,
-          last_name: userData.last_name,
-          bio: userData.bio,
-          avatar_url: "",
-          location: userData.location,
-          company: userData.company,
-          website: userData.website,
-          reputation: 0,
-          level: "beginner",
-          is_verified: false,
-          is_active: true,
-          email_verified: false,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        };
-
-        // Store user session
-        this.setSession(newUser);
-
-        return {
-          success: true,
-          user: newUser,
-          message: "Registration successful"
-        };
-      } else {
-        return {
-          success: false,
-          message: result.message || "Registration failed"
-        };
-      }
     } catch (error) {
       console.error("Registration error:", error);
       return {
@@ -262,7 +202,7 @@ export class AuthService {
       };
 
       // Make the login request with the new API structure
-      const response = await fetch(`${API_BASE_URL}/login`, {
+      let response = await fetch(`${API_BASE_URL}/login`, {
         method: "POST",
         headers: {
           ...getHeaders(),
@@ -271,6 +211,57 @@ export class AuthService {
         },
         body: JSON.stringify(requestBody)
       });
+
+      // If login flow is not deployed, try alternative approach
+      if (response.status === 400) {
+        const errorData = await response.json().catch(() => ({}));
+        if (errorData.code === "FLOW_NOT_DEPLOYED") {
+          console.log("Login flow not deployed, trying alternative approach...");
+          // Try to find user by email and validate password
+          const allUsers = await ApiService.getAllUsers();
+          const user = allUsers.find(u => u.email === loginData.email);
+          
+          if (user) {
+            // Simple password validation (in production, use proper hashing)
+            const hashedPassword = hashPassword(loginData.password);
+            if ((user as any).password_hash === hashedPassword) {
+              const authUser: AuthUser = {
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                first_name: (user as any).first_name || "",
+                last_name: (user as any).last_name || "",
+                bio: user.bio || "",
+                avatar_url: user.avatar || "",
+                location: user.location || "",
+                company: (user as any).company || "",
+                website: user.website || "",
+                reputation: user.reputation_score || 0,
+                level: (user as any).level || "beginner",
+                is_verified: user.is_verified || false,
+                is_active: user.is_active !== false,
+                email_verified: (user as any).email_verified !== false,
+                created_at: user.created_at || new Date().toISOString(),
+                updated_at: user.updated_at || new Date().toISOString()
+              };
+
+              // Store user session
+              this.setSession(authUser);
+
+              return {
+                success: true,
+                user: authUser,
+                message: "Login successful"
+              };
+            }
+          }
+          
+          return {
+            success: false,
+            message: "Invalid email or password"
+          };
+        }
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));

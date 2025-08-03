@@ -1,160 +1,75 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, HelpCircle, Heart, Share2, Bookmark, MessageSquare, MoreHorizontal, Calendar, User, CheckCircle, Clock, Menu } from "lucide-react";
+import { ArrowLeft, HelpCircle, Heart, Share2, Bookmark, MessageSquare, MoreHorizontal, Calendar, User, CheckCircle, Clock, Menu, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/community/Header";
 import Sidebar from "@/components/community/Sidebar";
+import { ApiService, Topic } from "@/services/api";
 
 const Questions = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterCategory, setFilterCategory] = useState("all");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [questions, setQuestions] = useState<Topic[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [categories, setCategories] = useState<string[]>([]);
 
-  const questions = [
-    {
-      id: 1,
-      title: "How to implement authentication in fastn?",
-      content: "I'm building a web application with fastn and need to implement user authentication. What's the best approach for handling login, registration, and session management?",
-      author: "Sarah Chen",
-      authorAvatar: "/avatars/sarah.jpg",
-      status: "answered",
-      category: "Authentication",
-      likes: 45,
-      shares: 12,
-      comments: 8,
-      bookmarks: 23,
-      isLiked: false,
-      isBookmarked: true,
-      publishedAt: "2024-01-15",
-      answers: 3,
-      views: 234
-    },
-    {
-      id: 2,
-      title: "Database connection issues in production",
-      content: "My fastn app works fine locally but I'm having trouble connecting to the database in production. The connection times out after a few seconds.",
-      author: "Alex Rodriguez",
-      authorAvatar: "/avatars/alex.jpg",
-      status: "unanswered",
-      category: "Database",
-      likes: 23,
-      shares: 5,
-      comments: 12,
-      bookmarks: 8,
-      isLiked: true,
-      isBookmarked: false,
-      publishedAt: "2024-01-14",
-      answers: 0,
-      views: 156
-    },
-    {
-      id: 3,
-      title: "Best practices for API design with fastn",
-      content: "I'm designing a REST API using fastn. What are the best practices for structuring endpoints, handling errors, and implementing pagination?",
-      author: "Michael Park",
-      authorAvatar: "/avatars/michael.jpg",
-      status: "answered",
-      category: "API Development",
-      likes: 67,
-      shares: 18,
-      comments: 15,
-      bookmarks: 34,
-      isLiked: false,
-      isBookmarked: false,
-      publishedAt: "2024-01-12",
-      answers: 5,
-      views: 445
-    },
-    {
-      id: 4,
-      title: "Deployment to AWS with fastn",
-      content: "What's the recommended way to deploy a fastn application to AWS? I'm looking for a step-by-step guide.",
-      author: "Emma Thompson",
-      authorAvatar: "/avatars/emma.jpg",
-      status: "unanswered",
-      category: "Deployment",
-      likes: 34,
-      shares: 9,
-      comments: 6,
-      bookmarks: 19,
-      isLiked: false,
-      isBookmarked: true,
-      publishedAt: "2024-01-10",
-      answers: 0,
-      views: 189
-    },
-    {
-      id: 5,
-      title: "Performance optimization techniques",
-      content: "My fastn application is running slowly. What are some effective techniques for optimizing performance?",
-      author: "David Kim",
-      authorAvatar: "/avatars/david.jpg",
-      status: "answered",
-      category: "Performance",
-      likes: 89,
-      shares: 25,
-      comments: 22,
-      bookmarks: 45,
-      isLiked: true,
-      isBookmarked: false,
-      publishedAt: "2024-01-08",
-      answers: 7,
-      views: 678
-    },
-    {
-      id: 6,
-      title: "Testing strategies for fastn applications",
-      content: "What testing frameworks and strategies work best with fastn? I want to implement comprehensive testing for my application.",
-      author: "Lisa Wang",
-      authorAvatar: "/avatars/lisa.jpg",
-      status: "unanswered",
-      category: "Testing",
-      likes: 28,
-      shares: 7,
-      comments: 4,
-      bookmarks: 12,
-      isLiked: false,
-      isBookmarked: false,
-      publishedAt: "2024-01-05",
-      answers: 0,
-      views: 123
-    }
-  ];
+  // Fetch questions from API
+  useEffect(() => {
+    const fetchQuestions = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const topics = await ApiService.getAllTopics();
+        setQuestions(topics);
+        
+        // Extract unique categories from topics
+        const uniqueCategories = [...new Set(topics.map(topic => topic.category_name))];
+        setCategories(uniqueCategories);
+      } catch (err) {
+        console.error("Error fetching questions:", err);
+        setError("Failed to load questions. Please try again later.");
+        toast({
+          title: "Error",
+          description: "Failed to load questions. Please try again later.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const categories = [
-    "Authentication",
-    "Database",
-    "API Development",
-    "Deployment",
-    "Performance",
-    "Testing",
-    "UI/UX",
-    "Security",
-    "Best Practices"
-  ];
+    fetchQuestions();
+  }, [toast]);
 
   const filteredQuestions = questions.filter(question => {
     const matchesSearch = question.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         question.content.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = filterStatus === "all" || question.status === filterStatus;
-    const matchesCategory = filterCategory === "all" || question.category === filterCategory;
+                         (question.description && question.description.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesStatus = filterStatus === "all" || 
+                         (filterStatus === "answered" && question.reply_count > 0) ||
+                         (filterStatus === "unanswered" && question.reply_count === 0);
+    const matchesCategory = filterCategory === "all" || question.category_name === filterCategory;
     return matchesSearch && matchesStatus && matchesCategory;
   });
 
-  const handleLike = (id: number) => {
+  const handleLike = (id: string) => {
     // Handle like functionality
     console.log("Liked question:", id);
     // You can implement actual like functionality here
   };
 
-  const handleShare = (id: number) => {
+  const handleShare = (id: string) => {
     // Handle share functionality
     console.log("Sharing question:", id);
     // You can implement actual share functionality here
@@ -167,17 +82,21 @@ const Questions = () => {
     } else {
       // Fallback: copy to clipboard
       navigator.clipboard.writeText(window.location.href);
-      console.log("Link copied to clipboard");
+      toast({
+        title: "Link copied",
+        description: "Question link copied to clipboard",
+      });
     }
   };
 
-  const handleBookmark = (id: number) => {
+  const handleBookmark = (id: string) => {
     // Handle bookmark functionality
     console.log("Bookmarked question:", id);
     // You can implement actual bookmark functionality here
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (replyCount: number) => {
+    const status = replyCount > 0 ? "answered" : "unanswered";
     const colors = {
       answered: "bg-green-100 text-green-800",
       unanswered: "bg-yellow-100 text-yellow-800"
@@ -188,6 +107,68 @@ const Questions = () => {
       </Badge>
     );
   };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="flex">
+          <Sidebar />
+          <div className="flex-1 md:ml-64">
+            <div className="p-6 border-b border-border bg-gradient-subtle">
+              <div className="max-w-4xl">
+                <h1 className="text-3xl font-bold text-foreground mb-2">Questions</h1>
+                <p className="text-muted-foreground">Get help from the community</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-center h-64">
+              <div className="flex items-center space-x-2">
+                <Loader2 className="w-6 h-6 animate-spin" />
+                <span>Loading questions...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="flex">
+          <Sidebar />
+          <div className="flex-1 md:ml-64">
+            <div className="p-6 border-b border-border bg-gradient-subtle">
+              <div className="max-w-4xl">
+                <h1 className="text-3xl font-bold text-foreground mb-2">Questions</h1>
+                <p className="text-muted-foreground">Get help from the community</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <HelpCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Error loading questions</h3>
+                <p className="text-muted-foreground mb-4">{error}</p>
+                <Button onClick={() => window.location.reload()}>
+                  Try Again
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -250,7 +231,7 @@ const Questions = () => {
                       <CheckCircle className="w-5 h-5 text-green-500" />
                       <div>
                         <p className="text-2xl font-bold">
-                          {questions.filter(q => q.status === "answered").length}
+                          {questions.filter(q => q.reply_count > 0).length}
                         </p>
                         <p className="text-sm text-muted-foreground">Answered</p>
                       </div>
@@ -263,7 +244,7 @@ const Questions = () => {
                       <Clock className="w-5 h-5 text-yellow-500" />
                       <div>
                         <p className="text-2xl font-bold">
-                          {questions.filter(q => q.status === "unanswered").length}
+                          {questions.filter(q => q.reply_count === 0).length}
                         </p>
                         <p className="text-sm text-muted-foreground">Unanswered</p>
                       </div>
@@ -276,7 +257,7 @@ const Questions = () => {
                       <MessageSquare className="w-5 h-5 text-blue-500" />
                       <div>
                         <p className="text-2xl font-bold">
-                          {questions.reduce((sum, q) => sum + q.answers, 0)}
+                          {questions.reduce((sum, q) => sum + q.reply_count, 0)}
                         </p>
                         <p className="text-sm text-muted-foreground">Total Answers</p>
                       </div>
@@ -328,12 +309,12 @@ const Questions = () => {
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center space-x-2 mb-2">
-                            {getStatusBadge(question.status)}
-                            <Badge variant="outline">{question.category}</Badge>
+                            {getStatusBadge(question.reply_count)}
+                            <Badge variant="outline">{question.category_name}</Badge>
                           </div>
                           <CardTitle className="text-xl">{question.title}</CardTitle>
                           <CardDescription className="mt-2">
-                            {question.content}
+                            {question.description}
                           </CardDescription>
                         </div>
                         <Button variant="ghost" size="sm">
@@ -345,20 +326,20 @@ const Questions = () => {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
                           <Avatar className="w-8 h-8">
-                            <AvatarImage src={question.authorAvatar} alt={question.author} />
-                            <AvatarFallback>{question.author.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                            <AvatarImage src={question.author_avatar} alt={question.author_username} />
+                            <AvatarFallback>{question.author_username.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                           </Avatar>
                           <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                             <span className="flex items-center">
                               <User className="w-4 h-4 mr-1" />
-                              {question.author}
+                              {question.author_username}
                             </span>
                             <span className="flex items-center">
                               <Calendar className="w-4 h-4 mr-1" />
-                              {question.publishedAt}
+                              {formatDate(question.created_at)}
                             </span>
-                            <span>{question.views} views</span>
-                            <span>{question.answers} answers</span>
+                            <span>{question.view_count} views</span>
+                            <span>{question.reply_count} answers</span>
                           </div>
                         </div>
                         
@@ -366,32 +347,43 @@ const Questions = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleLike(question.id)}
-                            className={question.isLiked ? "text-red-500" : ""}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleLike(question.id);
+                            }}
                           >
-                            <Heart className={`w-4 h-4 mr-1 ${question.isLiked ? "fill-current" : ""}`} />
-                            {question.likes}
+                            <Heart className="w-4 h-4 mr-1" />
+                            {question.like_count}
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleShare(question.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleShare(question.id);
+                            }}
                           >
                             <Share2 className="w-4 h-4 mr-1" />
-                            {question.shares}
+                            {question.share_count}
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleBookmark(question.id)}
-                            className={question.isBookmarked ? "text-blue-500" : ""}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleBookmark(question.id);
+                            }}
                           >
-                            <Bookmark className={`w-4 h-4 mr-1 ${question.isBookmarked ? "fill-current" : ""}`} />
-                            {question.bookmarks}
+                            <Bookmark className="w-4 h-4 mr-1" />
+                            {question.bookmark_count}
                           </Button>
-                          <Button variant="ghost" size="sm">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <MessageSquare className="w-4 h-4 mr-1" />
-                            {question.comments}
+                            {question.reply_count}
                           </Button>
                         </div>
                       </div>

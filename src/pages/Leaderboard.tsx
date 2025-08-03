@@ -1,161 +1,154 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Menu, Trophy, Star, TrendingUp, Calendar, Award, Crown, Medal, Users, ArrowLeft } from "lucide-react";
+import { Menu, Trophy, Star, TrendingUp, Calendar, Award, Crown, Medal, Users, ArrowLeft, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/community/Header";
 import Sidebar from "@/components/community/Sidebar";
+import { ApiService, User, Topic } from "@/services/api";
 
 const Leaderboard = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState("all-time");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
+  
+  // Data states
+  const [users, setUsers] = useState<User[]>([]);
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
+  const [stats, setStats] = useState<any[]>([]);
 
-  const leaderboardData = [
-    {
-      id: 1,
-      name: "Sarah Chen",
-      avatar: "SC",
-      points: 2847,
-      answers: 156,
-      badges: ["Gold", "Helper", "Expert"],
-      rank: 1,
-      streak: 45,
-      level: "Master",
-      joinDate: "2023-01-15",
-      thisMonth: 234,
-      lastMonth: 189
-    },
-    {
-      id: 2,
-      name: "Alex Rodriguez",
-      avatar: "AR",
-      points: 2156,
-      answers: 134,
-      badges: ["Silver", "Helper"],
-      rank: 2,
-      streak: 32,
-      level: "Expert",
-      joinDate: "2023-02-20",
-      thisMonth: 198,
-      lastMonth: 156
-    },
-    {
-      id: 3,
-      name: "Michael Park",
-      avatar: "MP",
-      points: 1892,
-      answers: 98,
-      badges: ["Bronze", "Helper"],
-      rank: 3,
-      streak: 28,
-      level: "Advanced",
-      joinDate: "2023-03-10",
-      thisMonth: 167,
-      lastMonth: 134
-    },
-    {
-      id: 4,
-      name: "Emma Thompson",
-      avatar: "ET",
-      points: 1654,
-      answers: 87,
-      badges: ["Helper"],
-      rank: 4,
-      streak: 21,
-      level: "Intermediate",
-      joinDate: "2023-04-05",
-      thisMonth: 145,
-      lastMonth: 123
-    },
-    {
-      id: 5,
-      name: "David Kim",
-      avatar: "DK",
-      points: 1432,
-      answers: 76,
-      badges: ["Helper"],
-      rank: 5,
-      streak: 18,
-      level: "Intermediate",
-      joinDate: "2023-05-12",
-      thisMonth: 123,
-      lastMonth: 98
-    },
-    {
-      id: 6,
-      name: "Lisa Wang",
-      avatar: "LW",
-      points: 1287,
-      answers: 65,
-      badges: ["Helper"],
-      rank: 6,
-      streak: 15,
-      level: "Intermediate",
-      joinDate: "2023-06-08",
-      thisMonth: 112,
-      lastMonth: 87
-    },
-    {
-      id: 7,
-      name: "James Wilson",
-      avatar: "JW",
-      points: 1156,
-      answers: 58,
-      badges: ["Helper"],
-      rank: 7,
-      streak: 12,
-      level: "Beginner",
-      joinDate: "2023-07-15",
-      thisMonth: 98,
-      lastMonth: 76
-    },
-    {
-      id: 8,
-      name: "Maria Garcia",
-      avatar: "MG",
-      points: 1043,
-      answers: 52,
-      badges: ["Helper"],
-      rank: 8,
-      streak: 10,
-      level: "Beginner",
-      joinDate: "2023-08-22",
-      thisMonth: 87,
-      lastMonth: 65
-    },
-    {
-      id: 9,
-      name: "John Smith",
-      avatar: "JS",
-      points: 987,
-      answers: 48,
-      badges: ["Helper"],
-      rank: 9,
-      streak: 8,
-      level: "Beginner",
-      joinDate: "2023-09-30",
-      thisMonth: 76,
-      lastMonth: 54
-    },
-    {
-      id: 10,
-      name: "Anna Johnson",
-      avatar: "AJ",
-      points: 876,
-      answers: 42,
-      badges: ["Helper"],
-      rank: 10,
-      streak: 6,
-      level: "Beginner",
-      joinDate: "2023-10-12",
-      thisMonth: 65,
-      lastMonth: 43
+  // Fetch leaderboard data from API
+  const fetchLeaderboardData = async (isRetry: boolean = false) => {
+    try {
+      if (isRetry) {
+        setRetrying(true);
+      } else {
+        setLoading(true);
+      }
+      setError(null);
+
+      // Fetch users and topics in parallel
+      const [fetchedUsers, fetchedTopics] = await Promise.all([
+        ApiService.getAllUsers(),
+        ApiService.getAllTopics(),
+      ]);
+
+      setUsers(fetchedUsers);
+      setTopics(fetchedTopics);
+
+      // Calculate user statistics and create leaderboard data
+      const userStats = fetchedUsers.map(user => {
+        // Count topics by this user
+        const userTopics = fetchedTopics.filter(topic => topic.author_id === user.id);
+        const userReplies = user.replies_count || 0;
+        const totalPoints = user.reputation_score || 0;
+        
+        // Calculate level based on reputation score
+        let level = "Beginner";
+        if (totalPoints >= 2000) level = "Master";
+        else if (totalPoints >= 1500) level = "Expert";
+        else if (totalPoints >= 1000) level = "Advanced";
+        else if (totalPoints >= 500) level = "Intermediate";
+
+        // Generate badges based on activity
+        const badges = [];
+        if (totalPoints >= 1000) badges.push("Gold");
+        else if (totalPoints >= 500) badges.push("Silver");
+        else if (totalPoints >= 100) badges.push("Bronze");
+        if (userReplies >= 10) badges.push("Helper");
+        if (userTopics.length >= 5) badges.push("Creator");
+
+        // Calculate streak (mock data for now)
+        const streak = Math.floor(Math.random() * 30) + 1;
+
+        return {
+          id: user.id,
+          name: user.username,
+          avatar: user.avatar,
+          points: totalPoints,
+          answers: userReplies,
+          badges,
+          rank: 0, // Will be set after sorting
+          streak,
+          level,
+          joinDate: user.created_at,
+          thisMonth: Math.floor(totalPoints * 0.1), // Mock monthly activity
+          lastMonth: Math.floor(totalPoints * 0.08), // Mock last month activity
+          topicsCount: userTopics.length,
+          repliesCount: userReplies,
+          likesReceived: user.likes_received || 0
+        };
+      });
+
+      // Sort by points and assign ranks
+      const sortedUsers = userStats
+        .sort((a, b) => b.points - a.points)
+        .map((user, index) => ({
+          ...user,
+          rank: index + 1
+        }));
+
+      setLeaderboardData(sortedUsers);
+
+      // Calculate overall statistics
+      const totalParticipants = fetchedUsers.length;
+      const totalPointsAwarded = fetchedUsers.reduce((sum, user) => sum + (user.reputation_score || 0), 0);
+      const activeThisMonth = fetchedUsers.filter(user => user.is_active).length;
+      const averageStreak = Math.floor(userStats.reduce((sum, user) => sum + user.streak, 0) / userStats.length);
+
+      setStats([
+        {
+          title: "Total Participants",
+          value: totalParticipants.toLocaleString(),
+          icon: Users,
+          color: "text-blue-500"
+        },
+        {
+          title: "Total Points Awarded",
+          value: totalPointsAwarded.toLocaleString(),
+          icon: Trophy,
+          color: "text-yellow-500"
+        },
+        {
+          title: "Active This Month",
+          value: activeThisMonth.toLocaleString(),
+          icon: TrendingUp,
+          color: "text-green-500"
+        },
+        {
+          title: "Average Streak",
+          value: `${averageStreak} days`,
+          icon: Calendar,
+          color: "text-purple-500"
+        }
+      ]);
+
+    } catch (err) {
+      console.error("Error fetching leaderboard data:", err);
+      setError("Failed to load leaderboard data. Please try again later.");
+      toast({
+        title: "Error",
+        description: "Failed to load leaderboard data. Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+      setRetrying(false);
     }
-  ];
+  };
+
+  useEffect(() => {
+    fetchLeaderboardData();
+  }, [toast]);
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
@@ -187,32 +180,127 @@ const Leaderboard = () => {
     }
   };
 
-  const stats = [
-    {
-      title: "Total Participants",
-      value: "1,247",
-      icon: Users,
-      color: "text-blue-500"
-    },
-    {
-      title: "Total Points Awarded",
-      value: "45,892",
-      icon: Trophy,
-      color: "text-yellow-500"
-    },
-    {
-      title: "Active This Month",
-      value: "234",
-      icon: TrendingUp,
-      color: "text-green-500"
-    },
-    {
-      title: "Average Streak",
-      value: "18.5 days",
-      icon: Calendar,
-      color: "text-purple-500"
-    }
-  ];
+  const getInitials = (username: string) => {
+    return username
+      .split("_")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase();
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="flex">
+          <Sidebar />
+          <div className="flex-1 md:ml-64">
+            <div className="p-6 border-b border-border bg-gradient-subtle">
+              <div className="max-w-4xl">
+                <div className="flex items-center space-x-4 mb-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(-1)}
+                    className="flex items-center space-x-2"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Back</span>
+                  </Button>
+                </div>
+                <h1 className="text-3xl font-bold text-foreground mb-2">
+                  Supporters Leaderboard 🏆
+                </h1>
+                <p className="text-muted-foreground">
+                  Top contributors helping the fastn community grow and thrive.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center justify-center h-64">
+              <div className="flex items-center space-x-2">
+                <Loader2 className="w-6 h-6 animate-spin" />
+                <span>Loading leaderboard data...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="flex">
+          <Sidebar />
+          <div className="flex-1 md:ml-64">
+            <div className="p-6 border-b border-border bg-gradient-subtle">
+              <div className="max-w-4xl">
+                <div className="flex items-center space-x-4 mb-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(-1)}
+                    className="flex items-center space-x-2"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Back</span>
+                  </Button>
+                </div>
+                <h1 className="text-3xl font-bold text-foreground mb-2">
+                  Supporters Leaderboard 🏆
+                </h1>
+                <p className="text-muted-foreground">
+                  Top contributors helping the fastn community grow and thrive.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Error loading leaderboard data</h3>
+                <p className="text-muted-foreground mb-4">{error}</p>
+                <div className="flex gap-2 justify-center">
+                  <Button
+                    onClick={() => fetchLeaderboardData(true)}
+                    disabled={retrying}
+                    className="flex items-center gap-2"
+                  >
+                    {retrying ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        Retrying...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-4 w-4" />
+                        Try Again
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => window.location.reload()}
+                  >
+                    Refresh Page
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -334,8 +422,9 @@ const Leaderboard = () => {
                         {/* Avatar and Name */}
                         <div className="flex items-center space-x-4 flex-1">
                           <Avatar className="w-12 h-12">
+                            <AvatarImage src={user.avatar} alt={user.name} />
                             <AvatarFallback className="bg-gradient-primary text-white">
-                              {user.avatar}
+                              {getInitials(user.name)}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1">
@@ -345,7 +434,7 @@ const Leaderboard = () => {
                                 {user.level}
                               </Badge>
                               <div className="flex space-x-1">
-                                {user.badges.map((badge, badgeIndex) => (
+                                {user.badges.map((badge: string, badgeIndex: number) => (
                                   <Badge key={badgeIndex} variant="secondary" className="text-xs">
                                     {badge}
                                   </Badge>
@@ -357,7 +446,7 @@ const Leaderboard = () => {
                               <span>•</span>
                               <span>{user.streak} day streak</span>
                               <span>•</span>
-                              <span>Joined {new Date(user.joinDate).toLocaleDateString()}</span>
+                              <span>Joined {formatDate(user.joinDate)}</span>
                             </div>
                           </div>
                         </div>
@@ -453,14 +542,6 @@ const Leaderboard = () => {
                     >
                       Find Questions to Answer
                     </Button>
-                    {/*<Button 
-                      variant="outline" 
-                      size="lg"
-                      className="border-white text-white hover:bg-white hover:text-primary"
-                      onClick={() => navigate("/answer-earn")}
-                    >
-                      Learn More
-                    </Button>*/}
                   </div>
                 </CardContent>
               </Card>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,7 @@ import {
   HelpCircle,
   Zap,
   Megaphone,
+  X,
 } from "lucide-react";
 import { ApiService, Topic, Category } from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -47,6 +48,7 @@ interface TopicListProps {
 
 const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated } = useAuth();
   const [topics, setTopics] = useState<Topic[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -55,9 +57,19 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
   const [retrying, setRetrying] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("all");
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 10;
+
+  // Read tag from URL parameters on component mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const tagParam = urlParams.get('tag');
+    if (tagParam) {
+      setSelectedTag(decodeURIComponent(tagParam));
+    }
+  }, [location.search]);
 
   // Fetch topics and categories from API
   const fetchData = async (isRetry: boolean = false) => {
@@ -136,20 +148,30 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
     fetchData();
   }, []);
 
-  // Filter topics based on search and filter
+  // Filter topics based on search, filter, and tag
   const filteredTopics = topics.filter((topic) => {
     const matchesSearch =
       topic.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       topic.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter =
       selectedFilter === "all" || topic.category_name === selectedFilter;
-    return matchesSearch && matchesFilter;
+    
+    // Add tag filtering
+    const matchesTag = !selectedTag || (topic.tags && Array.isArray(topic.tags) && topic.tags.includes(selectedTag));
+    
+    return matchesSearch && matchesFilter && matchesTag;
   });
 
   // Paginate topics
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const paginatedTopics = filteredTopics.slice(startIndex, endIndex);
+
+  // Handle tag filter removal
+  const clearTagFilter = () => {
+    setSelectedTag(null);
+    navigate('/', { replace: true });
+  };
 
   // Handle topic interactions
   const handleLike = async (topicId: string) => {
@@ -248,20 +270,29 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
     return categoryName;
   };
 
-  const parseTags = (tagsString?: string): string[] => {
-    if (!tagsString) return [];
-
-    try {
-      // Handle different tag formats: "{tag1,tag2}" or "tag1,tag2" or "tag1"
-      const cleanTags = tagsString.replace(/[{}]/g, ""); // Remove curly braces
-      return cleanTags
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter((tag) => tag.length > 0);
-    } catch (error) {
-      console.error("Error parsing tags:", error);
-      return [];
+  const parseTags = (tags?: string[] | string): string[] => {
+    if (!tags) return [];
+    
+    // If tags is already an array, return it
+    if (Array.isArray(tags)) {
+      return tags.filter(tag => tag && tag.length > 0);
     }
+    
+    // If tags is a string, parse it
+    if (typeof tags === 'string') {
+      try {
+        const cleanTags = tags.replace(/[{}]/g, "");
+        return cleanTags
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter((tag) => tag.length > 0);
+      } catch (error) {
+        console.error("Error parsing tags:", error);
+        return [];
+      }
+    }
+    
+    return [];
   };
 
   const getInitials = (username: string) => {
@@ -428,6 +459,31 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
           </div>
         </div>
 
+        {/* Active Filters */}
+        {(selectedTag || selectedFilter !== "all") && (
+          <div className="flex items-center gap-2 mb-6">
+            <span className="text-sm text-muted-foreground">Active filters:</span>
+            {selectedTag && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                Tag: {selectedTag}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto p-0 ml-1"
+                  onClick={clearTagFilter}
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+              </Badge>
+            )}
+            {selectedFilter !== "all" && (
+              <Badge variant="secondary">
+                Category: {selectedFilter}
+              </Badge>
+            )}
+          </div>
+        )}
+
         {/* Filter Buttons */}
         <div className="flex gap-2 mb-6 overflow-x-auto">
           <Button
@@ -519,7 +575,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
             {paginatedTopics.length === 0 ? (
               <div className="p-8 text-center">
                 <p className="text-muted-foreground">
-                  {searchQuery || selectedFilter !== "all"
+                  {searchQuery || selectedFilter !== "all" || selectedTag
                     ? "No topics match your search criteria."
                     : "No topics found."}
                 </p>
@@ -542,7 +598,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
 
                         {/* Topic Details */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex items-center space-x-2 mb-1">
                             <h3 className="font-semibold text-foreground truncate">
                               {topic.title}
                             </h3>
@@ -570,7 +626,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                             {topic.description}
                           </p>
 
-                          <div className="flex items-center gap-4 text-xs text-gray-500">
+                          <div className="flex items-center space-x-4 text-xs text-gray-500">
                             <span className="font-medium">
                               {topic.author_username}
                             </span>
@@ -592,15 +648,17 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
 
                           {/* Tags */}
                           <div className="flex gap-1 mt-2">
-                            {topic.tags &&
-                              parseTags(topic.tags).map((tag, index) => (
+                            {topic.tags && (() => {
+                              const tags = parseTags(topic.tags);
+                              return tags.map((tag, index) => (
                                 <span
                                   key={index}
                                   className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full"
                                 >
                                   {tag}
                                 </span>
-                              ))}
+                              ));
+                            })()}
                           </div>
                         </div>
                       </div>

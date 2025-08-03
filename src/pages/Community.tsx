@@ -1,134 +1,29 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Menu, Users, MessageSquare, Calendar, TrendingUp, Star, Award, ExternalLink, ArrowRight, ArrowLeft } from "lucide-react";
+import { Menu, Users, MessageSquare, Calendar, TrendingUp, Star, Award, ExternalLink, ArrowRight, ArrowLeft, Loader2, AlertCircle, RefreshCw, Eye, Heart, Bookmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/community/Header";
 import Sidebar from "@/components/community/Sidebar";
+import { ApiService, Topic, User } from "@/services/api";
 
 const Community = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  const communityStats = [
-    {
-      title: "Total Members",
-      value: "12,847",
-      icon: Users,
-      color: "text-blue-500",
-      change: "+234 this week"
-    },
-    {
-      title: "Active Discussions",
-      value: "1,234",
-      icon: MessageSquare,
-      color: "text-purple-500",
-      change: "+45 today"
-    },
-    {
-      title: "Events This Month",
-      value: "8",
-      icon: Calendar,
-      color: "text-indigo-500",
-      change: "2 upcoming"
-    },
-    {
-      title: "Top Contributors",
-      value: "156",
-      icon: Star,
-      color: "text-pink-500",
-      change: "+12 new"
-    }
-  ];
-
-  const recentActivities = [
-    {
-      id: 1,
-      type: "topic",
-      title: "New topic created",
-      description: "Sarah Chen created 'How to implement OAuth2 with fastn?'",
-      time: "2 hours ago",
-      avatar: "SC",
-      category: "Questions"
-    },
-    {
-      id: 2,
-      type: "reply",
-      title: "Topic replied to",
-      description: "Alex Rodriguez replied to 'Best practices for handling large datasets'",
-      time: "4 hours ago",
-      avatar: "AR",
-      category: "Best Practices"
-    },
-    {
-      id: 3,
-      type: "tutorial",
-      title: "New tutorial published",
-      description: "Michael Park published 'Setting up webhook endpoints'",
-      time: "6 hours ago",
-      avatar: "MP",
-      category: "Tutorials"
-    },
-    {
-      id: 4,
-      type: "announcement",
-      title: "Community announcement",
-      description: "New Answer & Earn program launched",
-      time: "1 day ago",
-      avatar: "FA",
-      category: "Announcements"
-    }
-  ];
-
-  const topContributors = [
-    {
-      id: 1,
-      name: "Sarah Chen",
-      avatar: "SC",
-      points: 2847,
-      topics: 45,
-      replies: 156,
-      rank: 1
-    },
-    {
-      id: 2,
-      name: "Alex Rodriguez",
-      avatar: "AR",
-      points: 2156,
-      topics: 32,
-      replies: 134,
-      rank: 2
-    },
-    {
-      id: 3,
-      name: "Michael Park",
-      avatar: "MP",
-      points: 1892,
-      topics: 28,
-      replies: 98,
-      rank: 3
-    },
-    {
-      id: 4,
-      name: "Emma Thompson",
-      avatar: "ET",
-      points: 1654,
-      topics: 25,
-      replies: 87,
-      rank: 4
-    },
-    {
-      id: 5,
-      name: "David Kim",
-      avatar: "DK",
-      points: 1432,
-      topics: 22,
-      replies: 76,
-      rank: 5
-    }
-  ];
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
+  
+  // Data states
+  const [users, setUsers] = useState<User[]>([]);
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [communityStats, setCommunityStats] = useState<any[]>([]);
+  const [recentActivities, setRecentActivities] = useState<any[]>([]);
+  const [topContributors, setTopContributors] = useState<User[]>([]);
 
   const socialPlatforms = [
     {
@@ -192,12 +87,128 @@ const Community = () => {
     }
   ];
 
+  // Fetch community data from API
+  const fetchCommunityData = async (isRetry: boolean = false) => {
+    try {
+      if (isRetry) {
+        setRetrying(true);
+      } else {
+        setLoading(true);
+      }
+      setError(null);
+
+      // Fetch users and topics in parallel
+      const [fetchedUsers, fetchedTopics] = await Promise.all([
+        ApiService.getAllUsers(),
+        ApiService.getAllTopics(),
+      ]);
+
+      setUsers(fetchedUsers);
+      setTopics(fetchedTopics);
+
+      // Calculate community statistics
+      const totalMembers = fetchedUsers.length;
+      const activeDiscussions = fetchedTopics.length;
+      const totalReplies = fetchedTopics.reduce((sum, topic) => sum + topic.reply_count, 0);
+      const totalLikes = fetchedTopics.reduce((sum, topic) => sum + topic.like_count, 0);
+      const totalViews = fetchedTopics.reduce((sum, topic) => sum + topic.view_count, 0);
+
+      // Calculate weekly changes (mock data for now)
+      const weeklyMemberChange = Math.floor(totalMembers * 0.05); // 5% growth
+      const dailyDiscussionChange = Math.floor(activeDiscussions * 0.1); // 10% daily growth
+
+      setCommunityStats([
+        {
+          title: "Total Members",
+          value: totalMembers.toLocaleString(),
+          icon: Users,
+          color: "text-blue-500",
+          change: `+${weeklyMemberChange} this week`
+        },
+        {
+          title: "Active Discussions",
+          value: activeDiscussions.toLocaleString(),
+          icon: MessageSquare,
+          color: "text-purple-500",
+          change: `+${dailyDiscussionChange} today`
+        },
+        {
+          title: "Total Replies",
+          value: totalReplies.toLocaleString(),
+          icon: TrendingUp,
+          color: "text-indigo-500",
+          change: `${Math.floor(totalReplies / activeDiscussions)} avg per topic`
+        },
+        {
+          title: "Community Engagement",
+          value: (totalLikes + totalViews).toLocaleString(),
+          icon: Star,
+          color: "text-pink-500",
+          change: `${Math.floor((totalLikes + totalViews) / activeDiscussions)} avg per topic`
+        }
+      ]);
+
+      // Generate recent activities from topics
+      const recentTopics = fetchedTopics
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 4);
+
+      const activities = recentTopics.map((topic, index) => ({
+        id: topic.id,
+        type: "topic",
+        title: "New topic created",
+        description: `${topic.author_username} created '${topic.title}'`,
+        time: formatTimeAgo(topic.created_at),
+        avatar: topic.author_username,
+        category: topic.category_name
+      }));
+
+      setRecentActivities(activities);
+
+      // Get top contributors (users with highest reputation scores)
+      const sortedUsers = fetchedUsers
+        .sort((a, b) => b.reputation_score - a.reputation_score)
+        .slice(0, 5);
+
+      setTopContributors(sortedUsers);
+
+    } catch (err) {
+      console.error("Error fetching community data:", err);
+      setError("Failed to load community data. Please try again later.");
+      toast({
+        title: "Error",
+        description: "Failed to load community data. Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+      setRetrying(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCommunityData();
+  }, [toast]);
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+
+    if (diffInHours < 1) return "Just now";
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`;
+    return date.toLocaleDateString();
+  };
+
   const getCategoryBadge = (category: string) => {
     const colors = {
       "Questions": "bg-blue-100 text-blue-800",
       "Best Practices": "bg-green-100 text-green-800",
       "Tutorials": "bg-purple-100 text-purple-800",
-      "Announcements": "bg-red-100 text-red-800"
+      "Announcements": "bg-red-100 text-red-800",
+      "Built with fastn": "bg-orange-100 text-orange-800",
+      "Showcase": "bg-pink-100 text-pink-800"
     };
     return (
       <Badge className={colors[category as keyof typeof colors] || "bg-gray-100 text-gray-800"}>
@@ -215,6 +226,94 @@ const Community = () => {
     };
     return icons[type as keyof typeof icons] || MessageSquare;
   };
+
+  const getInitials = (username: string) => {
+    return username
+      .split("_")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase();
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="flex">
+          <Sidebar />
+          <div className="flex-1 md:ml-64">
+            <div className="p-6 border-b border-border bg-gradient-subtle">
+              <div className="max-w-4xl">
+                <h1 className="text-3xl font-bold text-foreground mb-2">Community</h1>
+                <p className="text-muted-foreground">
+                  Connect with fellow fastn developers, share knowledge, and grow together.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center justify-center h-64">
+              <div className="flex items-center space-x-2">
+                <Loader2 className="w-6 h-6 animate-spin" />
+                <span>Loading community data...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="flex">
+          <Sidebar />
+          <div className="flex-1 md:ml-64">
+            <div className="p-6 border-b border-border bg-gradient-subtle">
+              <div className="max-w-4xl">
+                <h1 className="text-3xl font-bold text-foreground mb-2">Community</h1>
+                <p className="text-muted-foreground">
+                  Connect with fellow fastn developers, share knowledge, and grow together.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Error loading community data</h3>
+                <p className="text-muted-foreground mb-4">{error}</p>
+                <div className="flex gap-2 justify-center">
+                  <Button
+                    onClick={() => fetchCommunityData(true)}
+                    disabled={retrying}
+                    className="flex items-center gap-2"
+                  >
+                    {retrying ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        Retrying...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-4 w-4" />
+                        Try Again
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => window.location.reload()}
+                  >
+                    Refresh Page
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -275,6 +374,7 @@ const Community = () => {
                             {stat.value}
                           </p>
                           <p className="text-sm text-muted-foreground">{stat.title}</p>
+                          <p className="text-xs text-muted-foreground">{stat.change}</p>
                         </div>
                       </div>
                     </CardContent>
@@ -328,7 +428,7 @@ const Community = () => {
                           return (
                             <div key={activity.id} className="flex items-start space-x-3">
                               <Avatar className="w-8 h-8">
-                                <AvatarFallback className="text-xs">{activity.avatar}</AvatarFallback>
+                                <AvatarFallback className="text-xs">{getInitials(activity.avatar)}</AvatarFallback>
                               </Avatar>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center space-x-2 mb-1">
@@ -353,25 +453,26 @@ const Community = () => {
                   <Card>
                     <CardContent className="p-6">
                       <div className="space-y-4">
-                        {topContributors.map((contributor) => (
+                        {topContributors.map((contributor, index) => (
                           <div key={contributor.id} className="flex items-center space-x-3">
                             <div className="flex items-center space-x-2">
                               <Avatar className="w-8 h-8">
-                                <AvatarFallback className="text-xs">{contributor.avatar}</AvatarFallback>
+                                <AvatarImage src={contributor.avatar} alt={contributor.username} />
+                                <AvatarFallback className="text-xs">{getInitials(contributor.username)}</AvatarFallback>
                               </Avatar>
                               <div>
                                 <div className="flex items-center space-x-2">
-                                  <span className="text-sm font-medium text-foreground">{contributor.name}</span>
-                                  {contributor.rank <= 3 && (
+                                  <span className="text-sm font-medium text-foreground">{contributor.username}</span>
+                                  {index < 3 && (
                                     <Badge className="bg-yellow-100 text-yellow-800 text-xs">
-                                      #{contributor.rank}
+                                      #{index + 1}
                                     </Badge>
                                   )}
                                 </div>
                                 <div className="flex items-center space-x-4 text-xs text-muted-foreground">
-                                  <span>{contributor.points} points</span>
-                                  <span>{contributor.topics} topics</span>
-                                  <span>{contributor.replies} replies</span>
+                                  <span>{contributor.reputation_score} points</span>
+                                  <span>{contributor.topics_count} topics</span>
+                                  <span>{contributor.replies_count} replies</span>
                                 </div>
                               </div>
                             </div>

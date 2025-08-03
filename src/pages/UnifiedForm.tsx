@@ -211,13 +211,19 @@ const UnifiedForm = () => {
 
     try {
       if (selectedCategory === "topic") {
+        // Check if user is authenticated
+        if (!user?.id) {
+          setError("You must be logged in to create a topic. Please log in and try again.");
+          return;
+        }
+
         // Create topic using the API
         const topicData = {
           title: formData.title,
           description: formData.description,
           content: formData.content,
-          author_id: user?.id || "id_1754164424_145800", // Use actual user ID
-          author_username: user?.username || "current_user", // Use actual username
+          author_id: user.id, // Use actual user ID
+          author_username: user.username || user.email?.split('@')[0] || "user", // Use actual username
           category_id:
             categoryIdMapping[formData.category] || "id_1754163675_740242", // Map category name to ID
           is_featured: formData.featured,

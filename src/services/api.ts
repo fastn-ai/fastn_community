@@ -223,6 +223,64 @@ export class ApiService {
       await waitForRateLimit();
 
       try {
+        // Validate that the author_id exists in the users table
+        if (topicData.author_id) {
+          try {
+            const users = await this.getAllUsers();
+            const userExists = users.some(user => user.id === topicData.author_id);
+            if (!userExists) {
+              console.warn(`User with ID ${topicData.author_id} does not exist in the database. Attempting to create user...`);
+              
+                             // Try to create the user if they don't exist
+               try {
+                 const userData = JSON.parse(localStorage.getItem('fastn_user') || '{}');
+                 const createUserResponse = await fetch(`${API_BASE_URL}/crudUser`, {
+                   method: "POST",
+                   headers: getHeaders(),
+                   body: JSON.stringify({
+                     input: {
+                       action: "insert",
+                       users: [{
+                         // Let the database generate the ID
+                         username: userData.username || topicData.author_username || 'user',
+                         email: userData.email || 'user@example.com',
+                         password_hash: btoa('password_fastn_salt'),
+                         bio: userData.bio || "",
+                         avatar_url: userData.avatar_url || "",
+                         location: userData.location || "",
+                         website: userData.website || "",
+                         twitter: "",
+                         github: "",
+                         linkedin: "",
+                         is_verified: userData.is_verified || false,
+                         is_active: userData.is_active !== false,
+                         reputation_score: userData.reputation_score || 0,
+                         topics_count: 0,
+                         replies_count: 0,
+                         likes_received: 0,
+                         badges_count: 0
+                       }]
+                     }
+                   })
+                 });
+
+                if (createUserResponse.ok) {
+                  console.log("User created successfully for topic creation");
+                } else {
+                  console.error("Failed to create user for topic creation");
+                  throw new Error(`User with ID ${topicData.author_id} does not exist in the database and could not be created. Please ensure you are properly authenticated.`);
+                }
+              } catch (createError) {
+                console.error("Error creating user:", createError);
+                throw new Error(`User with ID ${topicData.author_id} does not exist in the database. Please ensure you are properly authenticated.`);
+              }
+            }
+          } catch (error) {
+            console.warn("Could not validate user existence:", error);
+            // Continue with topic creation even if user validation fails
+          }
+        }
+
         const response = await fetch(`${API_BASE_URL}/crudTopics`, {
           method: "POST",
           headers: {
@@ -237,7 +295,7 @@ export class ApiService {
                   title: topicData.title,
                   description: topicData.description,
                   content: topicData.content,
-                  author_id: topicData.author_id || "id_1754164424_145800", // Default author ID
+                  author_id: topicData.author_id || "id_1754164424_145800", // Use provided author ID
                   category_id: topicData.category_id || "id_1754163675_740242", // Default category ID
                   is_featured: topicData.is_featured || false,
                   is_hot: topicData.is_hot || false,

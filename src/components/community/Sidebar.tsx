@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { 
   Home, 
   MessageSquare, 
@@ -15,30 +16,108 @@ import {
   Plus,
   Trophy,
   Search,
-  UserPlus
+  UserPlus,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate, useLocation } from "react-router-dom";
+import { ApiService, Topic } from "@/services/api";
 
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+
+  // Fetch topics to calculate real counts
+  useEffect(() => {
+    const fetchTopics = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const fetchedTopics = await ApiService.getAllTopics();
+        setTopics(fetchedTopics);
+      } catch (err) {
+        console.error("Error fetching topics for sidebar:", err);
+        setError("Failed to load category counts");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTopics();
+  }, []);
+
+  // Calculate real counts for each category
+  const getCategoryCount = (categoryName: string) => {
+    return topics.filter(topic => topic.category_name === categoryName).length;
+  };
 
   const categories = [
-    { icon: Megaphone, name: "Announcements", count: 5, color: "text-red-400", path: "/announcements" },
-    { icon: HelpCircle, name: "Questions", count: 142, color: "text-blue-400", path: "/questions" },
-    //{ icon: BookOpen, name: "All Tutorials", count: 28, color: "text-green-400", path: "/all-tutorials" },
-    { icon: Code, name: "Built with fastn", count: 67, color: "text-purple-400", path: "/built-with-fastn" },
+    { 
+      icon: Megaphone, 
+      name: "Announcements", 
+      count: loading ? "..." : getCategoryCount("Announcements"), 
+      color: "text-red-400", 
+      path: "/announcements" 
+    },
+    { 
+      icon: HelpCircle, 
+      name: "Questions", 
+      count: loading ? "..." : getCategoryCount("Questions"), 
+      color: "text-blue-400", 
+      path: "/questions" 
+    },
+    { 
+      icon: Code, 
+      name: "Built with fastn", 
+      count: loading ? "..." : getCategoryCount("Built with fastn"), 
+      color: "text-purple-400", 
+      path: "/built-with-fastn" 
+    },
+    
   ];
 
-  const tags = [
-    "integration", "ai", "workflow", "api", "automation", "middleware"
-  ];
+  // Get popular tags from actual topics
+  const getPopularTags = () => {
+    const allTags: string[] = [];
+    topics.forEach(topic => {
+      if (topic.tags && Array.isArray(topic.tags)) {
+        allTags.push(...topic.tags);
+      }
+    });
+    
+    // Count tag occurrences
+    const tagCounts: { [key: string]: number } = {};
+    allTags.forEach(tag => {
+      tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+    });
+    
+    // Return top 6 most popular tags
+    return Object.entries(tagCounts)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 6)
+      .map(([tag]) => tag);
+  };
+
+  const tags = loading ? [] : getPopularTags();
 
   const isActive = (path: string) => {
     return location.pathname === path;
+  };
+
+  const handleTagClick = (tag: string) => {
+    setSelectedTag(selectedTag === tag ? null : tag);
+    // Navigate to topics page with tag filter
+    navigate(`/?tag=${encodeURIComponent(tag)}`);
+  };
+
+  const handleCategoryClick = (path: string) => {
+    navigate(path);
   };
 
   return (
@@ -53,7 +132,7 @@ const Sidebar = () => {
             onClick={() => navigate("/")}
           >
             <Home className="w-4 h-4 mr-3" />
-          Topics
+            Topics
           </Button>
        
           <Button 
@@ -62,7 +141,7 @@ const Sidebar = () => {
             onClick={() => navigate("/community")}
           >
             <Users className="w-4 h-4 mr-3" />
-          Community
+            Community
           </Button>
         </div>
 
@@ -85,14 +164,18 @@ const Sidebar = () => {
                 key={category.name}
                 variant={isActive(category.path) ? "default" : "ghost"}
                 className="w-full justify-between text-sm group hover:bg-accent hover:text-accent-foreground"
-                onClick={() => navigate(category.path)}
+                onClick={() => handleCategoryClick(category.path)}
               >
                 <div className="flex items-center">
                   <category.icon className={`w-4 h-4 mr-3 ${category.color}`} />
                   <span>{category.name}</span>
                 </div>
                 <Badge variant="secondary" className="text-xs">
-                  {category.count}
+                  {loading ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    category.count
+                  )}
                 </Badge>
               </Button>
             ))}
@@ -110,18 +193,31 @@ const Sidebar = () => {
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-1 mt-2">
-            <div className="flex flex-wrap gap-1">
-              {tags.map((tag) => (
-                <Badge
-                  key={tag}
-                  variant="outline"
-                  className="text-xs cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors"
-                >
-                  <Tag className="w-3 h-3 mr-1" />
-                  {tag}
-                </Badge>
-              ))}
-            </div>
+            {loading ? (
+              <div className="flex items-center justify-center py-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+              </div>
+            ) : tags.length > 0 ? (
+              <div className="flex flex-wrap gap-1">
+                {tags.map((tag) => (
+                  <Badge
+                    key={tag}
+                    variant={selectedTag === tag ? "default" : "outline"}
+                    className={`text-xs cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors ${
+                      selectedTag === tag ? "bg-primary text-primary-foreground" : ""
+                    }`}
+                    onClick={() => handleTagClick(tag)}
+                  >
+                    <Tag className="w-3 h-3 mr-1" />
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            ) : (
+              <div className="text-xs text-muted-foreground py-2">
+                No tags available
+              </div>
+            )}
           </CollapsibleContent>
         </Collapsible>
 
