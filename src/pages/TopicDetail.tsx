@@ -140,8 +140,8 @@ const TopicDetail = () => {
       await createReply({
         topic_id: id,
         content: replyContent,
-        author_id: "id_1754164424_145800",
-        author_username: "current_user", // This should be replaced with actual user data
+        author_id: user?.id || "id_1754164424_145800",
+        author_username: user?.username || "current_user",
         tutorial_id: "",
         is_accepted: false,
         is_helpful: false,
@@ -198,7 +198,7 @@ const TopicDetail = () => {
       const result = await editReply({
         id: editingReplyId,
         content: editingContent,
-        author_id: editingReplyData.author_id || "id_1754164424_145800",
+        author_id: user?.id || editingReplyData.author_id || "id_1754164424_145800",
         topic_id: id,
         tutorial_id: editingReplyData.tutorial_id || null,
         parent_reply_id: editingReplyData.parent_reply_id || null,

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Menu,
@@ -39,11 +39,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import Header from "@/components/community/Header";
 import Sidebar from "@/components/community/Sidebar";
 import { useApi } from "@/services/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 const UnifiedForm = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { createTopic } = useApi();
+  const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("topic");
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
@@ -51,6 +53,7 @@ const UnifiedForm = () => {
   const [tags, setTags] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const hasSubmitted = useRef(false);
 
   // Form data that adapts based on category
   const [formData, setFormData] = useState({
@@ -195,6 +198,14 @@ const UnifiedForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Prevent multiple submissions
+    if (isSubmitting || hasSubmitted.current) {
+      console.log("Form submission already in progress, ignoring duplicate submission");
+      return;
+    }
+    
+    hasSubmitted.current = true;
     setIsSubmitting(true);
     setError(null);
 
@@ -205,6 +216,8 @@ const UnifiedForm = () => {
           title: formData.title,
           description: formData.description,
           content: formData.content,
+          author_id: user?.id || "id_1754164424_145800", // Use actual user ID
+          author_username: user?.username || "current_user", // Use actual username
           category_id:
             categoryIdMapping[formData.category] || "id_1754163675_740242", // Map category name to ID
           is_featured: formData.featured,
@@ -239,6 +252,7 @@ const UnifiedForm = () => {
       );
     } finally {
       setIsSubmitting(false);
+      hasSubmitted.current = false;
     }
   };
 
@@ -313,7 +327,7 @@ const UnifiedForm = () => {
                   </AlertDescription>
                 </Alert>
               )}
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6" noValidate>
                 {/* Category Selection */}
                 {/*<Card>
                   <CardHeader>
