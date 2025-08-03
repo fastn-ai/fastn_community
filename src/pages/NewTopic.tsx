@@ -12,14 +12,21 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { useApi } from "@/services/api";
+import { useAuth } from "@/contexts/AuthContext";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const NewTopic = () => {
   const navigate = useNavigate();
+  const { createTopic } = useApi();
+  const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [previewMode, setPreviewMode] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: "",
     category: "",
@@ -74,10 +81,57 @@ const NewTopic = () => {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Form submitted:", { ...formData, tags, uploadedFiles });
-    // Handle form submission here
+    
+    if (isSubmitting) {
+      return;
+    }
+
+    // Check if user is authenticated
+    if (!user?.id) {
+      setError("You must be logged in to create a topic. Please log in and try again.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const topicData = {
+        title: formData.title,
+        description: formData.description,
+        content: formData.content,
+        author_id: user.id,
+        author_username: user.username || user.email?.split('@')[0] || "user",
+        category_id: "id_1754163675_740242", // Default category ID
+        is_featured: formData.featured,
+        is_hot: false,
+        is_new: true,
+        view_count: 0,
+        reply_count: 0,
+        like_count: 0,
+        bookmark_count: 0,
+        share_count: 0,
+        tags: tags,
+      };
+
+      console.log("Creating topic with data:", topicData);
+      const createdTopic = await createTopic(topicData);
+      console.log("Topic created successfully:", createdTopic);
+
+      // Navigate to the community page after successful creation
+      navigate("/community");
+    } catch (error) {
+      console.error("Error creating topic:", error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to create topic. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSaveDraft = () => {
@@ -138,6 +192,15 @@ const NewTopic = () => {
           {/* Form */}
           <div className="p-6">
             <div className="max-w-4xl">
+              {/* Error Display */}
+              {error && (
+                <Alert className="mb-6 border-red-200 bg-red-50">
+                  <AlertDescription className="text-red-800">
+                    {error}
+                  </AlertDescription>
+                </Alert>
+              )}
+              
               <form onSubmit={handleSubmit}>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Main Form */}
@@ -425,8 +488,9 @@ const NewTopic = () => {
                         <Button 
                           type="submit" 
                           className="w-full bg-gradient-primary"
+                          disabled={isSubmitting}
                         >
-                          Create Topic
+                          {isSubmitting ? "Creating Topic..." : "Create Topic"}
                         </Button>
                         <Button 
                           type="button" 
