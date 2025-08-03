@@ -117,9 +117,11 @@ export interface User {
 export interface Reply {
   id: string;
   topic_id: string;
+  author_id?: string;
   author_username: string;
   author_avatar?: string;
   content: string;
+  tutorial_id?: string;
   parent_reply_id?: string;
   is_accepted: boolean;
   is_helpful: boolean;
@@ -341,6 +343,44 @@ export class ApiService {
     });
   }
 
+  // Get all topic by ID (new endpoint)
+  static async getAllTopicById(topicId: string): Promise<Topic> {
+    return retryWithBackoff(async () => {
+      await waitForRateLimit();
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/getAllTopicById`, {
+          method: "POST",
+          headers: {
+            ...getHeaders(),
+            "x-fastn-custom-auth": "true",
+          },
+          body: JSON.stringify({
+            input: {
+              id: topicId,
+            },
+          }),
+        });
+
+        if (response.status === 429) {
+          throw new Error(
+            `HTTP error! status: ${response.status} - Rate limited`
+          );
+        }
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        return result;
+      } catch (error) {
+        console.error("Error fetching topic by ID (getAllTopicById):", error);
+        throw error;
+      }
+    });
+  }
+
   // Update topic
   static async updateTopic(
     topicId: string,
@@ -493,9 +533,27 @@ export class ApiService {
       try {
         const response = await fetch(`${API_BASE_URL}/createReply`, {
           method: "POST",
-          headers: getHeaders(),
+          headers: {
+            ...getHeaders(),
+            "x-fastn-custom-auth": "true",
+          },
           body: JSON.stringify({
-            input: replyData,
+            input: {
+              replies: [
+                {
+                  id: replyData.id,
+                  content: replyData.content,
+                  author_id: replyData.author_id || "id_1754164424_145800",
+                  topic_id: replyData.topic_id,
+                  tutorial_id: "",
+                  parent_reply_id: replyData.parent_reply_id || "",
+                  like_count: replyData.like_count || 0,
+                  is_accepted: replyData.is_accepted || false,
+                  is_helpful: replyData.is_helpful || false,
+                  created_at: new Date().toISOString(),
+                },
+              ],
+            },
           }),
         });
 
@@ -971,6 +1029,7 @@ export const useApi = () => {
     createTopic: ApiService.createTopic,
     getTopicsByCategory: ApiService.getTopicsByCategory,
     getTopicById: ApiService.getTopicById,
+    getAllTopicById: ApiService.getAllTopicById,
     updateTopic: ApiService.updateTopic,
     deleteTopic: ApiService.deleteTopic,
     getRepliesByTopic: ApiService.getRepliesByTopic,

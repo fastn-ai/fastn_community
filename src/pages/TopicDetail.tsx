@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/community/Header";
@@ -8,82 +8,186 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { 
-  MessageSquare, 
-  Eye, 
-  Clock, 
-  Pin, 
-  Heart, 
-  Share, 
+import {
+  MessageSquare,
+  Eye,
+  Clock,
+  Pin,
+  Heart,
+  Share,
   Bookmark,
   ThumbsUp,
   ThumbsDown,
   Reply,
-  ArrowLeft
+  ArrowLeft,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import { useApi } from "@/services/api";
+import type { Topic, Reply as ReplyType } from "@/services/api";
+
+interface TopicDetailResponse {
+  data: {
+    data: Topic;
+    replies: ReplyType[];
+  };
+}
 
 const TopicDetail = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [topic, setTopic] = useState<Topic | null>(null);
+  const [replies, setReplies] = useState<ReplyType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [replyContent, setReplyContent] = useState("");
+  const [submittingReply, setSubmittingReply] = useState(false);
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const { getAllTopicById, createReply } = useApi();
 
-  const topic = {
-    id: 1,
-    title: "🚀 We Need Your Help! [Answer & Earn]",
-    category: "Announcements",
-    author: "fastn-team",
-    replies: 155,
-    views: "26.7k",
-    createdAt: "Sep 2024",
-    isPinned: true,
-    hasAnswers: true,
-    categoryColor: "text-red-400",
-    content: `Our forum traffic is surging! You may have noticed on social media, YouTube and also here on the forum: fastn's popularity is booming! 🎉
+  useEffect(() => {
+    const fetchTopic = async () => {
+      if (!id) {
+        setError("No topic ID provided");
+        setLoading(false);
+        return;
+      }
 
-This is fantastic, but has also led to a huge influx of new questions here on the community forum. We're working hard to answer them all, but we could really use your help!
+      try {
+        setLoading(true);
+        const response = await getAllTopicById(id);
 
-## How You Can Help
+        // Handle the nested response structure
+        if (response && typeof response === "object" && "data" in response) {
+          const responseData = response as TopicDetailResponse;
+          if (responseData.data && responseData.data.data) {
+            setTopic(responseData.data.data);
+            setReplies(responseData.data.replies || []);
+          } else {
+            setTopic(responseData as unknown as Topic);
+            setReplies([]);
+          }
+        } else {
+          setTopic(response as Topic);
+          setReplies([]);
+        }
+      } catch (err) {
+        console.error("Error fetching topic:", err);
+        setError("Failed to load topic");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-If you're an experienced fastn user, please consider:
+    fetchTopic();
+  }, [id]);
 
-- **Answering questions** in the Questions category
-- **Sharing tutorials** and best practices
-- **Reviewing code** in Built with fastn showcases
-- **Providing feedback** on new features
+  const refreshTopicData = async () => {
+    if (!id) return;
 
-## Answer & Earn Program
-
-We're launching our Answer & Earn program where community members can earn points for:
-
-- ✅ Answering questions (10 points)
-- 🏆 Getting your answer marked as solution (50 points)
-- 📚 Creating helpful tutorials (100 points)
-- 🎯 Moderating discussions (25 points)
-
-Thank you for being part of our amazing community! 🙏`,
-    tags: ["announcement", "community", "help-wanted"]
+    try {
+      const response = await getAllTopicById(id);
+      if (response && typeof response === "object" && "data" in response) {
+        const responseData = response as TopicDetailResponse;
+        if (responseData.data && responseData.data.data) {
+          setTopic(responseData.data.data);
+          setReplies(responseData.data.replies || []);
+        }
+      }
+    } catch (error) {
+      console.error("Error refreshing topic data:", error);
+    }
   };
 
-  const replies = [
-    {
-      id: 1,
-      author: "developer123",
-      avatar: "D",
-      content: "This is great! I've been using fastn for 6 months now and would love to help answer questions. How do I get started with the Answer & Earn program?",
-      createdAt: "4d ago",
-      likes: 12,
-      isAnswer: false
-    },
-    {
-      id: 2,
-      author: "codemaster",
-      avatar: "C",
-      content: "Count me in! I'll start by answering some integration questions. The community has helped me so much, time to give back! 💪",
-      createdAt: "3d ago",
-      likes: 8,
-      isAnswer: true
+  const handleSubmitReply = async (e: React.MouseEvent) => {
+    // Prevent default form submission behavior
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Prevent multiple submissions
+    if (submittingReply || !replyContent.trim() || !id) {
+      return;
     }
-  ];
+
+    try {
+      setSubmittingReply(true);
+      console.log("Submitting reply..."); // Debug log
+
+      await createReply({
+        id: `id_${Date.now()}_${Math.floor(Math.random() * 1000000)}`,
+        topic_id: id,
+        content: replyContent,
+        author_id: "id_1754164424_145800",
+        author_username: "current_user", // This should be replaced with actual user data
+        tutorial_id: "",
+        is_accepted: false,
+        is_helpful: false,
+        like_count: 0,
+        dislike_count: 0,
+        reply_count: 0,
+      });
+
+      console.log("Reply submitted successfully"); // Debug log
+
+      // Clear the form after successful submission
+      setReplyContent("");
+
+      // Refresh the topic data to get updated replies
+      await refreshTopicData();
+    } catch (error) {
+      console.error("Error submitting reply:", error);
+      setError("Failed to submit reply");
+    } finally {
+      setSubmittingReply(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="flex">
+          <Sidebar />
+          <div className="flex-1 md:ml-64">
+            <div className="p-6">
+              <div className="max-w-4xl">
+                <div className="animate-pulse">
+                  <div className="h-8 bg-gray-200 rounded mb-4"></div>
+                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !topic) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="flex">
+          <Sidebar />
+          <div className="flex-1 md:ml-64">
+            <div className="p-6">
+              <div className="max-w-4xl">
+                <div className="text-center">
+                  <h1 className="text-2xl font-bold text-foreground mb-4">
+                    Error Loading Topic
+                  </h1>
+                  <p className="text-muted-foreground mb-4">
+                    {error || "Topic not found"}
+                  </p>
+                  <Button onClick={() => navigate(-1)}>Go Back</Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -104,7 +208,10 @@ Thank you for being part of our amazing community! 🙏`,
         {/* Mobile Sidebar */}
         {sidebarOpen && (
           <div className="md:hidden fixed inset-0 z-40">
-            <div className="fixed inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
+            <div
+              className="fixed inset-0 bg-black/50"
+              onClick={() => setSidebarOpen(false)}
+            />
             <div className="fixed left-0 top-0 h-full w-64 bg-card border-r border-border z-50">
               <Sidebar />
             </div>
@@ -113,7 +220,7 @@ Thank you for being part of our amazing community! 🙏`,
 
         {/* Desktop Sidebar */}
         <Sidebar />
-        
+
         {/* Main Content */}
         <div className="flex-1 md:ml-64">
           {/* Header */}
@@ -130,8 +237,12 @@ Thank you for being part of our amazing community! 🙏`,
                   <span>Back</span>
                 </Button>
               </div>
-              <h1 className="text-3xl font-bold text-foreground mb-2">Topic Details</h1>
-              <p className="text-muted-foreground">View and discuss this topic</p>
+              <h1 className="text-3xl font-bold text-foreground mb-2">
+                Topic Details
+              </h1>
+              <p className="text-muted-foreground">
+                View and discuss this topic
+              </p>
             </div>
           </div>
 
@@ -139,7 +250,7 @@ Thank you for being part of our amazing community! 🙏`,
           <div className="p-6 border-b border-border">
             <div className="max-w-4xl">
               <div className="flex items-start space-x-4 mb-4">
-                {topic.isPinned && (
+                {topic.is_featured && (
                   <Pin className="w-5 h-5 text-primary mt-1 flex-shrink-0" />
                 )}
                 <div className="flex-1">
@@ -147,26 +258,33 @@ Thank you for being part of our amazing community! 🙏`,
                     {topic.title}
                   </h1>
                   <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                    <Badge variant="outline" className={`${topic.categoryColor} border-current`}>
-                      {topic.category}
+                    <Badge
+                      variant="outline"
+                      className={`text-${
+                        topic.category_color || "blue"
+                      }-400 border-current`}
+                    >
+                      {topic.category_name}
                     </Badge>
-                    <span>by {topic.author}</span>
+                    <span>by {topic.author_username}</span>
                     <span className="flex items-center space-x-1">
                       <Clock className="w-4 h-4" />
-                      <span>{topic.createdAt}</span>
+                      <span>
+                        {new Date(topic.created_at).toLocaleDateString()}
+                      </span>
                     </span>
                     <span className="flex items-center space-x-1">
                       <Eye className="w-4 h-4" />
-                      <span>{topic.views} views</span>
+                      <span>{topic.view_count} views</span>
                     </span>
                     <span className="flex items-center space-x-1">
                       <MessageSquare className="w-4 h-4" />
-                      <span>{topic.replies} replies</span>
+                      <span>{topic.reply_count} replies</span>
                     </span>
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex space-x-2">
                 <Button variant="outline" size="sm">
                   <Heart className="w-4 h-4 mr-2" />
@@ -193,25 +311,32 @@ Thank you for being part of our amazing community! 🙏`,
                   <div className="flex items-center space-x-3">
                     <Avatar>
                       <AvatarFallback className="bg-gradient-primary text-white">
-                        F
+                        {topic.author_username.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <div className="font-semibold text-foreground">{topic.author}</div>
-                      <div className="text-sm text-muted-foreground">{topic.createdAt}</div>
+                      <div className="font-semibold text-foreground">
+                        {topic.author_username}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {new Date(topic.created_at).toLocaleDateString()}
+                      </div>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <div className="prose prose-invert max-w-none">
-                    <p className="whitespace-pre-line text-foreground">{topic.content}</p>
+                    <p className="whitespace-pre-line text-foreground">
+                      {topic.content || topic.description}
+                    </p>
                   </div>
                   <div className="flex flex-wrap gap-2 mt-4">
-                    {topic.tags.map((tag) => (
-                      <Badge key={tag} variant="secondary">
-                        {tag}
-                      </Badge>
-                    ))}
+                    {topic.tags &&
+                      topic.tags.map((tag) => (
+                        <Badge key={tag} variant="secondary">
+                          {tag}
+                        </Badge>
+                      ))}
                   </div>
                 </CardContent>
               </Card>
@@ -223,27 +348,43 @@ Thank you for being part of our amazing community! 🙏`,
                 <h2 className="text-xl font-semibold text-foreground">
                   {replies.length} Replies
                 </h2>
-                
+
                 {replies.map((reply) => (
-                  <Card key={reply.id} className={reply.isAnswer ? "border-green-500/50 bg-green-500/5" : ""}>
+                  <Card
+                    key={reply.id}
+                    className={
+                      reply.is_accepted
+                        ? "border-green-500/50 bg-green-500/5"
+                        : ""
+                    }
+                  >
                     <CardHeader className="pb-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
                           <Avatar>
                             <AvatarFallback className="bg-gradient-primary text-white">
-                              {reply.avatar}
+                              {reply.author_username
+                                ?.charAt(0)
+                                ?.toUpperCase() || "U"}
                             </AvatarFallback>
                           </Avatar>
                           <div>
                             <div className="flex items-center space-x-2">
-                              <span className="font-semibold text-foreground">{reply.author}</span>
-                              {reply.isAnswer && (
-                                <Badge variant="secondary" className="text-green-400 border-green-400">
+                              <span className="font-semibold text-foreground">
+                                {reply.author_username}
+                              </span>
+                              {reply.is_accepted && (
+                                <Badge
+                                  variant="secondary"
+                                  className="text-green-400 border-green-400"
+                                >
                                   ✓ Answer
                                 </Badge>
                               )}
                             </div>
-                            <div className="text-sm text-muted-foreground">{reply.createdAt}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {new Date(reply.created_at).toLocaleDateString()}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -253,7 +394,7 @@ Thank you for being part of our amazing community! 🙏`,
                       <div className="flex items-center space-x-4">
                         <Button variant="ghost" size="sm">
                           <ThumbsUp className="w-4 h-4 mr-2" />
-                          {reply.likes}
+                          {reply.like_count}
                         </Button>
                         <Button variant="ghost" size="sm">
                           <Reply className="w-4 h-4 mr-2" />
@@ -268,21 +409,37 @@ Thank you for being part of our amazing community! 🙏`,
               {/* Reply Form */}
               <Card>
                 <CardHeader>
-                  <h3 className="text-lg font-semibold text-foreground">Add Your Reply</h3>
+                  <h3 className="text-lg font-semibold text-foreground">
+                    Add Your Reply
+                  </h3>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <Textarea
-                    placeholder="Write your reply here..."
-                    className="min-h-[120px]"
-                  />
-                  <div className="flex space-x-2">
-                    <Button className="bg-gradient-primary">
-                      Post Reply
-                    </Button>
-                    <Button variant="outline">
-                      Preview
-                    </Button>
-                  </div>
+                  <form onSubmit={(e) => e.preventDefault()}>
+                    <Textarea
+                      placeholder="Write your reply here..."
+                      className="min-h-[120px]"
+                      value={replyContent}
+                      onChange={(e) => setReplyContent(e.target.value)}
+                      disabled={submittingReply}
+                    />
+                    <div className="flex space-x-2 mt-4">
+                      <Button
+                        type="button"
+                        className="bg-gradient-primary"
+                        onClick={handleSubmitReply}
+                        disabled={submittingReply || !replyContent.trim()}
+                      >
+                        {submittingReply ? "Posting..." : "Post Reply"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={submittingReply}
+                      >
+                        Preview
+                      </Button>
+                    </div>
+                  </form>
                 </CardContent>
               </Card>
             </div>
