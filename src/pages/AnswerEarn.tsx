@@ -1,18 +1,29 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Menu, Trophy, Star, Users, Target, Gift, TrendingUp, CheckCircle, Clock, MessageSquare, Search, ArrowLeft } from "lucide-react";
+import { Menu, Trophy, Star, Users, Target, Gift, TrendingUp, CheckCircle, Clock, MessageSquare, Search, ArrowLeft, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/community/Header";
 import Sidebar from "@/components/community/Sidebar";
+import { ApiService } from "@/services/api";
 
 const AnswerEarn = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
+  
+  // Data states
+  const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
+  const [openQuestions, setOpenQuestions] = useState<any[]>([]);
 
-  const leaderboardData = [
+  // Fallback sample data for when API fails
+  const fallbackLeaderboardData = [
     {
       id: 1,
       name: "Sarah Chen",
@@ -65,7 +76,8 @@ const AnswerEarn = () => {
     }
   ];
 
-  const openQuestions = [
+  // Static open questions data
+  const staticOpenQuestions = [
     {
       id: 1,
       title: "How to implement OAuth2 with fastn?",
@@ -117,6 +129,133 @@ const AnswerEarn = () => {
       tags: ["connectors", "third-party", "development"]
     }
   ];
+
+  // Fetch data from API
+  const fetchData = async (isRetry: boolean = false) => {
+    try {
+      if (isRetry) {
+        setRetrying(true);
+      } else {
+        setLoading(true);
+      }
+      setError(null);
+
+      // Add delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Always use static data for open questions
+      setOpenQuestions(staticOpenQuestions);
+
+      // Fetch users for leaderboard data
+      let fetchedUsers: any[] = [];
+      let hasErrors = false;
+
+      try {
+        const usersResult = await ApiService.getAllUsers();
+        fetchedUsers = usersResult;
+      } catch (err) {
+        console.error('Failed to fetch users:', err);
+        hasErrors = true;
+      }
+
+      // Transform users into leaderboard data (only if we have users)
+      if (fetchedUsers.length > 0) {
+        const userStats = fetchedUsers.map(user => {
+          const userReplies = user.replies_count || 0;
+          const totalPoints = user.reputation_score || 0;
+          
+          // Calculate level based on reputation score
+          let level = "Beginner";
+          if (totalPoints >= 2000) level = "Master";
+          else if (totalPoints >= 1500) level = "Expert";
+          else if (totalPoints >= 1000) level = "Advanced";
+          else if (totalPoints >= 500) level = "Intermediate";
+
+          // Generate badges based on activity
+          const badges = [];
+          if (totalPoints >= 1000) badges.push("Gold");
+          else if (totalPoints >= 500) badges.push("Silver");
+          else if (totalPoints >= 100) badges.push("Bronze");
+          if (userReplies >= 10) badges.push("Helper");
+
+          // Calculate streak (mock data for now)
+          const streak = Math.floor(Math.random() * 30) + 1;
+
+          return {
+            id: user.id,
+            name: user.username,
+            avatar: user.avatar,
+            points: totalPoints,
+            answers: userReplies,
+            badges,
+            rank: 0, // Will be set after sorting
+            streak,
+            level
+          };
+        });
+
+        // Sort by points and assign ranks
+        const sortedUsers = userStats
+          .sort((a, b) => b.points - a.points)
+          .slice(0, 5) // Only show top 5 for the preview
+          .map((user, index) => ({
+            ...user,
+            rank: index + 1
+          }));
+
+        setLeaderboardData(sortedUsers);
+      } else {
+        // Fallback to sample data if API fails
+        setLeaderboardData(fallbackLeaderboardData);
+      }
+
+      // Show warning if data failed to load
+      if (hasErrors) {
+        toast({
+          title: "Partial Data Loaded",
+          description: "Leaderboard data may not be up to date due to server limitations. Please try again later.",
+          variant: "default",
+        });
+      }
+
+    } catch (err) {
+      console.error("Error fetching AnswerEarn data:", err);
+      setError("Failed to load data. Please try again later.");
+      toast({
+        title: "Error",
+        description: "Failed to load data. Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+      setRetrying(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [toast]);
+
+  const getInitials = (username: string) => {
+    return username
+      .split("_")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase();
+  };
+
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty) {
+      case "Advanced":
+        return "text-red-500 bg-red-500/10";
+      case "Intermediate":
+        return "text-orange-500 bg-orange-500/10";
+      case "Beginner":
+        return "text-green-500 bg-green-500/10";
+      default:
+        return "text-blue-500 bg-blue-500/10";
+    }
+  };
 
   const benefits = [
     {
@@ -171,6 +310,112 @@ const AnswerEarn = () => {
       icon: Trophy
     }
   ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="flex">
+          <Sidebar />
+          <div className="flex-1 md:ml-64">
+            <div className="p-6 border-b border-border bg-gradient-subtle">
+              <div className="max-w-4xl">
+                <div className="flex items-center space-x-4 mb-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(-1)}
+                    className="flex items-center space-x-2"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Back</span>
+                  </Button>
+                </div>
+                <h1 className="text-3xl font-bold text-foreground mb-2">
+                  Answer & Earn 🎉
+                </h1>
+                <p className="text-muted-foreground">
+                  Help others, build your reputation, and earn rewards in the fastn community.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center justify-center h-64">
+              <div className="flex items-center space-x-2">
+                <Loader2 className="w-6 h-6 animate-spin" />
+                <span>Loading data...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="flex">
+          <Sidebar />
+          <div className="flex-1 md:ml-64">
+            <div className="p-6 border-b border-border bg-gradient-subtle">
+              <div className="max-w-4xl">
+                <div className="flex items-center space-x-4 mb-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(-1)}
+                    className="flex items-center space-x-2"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Back</span>
+                  </Button>
+                </div>
+                <h1 className="text-3xl font-bold text-foreground mb-2">
+                  Answer & Earn 🎉
+                </h1>
+                <p className="text-muted-foreground">
+                  Help others, build your reputation, and earn rewards in the fastn community.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Error loading data</h3>
+                <p className="text-muted-foreground mb-4">{error}</p>
+                <div className="flex gap-2 justify-center">
+                  <Button
+                    onClick={() => fetchData(true)}
+                    disabled={retrying}
+                    className="flex items-center gap-2"
+                  >
+                    {retrying ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        Retrying...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-4 w-4" />
+                        Try Again
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => window.location.reload()}
+                  >
+                    Refresh Page
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -284,7 +529,7 @@ const AnswerEarn = () => {
                             <div className="relative">
                               <Avatar className="w-12 h-12">
                                 <AvatarFallback className="bg-gradient-primary text-white">
-                                  {user.avatar}
+                                  {getInitials(user.name)}
                                 </AvatarFallback>
                               </Avatar>
                               {index < 3 && (
@@ -297,7 +542,7 @@ const AnswerEarn = () => {
                               <div className="flex items-center space-x-2">
                                 <h3 className="font-semibold text-foreground">{user.name}</h3>
                                 <div className="flex space-x-1">
-                                  {user.badges.map((badge, badgeIndex) => (
+                                  {user.badges.map((badge: string, badgeIndex: number) => (
                                     <Badge key={badgeIndex} variant="secondary" className="text-xs">
                                       {badge}
                                     </Badge>
@@ -345,7 +590,7 @@ const AnswerEarn = () => {
                             <div className="flex items-center space-x-3 text-sm text-muted-foreground mb-3">
                               <span>{question.category}</span>
                               <span>•</span>
-                              <Badge variant="outline" className="text-xs">
+                              <Badge variant="outline" className={`text-xs ${getDifficultyColor(question.difficulty)}`}>
                                 {question.difficulty}
                               </Badge>
                               <span>•</span>
@@ -359,7 +604,7 @@ const AnswerEarn = () => {
                         </div>
                         <div className="flex items-center justify-between">
                           <div className="flex flex-wrap gap-1">
-                            {question.tags.map((tag, index) => (
+                            {question.tags.map((tag: string, index: number) => (
                               <Badge key={index} variant="outline" className="text-xs">
                                 {tag}
                               </Badge>
