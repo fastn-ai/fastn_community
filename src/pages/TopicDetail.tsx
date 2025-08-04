@@ -495,19 +495,19 @@ const TopicDetail = () => {
                 </h2>
 
                 {replies.map((reply) => (
-                  <Card
-                    key={reply.id}
-                    className={
-                      reply.is_accepted
-                        ? "border-green-500/50 bg-green-500/5"
-                        : ""
-                    }
-                    style={{
-                      opacity: deletingReplyId === reply.id ? 0.5 : 1,
-                      pointerEvents:
-                        deletingReplyId === reply.id ? "none" : "auto",
-                    }}
-                  >
+                    <Card
+                      key={reply.id}
+                      className={
+                        reply.is_accepted
+                          ? "border-green-500/50 bg-green-500/5"
+                          : ""
+                      }
+                      style={{
+                        opacity: deletingReplyId === reply.id ? 0.5 : 1,
+                        pointerEvents:
+                          deletingReplyId === reply.id ? "none" : "auto",
+                      }}
+                    >
                     <CardHeader className="pb-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
@@ -521,7 +521,7 @@ const TopicDetail = () => {
                           <div>
                             <div className="flex items-center space-x-2">
                               <span className="font-semibold text-foreground">
-                                {reply.author_username}
+                                {reply.author_username} 
                               </span>
                               {reply.is_accepted && (
                                 <Badge
@@ -635,7 +635,7 @@ const TopicDetail = () => {
                             {isAuthenticated && (
                               <Button variant="ghost" size="sm">
                                 <Reply className="w-4 h-4 mr-2" />
-                                Reply
+                                Reply 
                               </Button>
                             )}
                           </div>
@@ -661,9 +661,21 @@ const TopicDetail = () => {
               {isAuthenticated ? (
                 <Card>
                   <CardHeader>
-                    <h3 className="text-lg font-semibold text-foreground">
-                      Add Your Reply
-                    </h3>
+                    <div className="flex items-center space-x-3">
+                      <Avatar>
+                        <AvatarFallback className="bg-gradient-primary text-white">
+                          {user?.username?.charAt(0).toUpperCase() || "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h3 className="text-lg font-semibold text-foreground">
+                          Add Your Reply
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          Replying as {user?.username || "User"}
+                        </p>
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
