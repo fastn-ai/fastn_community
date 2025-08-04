@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Menu, Upload, X, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,10 +15,11 @@ import { Separator } from "@/components/ui/separator";
 import { useApi } from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import type { Category } from "@/services/api";
 
 const NewTopic = () => {
   const navigate = useNavigate();
-  const { createTopic } = useApi();
+  const { createTopic, getAllCategories } = useApi();
   const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
@@ -27,6 +28,8 @@ const NewTopic = () => {
   const [previewMode, setPreviewMode] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [formData, setFormData] = useState({
     title: "",
     category: "",
@@ -40,6 +43,24 @@ const NewTopic = () => {
     estimatedTime: "",
     relatedLinks: ""
   });
+
+  // Fetch categories on component mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setIsLoadingCategories(true);
+        const fetchedCategories = await getAllCategories();
+        setCategories(fetchedCategories);
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+        setError("Failed to load categories. Please try again.");
+      } finally {
+        setIsLoadingCategories(false);
+      }
+    };
+
+    fetchCategories();
+  }, [getAllCategories]);
 
   const addTag = (tag: string) => {
     if (tag && !tags.includes(tag)) {
@@ -94,17 +115,29 @@ const NewTopic = () => {
       return;
     }
 
+    // Check if category is selected
+    if (!formData.category) {
+      setError("Please select a category for your topic.");
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
 
     try {
+      // Find the selected category to get its ID
+      const selectedCategory = categories.find(cat => cat.id === formData.category);
+      if (!selectedCategory) {
+        throw new Error("Selected category not found.");
+      }
+
       const topicData = {
         title: formData.title,
         description: formData.description,
         content: formData.content,
         author_id: user.id,
         author_username: user.username || user.email?.split('@')[0] || "user",
-        category_id: "id_1754163675_740242", // Default category ID
+        category_id: selectedCategory.id, // Use the selected category ID
         is_featured: formData.featured,
         is_hot: false,
         is_new: true,
@@ -236,16 +269,20 @@ const NewTopic = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label htmlFor="category">Category *</Label>
-                            <Select value={formData.category} onValueChange={(value) => handleInputChange("category", value)}>
+                            <Select 
+                              value={formData.category} 
+                              onValueChange={(value) => handleInputChange("category", value)}
+                              disabled={isLoadingCategories}
+                            >
                               <SelectTrigger>
-                                <SelectValue placeholder="Select a category" />
+                                <SelectValue placeholder={isLoadingCategories ? "Loading categories..." : "Select a category"} />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="announcements">Announcements</SelectItem>
-                                <SelectItem value="questions">Questions</SelectItem>
-                                <SelectItem value="tutorials">Tutorials</SelectItem>
-                                <SelectItem value="built-with-fastn">Built with fastn</SelectItem>
-                                <SelectItem value="community">Community</SelectItem>
+                                {categories.map((category) => (
+                                  <SelectItem key={category.id} value={category.id}>
+                                    {category.name}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                           </div>

@@ -42,6 +42,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useApi } from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Topic, Reply as ReplyType } from "@/services/api";
+import { getTagColor } from "@/lib/utils";
 
 interface TopicDetailResponse {
   data: {
@@ -474,9 +475,12 @@ const TopicDetail = () => {
                   <div className="flex flex-wrap gap-2 mt-4">
                     {topic.tags &&
                       topic.tags.map((tag) => (
-                        <Badge key={tag} variant="secondary">
+                        <span
+                          key={tag}
+                          className={`inline-block px-2 py-1 text-xs rounded-full border ${getTagColor(tag)}`}
+                        >
                           {tag}
-                        </Badge>
+                        </span>
                       ))}
                   </div>
                 </CardContent>

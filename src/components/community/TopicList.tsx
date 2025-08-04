@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 import { ApiService, Topic, Category } from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { getTagColor } from "@/lib/utils";
 
 interface TopicListProps {
   sidebarOpen: boolean;
@@ -653,7 +654,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                               return tags.map((tag, index) => (
                                 <span
                                   key={index}
-                                  className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full"
+                                  className={`inline-block px-2 py-1 text-xs rounded-full border ${getTagColor(tag)}`}
                                 >
                                   {tag}
                                 </span>
