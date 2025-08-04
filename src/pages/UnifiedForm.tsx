@@ -198,13 +198,15 @@ const UnifiedForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Prevent multiple submissions
     if (isSubmitting || hasSubmitted.current) {
-      console.log("Form submission already in progress, ignoring duplicate submission");
+      console.log(
+        "Form submission already in progress, ignoring duplicate submission"
+      );
       return;
     }
-    
+
     hasSubmitted.current = true;
     setIsSubmitting(true);
     setError(null);
@@ -213,7 +215,9 @@ const UnifiedForm = () => {
       if (selectedCategory === "topic") {
         // Check if user is authenticated
         if (!user?.id) {
-          setError("You must be logged in to create a topic. Please log in and try again.");
+          setError(
+            "You must be logged in to create a topic. Please log in and try again."
+          );
           return;
         }
 
@@ -223,7 +227,7 @@ const UnifiedForm = () => {
           description: formData.description,
           content: formData.content,
           author_id: user.id, // Use actual user ID
-          author_username: user.username || user.email?.split('@')[0] || "user", // Use actual username
+          author_username: user.username || user.email?.split("@")[0] || "user", // Use actual username
           category_id:
             categoryIdMapping[formData.category] || "id_1754163675_740242", // Map category name to ID
           is_featured: formData.featured,
@@ -243,7 +247,7 @@ const UnifiedForm = () => {
         console.log("Topic created successfully:", createdTopic);
 
         // Navigate to the community page after successful creation
-        navigate("/community");
+        navigate("/");
       } else {
         // Handle tutorial creation (placeholder for now)
         console.log("Tutorial creation not implemented yet");

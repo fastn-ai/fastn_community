@@ -60,7 +60,9 @@ const TopicDetail = () => {
   const [submittingReply, setSubmittingReply] = useState(false);
   const [editingReplyId, setEditingReplyId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState("");
-  const [editingReplyData, setEditingReplyData] = useState<ReplyType | null>(null);
+  const [editingReplyData, setEditingReplyData] = useState<ReplyType | null>(
+    null
+  );
   const [submittingEdit, setSubmittingEdit] = useState(false);
   const [deletingReplyId, setDeletingReplyId] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -105,39 +107,25 @@ const TopicDetail = () => {
     fetchTopic();
   }, [id]);
 
-  const refreshTopicData = async () => {
-    if (!id) return;
-
-    try {
-      const response = await getAllTopicById(id);
-      if (response && typeof response === "object" && "data" in response) {
-        const responseData = response as TopicDetailResponse;
-        if (responseData.data && responseData.data.data) {
-          setTopic(responseData.data.data);
-          setReplies(responseData.data.replies || []);
-        }
-      }
-    } catch (error) {
-      console.error("Error refreshing topic data:", error);
-    }
-  };
-
-  const handleSubmitReply = async (e: React.MouseEvent) => {
-    // Prevent default form submission behavior
-    e.preventDefault();
-    e.stopPropagation();
-
+  const submitReply = async () => {
     // Prevent multiple submissions
-    if (submittingReply || !replyContent.trim() || !id) {
+    if (submittingReply) {
+      console.log("Submission already in progress");
+      return;
+    }
+
+    // Set submitting state immediately to prevent multiple calls
+    setSubmittingReply(true);
+
+    if (!replyContent.trim() || !id) {
+      setSubmittingReply(false);
       return;
     }
 
     try {
       setError(null); // Clear any previous errors
-      setSubmittingReply(true);
       console.log("Submitting reply..."); // Debug log
-
-      await createReply({
+      const newReply = await createReply({
         topic_id: id,
         content: replyContent,
         author_id: user?.id || "id_1754164424_145800",
@@ -151,12 +139,26 @@ const TopicDetail = () => {
       });
 
       console.log("Reply submitted successfully"); // Debug log
-
       // Clear the form after successful submission
       setReplyContent("");
 
-      // Refresh the topic data to get updated replies
-      await refreshTopicData();
+      // Add the new reply to the local state instead of refetching
+      if (newReply && typeof newReply === "object") {
+        const replyData = newReply as ReplyType;
+        setReplies((prevReplies) => [...prevReplies, replyData]);
+
+        // Update topic reply count
+        if (topic) {
+          setTopic((prevTopic) =>
+            prevTopic
+              ? {
+                  ...prevTopic,
+                  reply_count: prevTopic.reply_count + 1,
+                }
+              : null
+          );
+        }
+      }
     } catch (error) {
       console.error("Error submitting reply:", error);
       if (error instanceof Error) {
@@ -167,6 +169,11 @@ const TopicDetail = () => {
     } finally {
       setSubmittingReply(false);
     }
+  };
+
+  const handleSubmitReply = async () => {
+    // Prevent default form submission behavior
+    await submitReply();
   };
 
   const handleEditReply = (reply: ReplyType) => {
@@ -190,7 +197,7 @@ const TopicDetail = () => {
     try {
       setError(null); // Clear any previous errors
       setSubmittingEdit(true);
-      
+
       if (!editingReplyData) {
         throw new Error("No reply data found for editing");
       }
@@ -198,7 +205,8 @@ const TopicDetail = () => {
       const result = await editReply({
         id: editingReplyId,
         content: editingContent,
-        author_id: user?.id || editingReplyData.author_id || "id_1754164424_145800",
+        author_id:
+          user?.id || editingReplyData.author_id || "id_1754164424_145800",
         topic_id: id,
         tutorial_id: editingReplyData.tutorial_id || null,
         parent_reply_id: editingReplyData.parent_reply_id || null,
@@ -214,8 +222,17 @@ const TopicDetail = () => {
       setEditingContent("");
       setEditingReplyData(null);
 
-      // Refresh the topic data to get updated replies
-      await refreshTopicData();
+      // Update the reply in local state instead of refetching
+      setReplies((prevReplies) =>
+        prevReplies.map((reply) =>
+          reply.id === editingReplyId
+            ? { ...reply, content: editingContent }
+            : reply
+        )
+      );
+
+      // Navigate to community page after successful edit
+      navigate("/");
     } catch (error) {
       console.error("Error editing reply:", error);
       if (error instanceof Error) {
@@ -234,11 +251,25 @@ const TopicDetail = () => {
     try {
       setError(null); // Clear any previous errors
       setDeletingReplyId(replyId);
-      
+
       await deleteReply(replyId);
 
-      // Refresh the topic data to get updated replies
-      await refreshTopicData();
+      // Remove the reply from local state instead of refetching
+      setReplies((prevReplies) =>
+        prevReplies.filter((reply) => reply.id !== replyId)
+      );
+
+      // Update topic reply count
+      if (topic) {
+        setTopic((prevTopic) =>
+          prevTopic
+            ? {
+                ...prevTopic,
+                reply_count: Math.max(0, prevTopic.reply_count - 1),
+              }
+            : null
+        );
+      }
     } catch (error) {
       console.error("Error deleting reply:", error);
       if (error instanceof Error) {
@@ -469,7 +500,8 @@ const TopicDetail = () => {
                     }
                     style={{
                       opacity: deletingReplyId === reply.id ? 0.5 : 1,
-                      pointerEvents: deletingReplyId === reply.id ? "none" : "auto",
+                      pointerEvents:
+                        deletingReplyId === reply.id ? "none" : "auto",
                     }}
                   >
                     <CardHeader className="pb-4">
@@ -503,8 +535,8 @@ const TopicDetail = () => {
                         </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button 
-                              variant="ghost" 
+                            <Button
+                              variant="ghost"
                               size="sm"
                               disabled={deletingReplyId === reply.id}
                             >
@@ -512,13 +544,15 @@ const TopicDetail = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEditReply(reply)}>
+                            <DropdownMenuItem
+                              onClick={() => handleEditReply(reply)}
+                            >
                               <Edit className="w-4 h-4 mr-2" />
                               Edit
                             </DropdownMenuItem>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
-                                <DropdownMenuItem 
+                                <DropdownMenuItem
                                   className="text-red-600"
                                   onSelect={(e) => e.preventDefault()}
                                 >
@@ -528,9 +562,12 @@ const TopicDetail = () => {
                               </AlertDialogTrigger>
                               <AlertDialogContent>
                                 <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete Reply</AlertDialogTitle>
+                                  <AlertDialogTitle>
+                                    Delete Reply
+                                  </AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    Are you sure you want to delete this reply? This action cannot be undone.
+                                    Are you sure you want to delete this reply?
+                                    This action cannot be undone.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
@@ -540,7 +577,9 @@ const TopicDetail = () => {
                                     className="bg-red-600 hover:bg-red-700"
                                     disabled={deletingReplyId === reply.id}
                                   >
-                                    {deletingReplyId === reply.id ? "Deleting..." : "Delete"}
+                                    {deletingReplyId === reply.id
+                                      ? "Deleting..."
+                                      : "Delete"}
                                   </AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
@@ -562,7 +601,9 @@ const TopicDetail = () => {
                             <Button
                               size="sm"
                               onClick={handleSubmitEdit}
-                              disabled={submittingEdit || !editingContent.trim()}
+                              disabled={
+                                submittingEdit || !editingContent.trim()
+                              }
                               className="bg-gradient-primary"
                             >
                               {submittingEdit ? "Saving..." : "Save"}
@@ -579,7 +620,9 @@ const TopicDetail = () => {
                         </div>
                       ) : (
                         <>
-                          <p className="text-foreground mb-4">{reply.content}</p>
+                          <p className="text-foreground mb-4">
+                            {reply.content}
+                          </p>
                           <div className="flex items-center space-x-4">
                             <Button variant="ghost" size="sm">
                               <ThumbsUp className="w-4 h-4 mr-2" />
@@ -588,7 +631,7 @@ const TopicDetail = () => {
                             {isAuthenticated && (
                               <Button variant="ghost" size="sm">
                                 <Reply className="w-4 h-4 mr-2" />
-                                Reply 
+                                Reply
                               </Button>
                             )}
                           </div>
@@ -619,7 +662,7 @@ const TopicDetail = () => {
                     </h3>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <form onSubmit={(e) => e.preventDefault()}>
+                    <div>
                       <Textarea
                         placeholder="Write your reply here..."
                         className="min-h-[120px]"
@@ -631,8 +674,8 @@ const TopicDetail = () => {
                         <Button
                           type="button"
                           className="bg-gradient-primary"
-                          onClick={handleSubmitReply}
-                          disabled={submittingReply || !replyContent.trim()}
+                          onClick={() => handleSubmitReply()}
+                          disabled={submittingReply}
                         >
                           {submittingReply ? "Posting..." : "Post Reply"}
                         </Button>
@@ -644,7 +687,7 @@ const TopicDetail = () => {
                           Preview
                         </Button>
                       </div>
-                    </form>
+                    </div>
                   </CardContent>
                 </Card>
               ) : (
@@ -654,7 +697,7 @@ const TopicDetail = () => {
                       <p className="text-muted-foreground">
                         Please sign in to reply to this topic
                       </p>
-                      <Button 
+                      <Button
                         onClick={() => navigate("/login")}
                         className="bg-gradient-primary"
                       >

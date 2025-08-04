@@ -1,5 +1,5 @@
 // Authentication Service for fastn community platform
-import { ApiService } from './api';
+import { ApiService } from "./api";
 
 const API_BASE_URL = "https://qa.fastn.ai/api/v1";
 const API_KEY = "59b01ec6-8f4b-490f-8be4-cd2263d36584";
@@ -63,16 +63,16 @@ export interface AuthResponse {
 
 // Session storage keys
 const SESSION_KEYS = {
-  USER: 'fastn_user',
-  TOKEN: 'fastn_token',
-  IS_AUTHENTICATED: 'fastn_is_authenticated'
+  USER: "fastn_user",
+  TOKEN: "fastn_token",
+  IS_AUTHENTICATED: "fastn_is_authenticated",
 };
 
 // Simple password hashing (in production, use proper hashing)
 const hashPassword = (password: string): string => {
   // This is a simple hash for demo purposes
   // In production, use bcrypt or similar
-  return btoa(password + '_fastn_salt');
+  return btoa(password + "_fastn_salt");
 };
 
 // Authentication Service
@@ -84,7 +84,7 @@ export class AuthService {
       if (userData.password !== userData.confirmPassword) {
         return {
           success: false,
-          message: "Passwords do not match"
+          message: "Passwords do not match",
         };
       }
 
@@ -92,28 +92,29 @@ export class AuthService {
       if (userData.password.length < 6) {
         return {
           success: false,
-          message: "Password must be at least 6 characters long"
+          message: "Password must be at least 6 characters long",
         };
       }
 
       // Check if user already exists
       const existingUsers = await ApiService.getAllUsers();
       const existingUser = existingUsers.find(
-        user => user.email === userData.email || user.username === userData.username
+        (user) =>
+          user.email === userData.email || user.username === userData.username
       );
 
       if (existingUser) {
         return {
           success: false,
-          message: existingUser.email === userData.email 
-            ? "Email already registered" 
-            : "Username already taken"
+          message:
+            existingUser.email === userData.email
+              ? "Email already registered"
+              : "Username already taken",
         };
       }
 
       // Create new user
-    
-      console.log("Registration request body:", requestBody);
+
       console.log("Registration request headers:", getHeaders());
 
       // Create user directly using crudUser endpoint
@@ -124,68 +125,72 @@ export class AuthService {
           body: JSON.stringify({
             input: {
               action: "insert",
-              users: [{
-                id: `id_${Date.now()}_${Math.floor(Math.random() * 1000000)}`,
-                username: userData.username,
-                email: userData.email,
-                password_hash: hashPassword(userData.password)
-              }]
-            }
-          })
+              users: [
+                {
+                  id: `id_${Date.now()}_${Math.floor(Math.random() * 1000000)}`,
+                  username: userData.username,
+                  email: userData.email,
+                  password_hash: hashPassword(userData.password),
+                },
+              ],
+            },
+          }),
         });
 
-          if (userResponse.ok) {
-            const userResult = await userResponse.json();
-            console.log("User created via crudUser:", userResult);
-            
-            const newUser: AuthUser = {
-              id: userResult.data?.id || `id_${Date.now()}_${Math.floor(Math.random() * 1000000)}`,
-              username: userData.username,
-              email: userData.email,
-              first_name: userData.first_name,
-              last_name: userData.last_name,
-              bio: userData.bio,
-              avatar_url: "",
-              location: userData.location,
-              company: userData.company,
-              website: userData.website,
-              reputation: 0,
-              level: "beginner",
-              is_verified: false,
-              is_active: true,
-              email_verified: false,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            };
+        if (userResponse.ok) {
+          const userResult = await userResponse.json();
+          console.log("User created via crudUser:", userResult);
 
-            // Store user session
-            this.setSession(newUser);
+          const newUser: AuthUser = {
+            id:
+              userResult.data?.id ||
+              `id_${Date.now()}_${Math.floor(Math.random() * 1000000)}`,
+            username: userData.username,
+            email: userData.email,
+            first_name: userData.first_name,
+            last_name: userData.last_name,
+            bio: userData.bio,
+            avatar_url: "",
+            location: userData.location,
+            company: userData.company,
+            website: userData.website,
+            reputation: 0,
+            level: "beginner",
+            is_verified: false,
+            is_active: true,
+            email_verified: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          };
 
-            return {
-              success: true,
-              user: newUser,
-              message: "Registration successful (via fallback method)"
-            };
-          } else {
-            const userError = await userResponse.json().catch(() => ({}));
-            console.error("User creation failed:", userError);
-            return {
-              success: false,
-              message: "Registration failed: Could not create user account"
-            };
-          }
-        } catch (userError) {
-          console.error("User creation error:", userError);
+          // Store user session
+          this.setSession(newUser);
+
+          return {
+            success: true,
+            user: newUser,
+            message: "Registration successful (via fallback method)",
+          };
+        } else {
+          const userError = await userResponse.json().catch(() => ({}));
+          console.error("User creation failed:", userError);
           return {
             success: false,
-            message: "Registration failed: Could not create user account"
+            message: "Registration failed: Could not create user account",
           };
         }
+      } catch (userError) {
+        console.error("User creation error:", userError);
+        return {
+          success: false,
+          message: "Registration failed: Could not create user account",
+        };
+      }
     } catch (error) {
       console.error("Registration error:", error);
       return {
         success: false,
-        message: error instanceof Error ? error.message : "Registration failed"
+        message: error instanceof Error ? error.message : "Registration failed",
       };
     }
   }
@@ -197,8 +202,8 @@ export class AuthService {
       const requestBody = {
         input: {
           email: loginData.email,
-          password: loginData.password
-        }
+          password: hashPassword(loginData.password),
+        },
       };
 
       // Make the login request with the new API structure
@@ -207,20 +212,22 @@ export class AuthService {
         headers: {
           ...getHeaders(),
           "x-fastn-custom-auth": "true",
-          "authorization": "" // This should be set if you have an auth token
+          authorization: "", // This should be set if you have an auth token
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
       });
 
       // If login flow is not deployed, try alternative approach
       if (response.status === 400) {
         const errorData = await response.json().catch(() => ({}));
         if (errorData.code === "FLOW_NOT_DEPLOYED") {
-          console.log("Login flow not deployed, trying alternative approach...");
+          console.log(
+            "Login flow not deployed, trying alternative approach..."
+          );
           // Try to find user by email and validate password
           const allUsers = await ApiService.getAllUsers();
-          const user = allUsers.find(u => u.email === loginData.email);
-          
+          const user = allUsers.find((u) => u.email === loginData.email);
+
           if (user) {
             // Simple password validation (in production, use proper hashing)
             const hashedPassword = hashPassword(loginData.password);
@@ -242,7 +249,7 @@ export class AuthService {
                 is_active: user.is_active !== false,
                 email_verified: (user as any).email_verified !== false,
                 created_at: user.created_at || new Date().toISOString(),
-                updated_at: user.updated_at || new Date().toISOString()
+                updated_at: user.updated_at || new Date().toISOString(),
               };
 
               // Store user session
@@ -251,14 +258,14 @@ export class AuthService {
               return {
                 success: true,
                 user: authUser,
-                message: "Login successful"
+                message: "Login successful",
               };
             }
           }
-          
+
           return {
             success: false,
-            message: "Invalid email or password"
+            message: "Invalid email or password",
           };
         }
       }
@@ -267,7 +274,8 @@ export class AuthService {
         const errorData = await response.json().catch(() => ({}));
         return {
           success: false,
-          message: errorData.message || `Login failed with status: ${response.status}`
+          message:
+            errorData.message || `Login failed with status: ${response.status}`,
         };
       }
 
@@ -277,10 +285,12 @@ export class AuthService {
       if (result.success || result.data) {
         // Extract user data from the response
         const userData = result.data || result.user || result;
-        
+
         const authUser: AuthUser = {
-          id: userData.id || `id_${Date.now()}_${Math.floor(Math.random() * 1000000)}`,
-          username: userData.username || loginData.email.split('@')[0],
+          id:
+            userData.id ||
+            `id_${Date.now()}_${Math.floor(Math.random() * 1000000)}`,
+          username: userData.username || loginData.email.split("@")[0],
           email: loginData.email,
           first_name: (userData as any).first_name || "",
           last_name: (userData as any).last_name || "",
@@ -295,7 +305,7 @@ export class AuthService {
           is_active: userData.is_active !== false,
           email_verified: (userData as any).email_verified !== false,
           created_at: userData.created_at || new Date().toISOString(),
-          updated_at: userData.updated_at || new Date().toISOString()
+          updated_at: userData.updated_at || new Date().toISOString(),
         };
 
         // Store user session
@@ -305,19 +315,19 @@ export class AuthService {
           success: true,
           user: authUser,
           message: "Login successful",
-          token: result.token || result.access_token
+          token: result.token || result.access_token,
         };
       } else {
         return {
           success: false,
-          message: result.message || "Login failed"
+          message: result.message || "Login failed",
         };
       }
     } catch (error) {
       console.error("Login error:", error);
       return {
         success: false,
-        message: error instanceof Error ? error.message : "Login failed"
+        message: error instanceof Error ? error.message : "Login failed",
       };
     }
   }
@@ -335,7 +345,9 @@ export class AuthService {
   // Get current user
   static getCurrentUser(): AuthUser | null {
     try {
-      const userStr = localStorage.getItem(SESSION_KEYS.USER) || sessionStorage.getItem(SESSION_KEYS.USER);
+      const userStr =
+        localStorage.getItem(SESSION_KEYS.USER) ||
+        sessionStorage.getItem(SESSION_KEYS.USER);
       if (userStr) {
         return JSON.parse(userStr);
       }
@@ -349,20 +361,25 @@ export class AuthService {
   // Check if user is authenticated
   static isAuthenticated(): boolean {
     const user = this.getCurrentUser();
-    const isAuth = localStorage.getItem(SESSION_KEYS.IS_AUTHENTICATED) || sessionStorage.getItem(SESSION_KEYS.IS_AUTHENTICATED);
-    return !!(user && isAuth === 'true');
+    const isAuth =
+      localStorage.getItem(SESSION_KEYS.IS_AUTHENTICATED) ||
+      sessionStorage.getItem(SESSION_KEYS.IS_AUTHENTICATED);
+    return !!(user && isAuth === "true");
   }
 
   // Set user session
   private static setSession(user: AuthUser): void {
     localStorage.setItem(SESSION_KEYS.USER, JSON.stringify(user));
-    localStorage.setItem(SESSION_KEYS.IS_AUTHENTICATED, 'true');
+    localStorage.setItem(SESSION_KEYS.IS_AUTHENTICATED, "true");
     sessionStorage.setItem(SESSION_KEYS.USER, JSON.stringify(user));
-    sessionStorage.setItem(SESSION_KEYS.IS_AUTHENTICATED, 'true');
+    sessionStorage.setItem(SESSION_KEYS.IS_AUTHENTICATED, "true");
   }
 
   // Update user profile
-  static async updateProfile(userId: string, profileData: Partial<AuthUser>): Promise<AuthResponse> {
+  static async updateProfile(
+    userId: string,
+    profileData: Partial<AuthUser>
+  ): Promise<AuthResponse> {
     try {
       const response = await fetch(`${API_BASE_URL}/crudUser`, {
         method: "POST",
@@ -373,11 +390,11 @@ export class AuthService {
             users: [
               {
                 id: userId,
-                ...profileData
-              }
-            ]
-          }
-        })
+                ...profileData,
+              },
+            ],
+          },
+        }),
       });
 
       if (!response.ok) {
@@ -397,19 +414,20 @@ export class AuthService {
         return {
           success: true,
           user: currentUser ? { ...currentUser, ...profileData } : undefined,
-          message: "Profile updated successfully"
+          message: "Profile updated successfully",
         };
       } else {
         return {
           success: false,
-          message: result.message || "Profile update failed"
+          message: result.message || "Profile update failed",
         };
       }
     } catch (error) {
       console.error("Profile update error:", error);
       return {
         success: false,
-        message: error instanceof Error ? error.message : "Profile update failed"
+        message:
+          error instanceof Error ? error.message : "Profile update failed",
       };
     }
   }
@@ -435,7 +453,7 @@ export class AuthService {
         is_active: user.is_active,
         email_verified: true,
         created_at: user.created_at,
-        updated_at: user.updated_at
+        updated_at: user.updated_at,
       };
     } catch (error) {
       console.error("Error getting user by ID:", error);
@@ -456,13 +474,22 @@ export class AuthService {
   }
 
   // Validate password strength
-  static validatePassword(password: string): { isValid: boolean; message: string } {
+  static validatePassword(password: string): {
+    isValid: boolean;
+    message: string;
+  } {
     if (password.length < 6) {
-      return { isValid: false, message: "Password must be at least 6 characters long" };
+      return {
+        isValid: false,
+        message: "Password must be at least 6 characters long",
+      };
     }
     if (password.length > 50) {
-      return { isValid: false, message: "Password must be less than 50 characters" };
+      return {
+        isValid: false,
+        message: "Password must be less than 50 characters",
+      };
     }
     return { isValid: true, message: "Password is valid" };
   }
-} 
+}
