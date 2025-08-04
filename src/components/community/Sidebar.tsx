@@ -97,11 +97,25 @@ const Sidebar = () => {
       tagCounts[tag] = (tagCounts[tag] || 0) + 1;
     });
     
-    // Return top 6 most popular tags
-    return Object.entries(tagCounts)
+    // Add specific tags we want to always show
+    const specificTags = ["fastn", "best-practices", "deployment"];
+    specificTags.forEach(tag => {
+      if (!tagCounts[tag]) {
+        tagCounts[tag] = 0; // Add with 0 count if not in database
+      }
+    });
+    
+    // Return specific tags first, then top popular tags
+    const specificTagsList = specificTags.filter(tag => tagCounts[tag] !== undefined);
+    const popularTags = Object.entries(tagCounts)
+      .filter(([tag]) => !specificTags.includes(tag)) // Exclude specific tags from popular list
       .sort(([,a], [,b]) => b - a)
       .slice(0, 6)
       .map(([tag]) => tag);
+    
+    // Combine specific tags with popular tags, ensuring no duplicates
+    const combinedTags = [...specificTagsList, ...popularTags];
+    return combinedTags.slice(0, 9); // Show up to 9 tags total
   };
 
   const tags = loading ? [] : getPopularTags();
