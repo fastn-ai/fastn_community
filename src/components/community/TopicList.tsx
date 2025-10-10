@@ -38,9 +38,9 @@ import {
   Zap,
   Megaphone,
   X,
+  Settings,
 } from "lucide-react";
 import { ApiService, Topic, Category } from "@/services/api";
-import { useAuth } from "@/contexts/AuthContext";
 import { getTagColor } from "@/lib/utils";
 
 interface TopicListProps {
@@ -50,7 +50,6 @@ interface TopicListProps {
 const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated } = useAuth();
   const [topics, setTopics] = useState<Topic[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -448,15 +447,21 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
               <FolderOpen className="h-4 w-4 text-blue-600" />
               Categories
             </Button>
-            {isAuthenticated && (
-              <Button
-                onClick={() => navigate("/create")}
-                className="hidden sm:flex items-center space-x-2"
-              >
-                <Plus className="w-4 h-4" />
-                <span>New Topic </span>
-              </Button>
-            )}
+            <Button
+              onClick={() => navigate("/create")}
+              className="hidden sm:flex items-center space-x-2"
+            >
+              <Plus className="w-4 h-4" />
+              <span>New Topic </span>
+            </Button>
+            <Button
+              onClick={() => navigate("/admin")}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <Settings className="h-4 w-4" />
+              Admin
+            </Button>
           </div>
         </div>
 

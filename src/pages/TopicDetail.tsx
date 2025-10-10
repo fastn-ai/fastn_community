@@ -40,7 +40,7 @@ import {
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useApi } from "@/services/api";
-import { useAuth } from "@/contexts/AuthContext";
+// Removed auth context import
 import type { Topic, Reply as ReplyType } from "@/services/api";
 import { getTagColor } from "@/lib/utils";
 
@@ -69,7 +69,9 @@ const TopicDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { getAllTopicById, createReply, editReply, deleteReply } = useApi();
-  const { isAuthenticated, user } = useAuth();
+  // Mock user data since we removed authentication
+  const user = { id: 'user_1', username: 'admin', email: 'admin@fastn.ai' };
+  const isAuthenticated = true;
 
   useEffect(() => {
     const fetchTopic = async () => {
@@ -206,14 +208,6 @@ const TopicDetail = () => {
       const result = await editReply({
         id: editingReplyId,
         content: editingContent,
-        author_id:
-          user?.id || editingReplyData.author_id || "id_1754164424_145800",
-        topic_id: id,
-        tutorial_id: editingReplyData.tutorial_id || null,
-        parent_reply_id: editingReplyData.parent_reply_id || null,
-        like_count: editingReplyData.like_count || 0,
-        is_accepted: editingReplyData.is_accepted || false,
-        is_helpful: editingReplyData.is_helpful || false,
       });
 
       console.log("Edit reply result:", result); // Debug log

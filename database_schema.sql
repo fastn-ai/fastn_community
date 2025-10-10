@@ -367,6 +367,32 @@ CREATE INDEX idx_search_history_user_id ON search_history(user_id);
 CREATE INDEX idx_user_sessions_user_id ON user_sessions(user_id);
 CREATE INDEX idx_user_sessions_token ON user_sessions(session_token);
 
+-- Composite indexes for common query patterns
+CREATE INDEX idx_topics_category_status_created ON topics(category_id, status, created_at DESC);
+CREATE INDEX idx_topics_author_status ON topics(author_id, status);
+CREATE INDEX idx_topics_featured_hot_new ON topics(is_featured, is_hot, is_new);
+CREATE INDEX idx_replies_topic_created ON replies(topic_id, created_at DESC);
+CREATE INDEX idx_replies_author_created ON replies(author_id, created_at DESC);
+CREATE INDEX idx_user_interactions_user_entity ON user_interactions(user_id, entity_type, entity_id);
+CREATE INDEX idx_notifications_user_read_created ON notifications(user_id, is_read, created_at DESC);
+CREATE INDEX idx_tutorials_category_difficulty ON tutorials(category_id, difficulty);
+CREATE INDEX idx_tutorials_author_status ON tutorials(author_id, status);
+CREATE INDEX idx_events_start_date_status ON events(start_date, status);
+CREATE INDEX idx_media_files_entity ON media_files(entity_type, entity_id);
+CREATE INDEX idx_tutorial_ratings_tutorial ON tutorial_ratings(tutorial_id, rating);
+
+-- Full-text search indexes
+CREATE INDEX idx_topics_title_search ON topics USING gin(to_tsvector('english', title));
+CREATE INDEX idx_topics_content_search ON topics USING gin(to_tsvector('english', content));
+CREATE INDEX idx_replies_content_search ON replies USING gin(to_tsvector('english', content));
+CREATE INDEX idx_tutorials_title_search ON tutorials USING gin(to_tsvector('english', title));
+CREATE INDEX idx_tutorials_content_search ON tutorials USING gin(to_tsvector('english', content));
+
+-- Partial indexes for active records
+CREATE INDEX idx_topics_active ON topics(created_at DESC) WHERE status = 'published';
+CREATE INDEX idx_replies_accepted ON replies(created_at DESC) WHERE is_accepted = true;
+CREATE INDEX idx_users_active ON users(reputation_score DESC) WHERE is_active = true;
+
 -- Create triggers for updated_at timestamps
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$

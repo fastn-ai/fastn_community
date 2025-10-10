@@ -39,13 +39,14 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import Header from "@/components/community/Header";
 import Sidebar from "@/components/community/Sidebar";
 import { useApi } from "@/services/api";
-import { useAuth } from "@/contexts/AuthContext";
+// Removed auth context import
 
 const UnifiedForm = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { createTopic } = useApi();
-  const { user } = useAuth();
+  // Mock user data since we removed authentication
+  const user = { id: 'user_1', username: 'admin', email: 'admin@fastn.ai' };
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("topic");
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);

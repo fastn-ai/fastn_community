@@ -1,38 +1,7 @@
-// API Service for fastn community platform
-const API_BASE_URL = "https://qa.fastn.ai/api/v1";
-const API_KEY = "59b01ec6-8f4b-490f-8be4-cd2263d36584";
+// Mock API Service for fastn community platform
+// This is a frontend-only implementation with mock data
 
-const getHeaders = () => ({
-  "Content-Type": "application/json",
-  "x-fastn-api-key": API_KEY,
-  "x-fastn-space-id": "ee032b0c-ebb1-45cb-9cb3-a835d276a8e4",
-  "x-fastn-space-tenantid": "",
-  stage: "DRAFT",
-});
-
-const waitForRateLimit = async () => {
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-};
-
-const retryWithBackoff = async <T>(
-  fn: () => Promise<T>,
-  maxRetries: number = 3,
-  baseDelay: number = 1000
-): Promise<T> => {
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      if (attempt === maxRetries) throw error;
-
-      const delay = baseDelay * Math.pow(2, attempt);
-      await new Promise((resolve) => setTimeout(resolve, delay));
-    }
-  }
-  throw new Error("Max retries exceeded");
-};
-
-// Interfaces
+// Mock data interfaces
 export interface Topic {
   id: string;
   title: string;
@@ -44,7 +13,7 @@ export interface Topic {
   category_name: string;
   category_color?: string;
   category_id?: string;
-  status?: string;
+  status?: 'pending' | 'approved' | 'rejected';
   is_featured?: boolean;
   is_hot?: boolean;
   is_new?: boolean;
@@ -53,7 +22,7 @@ export interface Topic {
   like_count: number;
   bookmark_count: number;
   share_count: number;
-  tags?: string[]; // Changed to array of strings
+  tags?: string[];
   created_at: string;
   updated_at?: string;
 }
@@ -68,26 +37,6 @@ export interface Category {
   topics_count: number;
   tutorials_count: number;
   is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Tag {
-  id: string;
-  name: string;
-  description?: string;
-  slug: string;
-  color?: string;
-  topics_count: number;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface TopicTag {
-  id: string;
-  topic_id: string;
-  tag_id: string;
   created_at: string;
   updated_at: string;
 }
@@ -132,1009 +81,425 @@ export interface Reply {
   updated_at: string;
 }
 
+export interface Tag {
+  id: string;
+  name: string;
+  description?: string;
+  slug: string;
+  color?: string;
+  topics_count: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   data: T;
   message?: string;
 }
 
+// Mock data storage
+let mockTopics: Topic[] = [];
+let mockCategories: Category[] = [];
+let mockUsers: User[] = [];
+let mockReplies: Reply[] = [];
+let mockTags: Tag[] = [];
+
+// Initialize mock data
+const initializeMockData = () => {
+  // Mock Categories
+  mockCategories = [
+    {
+      id: 'cat_1',
+      name: 'Questions',
+      description: 'Ask questions and get help from the community',
+      slug: 'questions',
+      icon: 'help-circle',
+      color: '#3B82F6',
+      topics_count: 0,
+      tutorials_count: 0,
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: 'cat_2',
+      name: 'Announcements',
+      description: 'Important updates and announcements',
+      slug: 'announcements',
+      icon: 'megaphone',
+      color: '#EF4444',
+      topics_count: 0,
+      tutorials_count: 0,
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: 'cat_3',
+      name: 'Best Practices',
+      description: 'Share best practices and tips',
+      slug: 'best-practices',
+      icon: 'star',
+      color: '#10B981',
+      topics_count: 0,
+      tutorials_count: 0,
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+  ];
+
+  // Mock Users
+  mockUsers = [
+    {
+      id: 'user_1',
+      username: 'admin',
+      email: 'admin@fastn.ai',
+      avatar: '',
+      bio: 'Platform Administrator',
+      location: 'Global',
+      website: 'https://fastn.ai',
+      twitter: '',
+      github: '',
+      linkedin: '',
+      is_verified: true,
+      is_active: true,
+      topics_count: 0,
+      replies_count: 0,
+      likes_received: 0,
+      badges_count: 0,
+      reputation_score: 1000,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: 'user_2',
+      username: 'john_doe',
+      email: 'john@example.com',
+      avatar: '',
+      bio: 'Fastn Developer',
+      location: 'San Francisco',
+      website: '',
+      twitter: '',
+      github: '',
+      linkedin: '',
+      is_verified: false,
+      is_active: true,
+      topics_count: 0,
+      replies_count: 0,
+      likes_received: 0,
+      badges_count: 0,
+      reputation_score: 150,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+  ];
+
+  // Mock Topics
+  mockTopics = [
+    {
+      id: 'topic_1',
+      title: 'Welcome to Fastn Community!',
+      description: 'This is our first community post. Welcome everyone!',
+      content: 'Welcome to the Fastn community platform. This is where developers can share knowledge, ask questions, and collaborate.',
+      author_username: 'admin',
+      author_avatar: '',
+      author_id: 'user_1',
+      category_name: 'Announcements',
+      category_color: '#EF4444',
+      category_id: 'cat_2',
+      status: 'approved',
+      is_featured: true,
+      is_hot: false,
+      is_new: true,
+      view_count: 150,
+      reply_count: 5,
+      like_count: 25,
+      bookmark_count: 10,
+      share_count: 3,
+      tags: ['welcome', 'community', 'fastn'],
+      created_at: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: 'topic_2',
+      title: 'How to get started with Fastn?',
+      description: 'Looking for guidance on getting started with Fastn development.',
+      content: 'I am new to Fastn and would like to know the best way to get started. Any recommendations?',
+      author_username: 'john_doe',
+      author_avatar: '',
+      author_id: 'user_2',
+      category_name: 'Questions',
+      category_color: '#3B82F6',
+      category_id: 'cat_1',
+      status: 'approved',
+      is_featured: false,
+      is_hot: true,
+      is_new: false,
+      view_count: 75,
+      reply_count: 3,
+      like_count: 8,
+      bookmark_count: 5,
+      share_count: 1,
+      tags: ['getting-started', 'help', 'fastn'],
+      created_at: new Date(Date.now() - 43200000).toISOString(), // 12 hours ago
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: 'topic_3',
+      title: 'Best practices for Fastn development',
+      description: 'Share your best practices and tips for Fastn development.',
+      content: 'This is a pending post that needs admin approval.',
+      author_username: 'john_doe',
+      author_avatar: '',
+      author_id: 'user_2',
+      category_name: 'Best Practices',
+      category_color: '#10B981',
+      category_id: 'cat_3',
+      status: 'pending',
+      is_featured: false,
+      is_hot: false,
+      is_new: true,
+      view_count: 0,
+      reply_count: 0,
+      like_count: 0,
+      bookmark_count: 0,
+      share_count: 0,
+      tags: ['best-practices', 'development'],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+  ];
+
+  // Mock Tags
+  mockTags = [
+    {
+      id: 'tag_1',
+      name: 'fastn',
+      description: 'Fastn framework related topics',
+      slug: 'fastn',
+      color: '#8B5CF6',
+      topics_count: 3,
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: 'tag_2',
+      name: 'development',
+      description: 'Development related topics',
+      slug: 'development',
+      color: '#06B6D4',
+      topics_count: 2,
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+  ];
+};
+
+// Initialize mock data on first load
+if (mockTopics.length === 0) {
+  initializeMockData();
+}
+
+// Mock API Service Class
 export class ApiService {
   // Get all categories
   static async getAllCategories(): Promise<Category[]> {
-    return retryWithBackoff(async () => {
-      await waitForRateLimit();
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/getAllcategories`, {
-          method: "POST",
-          headers: getHeaders(),
-          body: JSON.stringify({ input: {} }),
-        });
-
-        if (response.status === 429) {
-          throw new Error(
-            `HTTP error! status: ${response.status} - Rate limited`
-          );
-        }
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-
-        if (result.data) {
-          return Array.isArray(result.data) ? result.data : [result.data];
-        } else if (Array.isArray(result)) {
-          return result;
-        } else {
-          console.warn("Unexpected API response format:", result);
-          return [];
-        }
-      } catch (error) {
-        console.error("Error fetching categories:", error);
-        throw error;
-      }
+    return new Promise((resolve) => {
+      setTimeout(() => resolve([...mockCategories]), 100);
     });
   }
 
   // Get all topics
   static async getAllTopics(): Promise<Topic[]> {
-    return retryWithBackoff(async () => {
-      await waitForRateLimit();
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/getAllTopics`, {
-          method: "POST",
-          headers: getHeaders(),
-          body: JSON.stringify({ input: {} }),
-        });
-
-        if (response.status === 429) {
-          throw new Error(
-            `HTTP error! status: ${response.status} - Rate limited`
-          );
-        }
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-
-        if (result.data) {
-          return Array.isArray(result.data) ? result.data : [result.data];
-        } else if (Array.isArray(result)) {
-          return result;
-        } else {
-          console.warn("Unexpected API response format:", result);
-          return [];
-        }
-      } catch (error) {
-        console.error("Error fetching topics:", error);
-        throw error;
-      }
+    return new Promise((resolve) => {
+      setTimeout(() => resolve([...mockTopics]), 100);
     });
   }
 
-  // Create topic using crudTopics endpoint
-  static async createTopic(topicData: Partial<Topic>): Promise<Topic> {
-    return retryWithBackoff(async () => {
-      await waitForRateLimit();
-
-      try {
-        // Validate that the author_id exists in the users table
-        if (topicData.author_id) {
-          try {
-            const users = await this.getAllUsers();
-            const userExists = users.some(user => user.id === topicData.author_id);
-            if (!userExists) {
-              console.warn(`User with ID ${topicData.author_id} does not exist in the database. Attempting to create user...`);
-              
-                             // Try to create the user if they don't exist
-               try {
-                 const userData = JSON.parse(localStorage.getItem('fastn_user') || '{}');
-                 const createUserResponse = await fetch(`${API_BASE_URL}/crudUser`, {
-                   method: "POST",
-                   headers: getHeaders(),
-                   body: JSON.stringify({
-                     input: {
-                       action: "insert",
-                       users: [{
-                         // Let the database generate the ID
-                         username: userData.username || topicData.author_username || 'user',
-                         email: userData.email || 'user@example.com',
-                         password_hash: btoa('password_fastn_salt'),
-                         bio: userData.bio || "",
-                         avatar_url: userData.avatar_url || "",
-                         location: userData.location || "",
-                         website: userData.website || "",
-                         twitter: "",
-                         github: "",
-                         linkedin: "",
-                         is_verified: userData.is_verified || false,
-                         is_active: userData.is_active !== false,
-                         reputation_score: userData.reputation_score || 0,
-                         topics_count: 0,
-                         replies_count: 0,
-                         likes_received: 0,
-                         badges_count: 0
-                       }]
-                     }
-                   })
-                 });
-
-                if (createUserResponse.ok) {
-                  console.log("User created successfully for topic creation");
-                } else {
-                  console.error("Failed to create user for topic creation");
-                  throw new Error(`User with ID ${topicData.author_id} does not exist in the database and could not be created. Please ensure you are properly authenticated.`);
-                }
-              } catch (createError) {
-                console.error("Error creating user:", createError);
-                throw new Error(`User with ID ${topicData.author_id} does not exist in the database. Please ensure you are properly authenticated.`);
-              }
-            }
-          } catch (error) {
-            console.warn("Could not validate user existence:", error);
-            // Continue with topic creation even if user validation fails
-          }
-        }
-
-        const response = await fetch(`${API_BASE_URL}/crudTopics`, {
-          method: "POST",
-          headers: {
-            ...getHeaders(),
-            "x-fastn-custom-auth": "true",
-          },
-          body: JSON.stringify({
-            input: {
-              action: "insert",
-              topics: [
-                {
-                  title: topicData.title,
-                  description: topicData.description,
-                  content: topicData.content,
-                  author_id: topicData.author_id || "id_1754164424_145800", // Use provided author ID
-                  category_id: topicData.category_id || "id_1754163675_740242", // Default category ID
-                  is_featured: topicData.is_featured || false,
-                  is_hot: topicData.is_hot || false,
-                  is_new: topicData.is_new || true,
-                  view_count: topicData.view_count || 0,
-                  reply_count: topicData.reply_count || 0,
-                  like_count: topicData.like_count || 0,
-                  bookmark_count: topicData.bookmark_count || 0,
-                  share_count: topicData.share_count || 0,
-                  tags: topicData.tags || [], // Include tags as array
-                },
-              ],
-            },
-          }),
-        });
-
-        if (response.status === 429) {
-          throw new Error(
-            `HTTP error! status: ${response.status} - Rate limited`
-          );
-        }
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-        return result.data;
-      } catch (error) {
-        console.error("Error creating topic:", error);
-        throw error;
-      }
-    });
-  }
-
-  // Get topics by category
-  static async getTopicsByCategory(categoryId: string): Promise<Topic[]> {
-    return retryWithBackoff(async () => {
-      await waitForRateLimit();
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/getTopicsByCategory`, {
-          method: "POST",
-          headers: getHeaders(),
-          body: JSON.stringify({
-            input: {
-              category_id: categoryId,
-            },
-          }),
-        });
-
-        if (response.status === 429) {
-          throw new Error(
-            `HTTP error! status: ${response.status} - Rate limited`
-          );
-        }
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-        return Array.isArray(result.data) ? result.data : [result.data];
-      } catch (error) {
-        console.error("Error fetching topics by category:", error);
-        throw error;
-      }
-    });
-  }
-
-  // Get topic by ID
-  static async getTopicById(topicId: string): Promise<Topic> {
-    return retryWithBackoff(async () => {
-      await waitForRateLimit();
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/getTopicById`, {
-          method: "POST",
-          headers: getHeaders(),
-          body: JSON.stringify({
-            input: {
-              topic_id: topicId,
-            },
-          }),
-        });
-
-        if (response.status === 429) {
-          throw new Error(
-            `HTTP error! status: ${response.status} - Rate limited`
-          );
-        }
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-        return result.data;
-      } catch (error) {
-        console.error("Error fetching topic by ID:", error);
-        throw error;
-      }
-    });
-  }
-
-  // Get all topic by ID (new endpoint)
-  static async getAllTopicById(topicId: string): Promise<Topic> {
-    return retryWithBackoff(async () => {
-      await waitForRateLimit();
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/getAllTopicById`, {
-          method: "POST",
-          headers: {
-            ...getHeaders(),
-            "x-fastn-custom-auth": "true",
-          },
-          body: JSON.stringify({
-            input: {
-              id: topicId,
-            },
-          }),
-        });
-
-        if (response.status === 429) {
-          throw new Error(
-            `HTTP error! status: ${response.status} - Rate limited`
-          );
-        }
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-        return result;
-      } catch (error) {
-        console.error("Error fetching topic by ID (getAllTopicById):", error);
-        throw error;
-      }
-    });
-  }
-
-  // Update topic
-  static async updateTopic(
-    topicId: string,
-    topicData: Partial<Topic>
-  ): Promise<Topic> {
-    return retryWithBackoff(async () => {
-      await waitForRateLimit();
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/updateTopic`, {
-          method: "POST",
-          headers: getHeaders(),
-          body: JSON.stringify({
-            input: {
-              topic_id: topicId,
-              ...topicData,
-            },
-          }),
-        });
-
-        if (response.status === 429) {
-          throw new Error(
-            `HTTP error! status: ${response.status} - Rate limited`
-          );
-        }
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-        return result.data;
-      } catch (error) {
-        console.error("Error updating topic:", error);
-        throw error;
-      }
-    });
-  }
-
-  // Delete topic
-  static async deleteTopic(topicId: string): Promise<boolean> {
-    return retryWithBackoff(async () => {
-      await waitForRateLimit();
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/deleteTopic`, {
-          method: "POST",
-          headers: getHeaders(),
-          body: JSON.stringify({
-            input: {
-              topic_id: topicId,
-            },
-          }),
-        });
-
-        if (response.status === 429) {
-          throw new Error(
-            `HTTP error! status: ${response.status} - Rate limited`
-          );
-        }
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-        return result.success || true;
-      } catch (error) {
-        console.error("Error deleting topic:", error);
-        throw error;
-      }
-    });
-  }
-
-  // Get replies for a specific topic
-  static async getRepliesByTopic(topicId: string): Promise<Reply[]> {
-    return retryWithBackoff(async () => {
-      await waitForRateLimit();
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/getRepliesByTopic`, {
-          method: "POST",
-          headers: getHeaders(),
-          body: JSON.stringify({
-            input: {
-              topic_id: topicId,
-            },
-          }),
-        });
-
-        if (response.status === 429) {
-          throw new Error(
-            `HTTP error! status: ${response.status} - Rate limited`
-          );
-        }
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-        return Array.isArray(result.data) ? result.data : [result.data];
-      } catch (error) {
-        console.error("Error fetching replies by topic:", error);
-        throw error;
-      }
-    });
-  }
-
-  // Get reply by ID
-  static async getReplyById(replyId: string): Promise<Reply> {
-    return retryWithBackoff(async () => {
-      await waitForRateLimit();
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/getReplyById`, {
-          method: "POST",
-          headers: getHeaders(),
-          body: JSON.stringify({
-            input: {
-              reply_id: replyId,
-            },
-          }),
-        });
-
-        if (response.status === 429) {
-          throw new Error(
-            `HTTP error! status: ${response.status} - Rate limited`
-          );
-        }
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-        return result.data;
-      } catch (error) {
-        console.error("Error fetching reply by ID:", error);
-        throw error;
-      }
-    });
-  }
-
-  // Create new reply
-  static async createReply(replyData: Partial<Reply>): Promise<Reply> {
-    return retryWithBackoff(async () => {
-      await waitForRateLimit();
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/createReply`, {
-          method: "POST",
-          headers: {
-            ...getHeaders(),
-            "x-fastn-custom-auth": "true",
-          },
-          body: JSON.stringify({
-            input: {
-              replies: [
-                {
-                  content: replyData.content,
-                  author_id: replyData.author_id || "id_1754164424_145800",
-                  topic_id: replyData.topic_id,
-                  tutorial_id: "",
-                  parent_reply_id: replyData.parent_reply_id || "",
-                  like_count: replyData.like_count || 0,
-                  is_accepted: replyData.is_accepted || false,
-                  is_helpful: replyData.is_helpful || false,
-                  created_at: new Date().toISOString(),
-                },
-              ],
-            },
-          }),
-        });
-
-        if (response.status === 429) {
-          throw new Error(
-            `HTTP error! status: ${response.status} - Rate limited`
-          );
-        }
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-        return result.data;
-      } catch (error) {
-        console.error("Error creating reply:", error);
-        throw error;
-      }
-    });
-  }
-
-  // Update reply
-  static async updateReply(
-    replyId: string,
-    replyData: Partial<Reply>
-  ): Promise<Reply> {
-    return retryWithBackoff(async () => {
-      await waitForRateLimit();
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/updateReply`, {
-          method: "POST",
-          headers: getHeaders(),
-          body: JSON.stringify({
-            input: {
-              reply_id: replyId,
-              ...replyData,
-            },
-          }),
-        });
-
-        if (response.status === 429) {
-          throw new Error(
-            `HTTP error! status: ${response.status} - Rate limited`
-          );
-        }
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-        return result.data;
-      } catch (error) {
-        console.error("Error updating reply:", error);
-        throw error;
-      }
-    });
-  }
-
-  // Delete reply
-  static async deleteReply(replyId: string): Promise<boolean> {
-    return retryWithBackoff(async () => {
-      await waitForRateLimit();
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/deleteReply`, {
-          method: "POST",
-          headers: getHeaders(),
-          body: JSON.stringify({
-            input: {
-              reply_id: replyId,
-            },
-          }),
-        });
-
-        if (response.status === 429) {
-          throw new Error(
-            `HTTP error! status: ${response.status} - Rate limited`
-          );
-        }
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-        return result.success || true;
-      } catch (error) {
-        console.error("Error deleting reply:", error);
-        throw error;
-      }
-    });
-  }
-
-  // Edit reply
-  static async editReply(replyData: {
-    id: string;
-    content: string;
-    author_id: string;
-    topic_id: string;
-    tutorial_id?: string | null;
-    parent_reply_id?: string | null;
-    like_count?: number;
-    is_accepted?: boolean;
-    is_helpful?: boolean;
-  }): Promise<any> {
-    return retryWithBackoff(async () => {
-      await waitForRateLimit();
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/editReply`, {
-          method: "POST",
-          headers: getHeaders(),
-          body: JSON.stringify({
-            input: {
-              replies: [replyData],
-            },
-          }),
-        });
-
-        if (response.status === 429) {
-          throw new Error(
-            `HTTP error! status: ${response.status} - Rate limited`
-          );
-        }
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-        console.log("EditReply API response:", result); // Debug log
-        
-        // Check if the response indicates an error
-        if (result.error || result.message) {
-          throw new Error(result.message || result.error || "Edit reply failed");
-        }
-        
-        // Handle different response formats for editReply
-        if (result.data) {
-          return result.data;
-        } else if (result.success !== undefined) {
-          // If it's a success response without data, return the result itself
-          return result;
-        } else {
-          // If no data property, return the entire result
-          return result;
-        }
-      } catch (error) {
-        console.error("Error editing reply:", error);
-        throw error;
-      }
-    });
-  }
-
-  // Like a reply
-  static async likeReply(replyId: string): Promise<Reply> {
-    return retryWithBackoff(async () => {
-      await waitForRateLimit();
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/likeReply`, {
-          method: "POST",
-          headers: getHeaders(),
-          body: JSON.stringify({
-            input: {
-              reply_id: replyId,
-            },
-          }),
-        });
-
-        if (response.status === 429) {
-          throw new Error(
-            `HTTP error! status: ${response.status} - Rate limited`
-          );
-        }
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-        return result.data;
-      } catch (error) {
-        console.error("Error liking reply:", error);
-        throw error;
-      }
-    });
-  }
-
-  // Accept reply as answer
-  static async acceptReply(replyId: string): Promise<Reply> {
-    return retryWithBackoff(async () => {
-      await waitForRateLimit();
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/acceptReply`, {
-          method: "POST",
-          headers: getHeaders(),
-          body: JSON.stringify({
-            input: {
-              reply_id: replyId,
-            },
-          }),
-        });
-
-        if (response.status === 429) {
-          throw new Error(
-            `HTTP error! status: ${response.status} - Rate limited`
-          );
-        }
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-        return result.data;
-      } catch (error) {
-        console.error("Error accepting reply:", error);
-        throw error;
-      }
-    });
-  }
-
-  // Get all tags
-  static async getAllTags(): Promise<Tag[]> {
-    return retryWithBackoff(async () => {
-      await waitForRateLimit();
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/getAllTags`, {
-          method: "POST",
-          headers: getHeaders(),
-          body: JSON.stringify({ input: {} }),
-        });
-
-        if (response.status === 429) {
-          throw new Error(
-            `HTTP error! status: ${response.status} - Rate limited`
-          );
-        }
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-
-        if (result.data) {
-          return Array.isArray(result.data) ? result.data : [result.data];
-        } else if (Array.isArray(result)) {
-          return result;
-        } else {
-          console.warn("Unexpected API response format:", result);
-          return [];
-        }
-      } catch (error) {
-        console.error("Error fetching tags:", error);
-        throw error;
-      }
-    });
-  }
-
-  // Get tags for a specific topic
-  static async getTagsByTopic(topicId: string): Promise<Tag[]> {
-    return retryWithBackoff(async () => {
-      await waitForRateLimit();
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/getTagsByTopic`, {
-          method: "POST",
-          headers: getHeaders(),
-          body: JSON.stringify({
-            input: {
-              topic_id: topicId,
-            },
-          }),
-        });
-
-        if (response.status === 429) {
-          throw new Error(
-            `HTTP error! status: ${response.status} - Rate limited`
-          );
-        }
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-        return Array.isArray(result.data) ? result.data : [result.data];
-      } catch (error) {
-        console.error("Error fetching tags by topic:", error);
-        throw error;
-      }
-    });
-  }
-
-  // Get topics by tag
-  static async getTopicsByTag(tagId: string): Promise<Topic[]> {
-    return retryWithBackoff(async () => {
-      await waitForRateLimit();
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/getTopicsByTag`, {
-          method: "POST",
-          headers: getHeaders(),
-          body: JSON.stringify({
-            input: {
-              tag_id: tagId,
-            },
-          }),
-        });
-
-        if (response.status === 429) {
-          throw new Error(
-            `HTTP error! status: ${response.status} - Rate limited`
-          );
-        }
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-        return Array.isArray(result.data) ? result.data : [result.data];
-      } catch (error) {
-        console.error("Error fetching topics by tag:", error);
-        throw error;
-      }
-    });
-  }
-
-  // Add tag to topic
-  static async addTagToTopic(
-    topicId: string,
-    tagId: string
-  ): Promise<TopicTag> {
-    return retryWithBackoff(async () => {
-      await waitForRateLimit();
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/addTagToTopic`, {
-          method: "POST",
-          headers: getHeaders(),
-          body: JSON.stringify({
-            input: {
-              topic_id: topicId,
-              tag_id: tagId,
-            },
-          }),
-        });
-
-        if (response.status === 429) {
-          throw new Error(
-            `HTTP error! status: ${response.status} - Rate limited`
-          );
-        }
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-        return result.data;
-      } catch (error) {
-        console.error("Error adding tag to topic:", error);
-        throw error;
-      }
-    });
-  }
-
-  // Remove tag from topic
-  static async removeTagFromTopic(
-    topicId: string,
-    tagId: string
-  ): Promise<boolean> {
-    return retryWithBackoff(async () => {
-      await waitForRateLimit();
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/removeTagFromTopic`, {
-          method: "POST",
-          headers: getHeaders(),
-          body: JSON.stringify({
-            input: {
-              topic_id: topicId,
-              tag_id: tagId,
-            },
-          }),
-        });
-
-        if (response.status === 429) {
-          throw new Error(
-            `HTTP error! status: ${response.status} - Rate limited`
-          );
-        }
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-        return result.success || true;
-      } catch (error) {
-        console.error("Error removing tag from topic:", error);
-        throw error;
-      }
-    });
-  }
-
-  // Get all topic-tag relationships
-  static async getAllTopicTags(): Promise<TopicTag[]> {
-    return retryWithBackoff(async () => {
-      await waitForRateLimit();
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/getAllTopicTags`, {
-          method: "POST",
-          headers: getHeaders(),
-          body: JSON.stringify({ input: {} }),
-        });
-
-        if (response.status === 429) {
-          throw new Error(
-            `HTTP error! status: ${response.status} - Rate limited`
-          );
-        }
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-
-        if (result.data) {
-          return Array.isArray(result.data) ? result.data : [result.data];
-        } else if (Array.isArray(result)) {
-          return result;
-        } else {
-          console.warn("Unexpected API response format:", result);
-          return [];
-        }
-      } catch (error) {
-        console.error("Error fetching topic tags:", error);
-        throw error;
-      }
+  // Get topics by status (for admin)
+  static async getTopicsByStatus(status: 'pending' | 'approved' | 'rejected'): Promise<Topic[]> {
+    return new Promise((resolve) => {
+      const filteredTopics = mockTopics.filter(topic => topic.status === status);
+      setTimeout(() => resolve([...filteredTopics]), 100);
     });
   }
 
   // Get all users
   static async getAllUsers(): Promise<User[]> {
-    return retryWithBackoff(async () => {
-      await waitForRateLimit();
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/getAllUsers`, {
-          method: "POST",
-          headers: getHeaders(),
-          body: JSON.stringify({ input: {} }),
-        });
-
-        if (response.status === 429) {
-          throw new Error(
-            `HTTP error! status: ${response.status} - Rate limited`
-          );
-        }
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-
-        if (result.data) {
-          return Array.isArray(result.data) ? result.data : [result.data];
-        } else if (Array.isArray(result)) {
-          return result;
-        } else {
-          console.warn("Unexpected API response format:", result);
-          return [];
-        }
-      } catch (error) {
-        console.error("Error fetching users:", error);
-        throw error;
-      }
+    return new Promise((resolve) => {
+      setTimeout(() => resolve([...mockUsers]), 100);
     });
   }
 
-  // Get user by ID
-  static async getUserById(userId: string): Promise<User> {
-    return retryWithBackoff(async () => {
-      await waitForRateLimit();
+  // Get all replies
+  static async getAllReplies(): Promise<Reply[]> {
+    return new Promise((resolve) => {
+      setTimeout(() => resolve([...mockReplies]), 100);
+    });
+  }
 
-      try {
-        const response = await fetch(`${API_BASE_URL}/getUserById`, {
-          method: "POST",
-          headers: getHeaders(),
-          body: JSON.stringify({
-            input: {
-              user_id: userId,
-            },
-          }),
-        });
+  // Get all tags
+  static async getAllTags(): Promise<Tag[]> {
+    return new Promise((resolve) => {
+      setTimeout(() => resolve([...mockTags]), 100);
+    });
+  }
 
-        if (response.status === 429) {
-          throw new Error(
-            `HTTP error! status: ${response.status} - Rate limited`
-          );
-        }
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-        return result.data;
-      } catch (error) {
-        console.error("Error fetching user by ID:", error);
-        throw error;
+  // Admin: Approve topic
+  static async approveTopic(topicId: string): Promise<Topic> {
+    return new Promise((resolve) => {
+      const topic = mockTopics.find(t => t.id === topicId);
+      if (topic) {
+        topic.status = 'approved';
+        topic.updated_at = new Date().toISOString();
       }
+      setTimeout(() => resolve(topic!), 100);
+    });
+  }
+
+  // Admin: Reject topic
+  static async rejectTopic(topicId: string): Promise<Topic> {
+    return new Promise((resolve) => {
+      const topic = mockTopics.find(t => t.id === topicId);
+      if (topic) {
+        topic.status = 'rejected';
+        topic.updated_at = new Date().toISOString();
+      }
+      setTimeout(() => resolve(topic!), 100);
+    });
+  }
+
+  // Admin: Delete topic
+  static async deleteTopic(topicId: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      const index = mockTopics.findIndex(t => t.id === topicId);
+      if (index !== -1) {
+        mockTopics.splice(index, 1);
+      }
+      setTimeout(() => resolve(true), 100);
+    });
+  }
+
+  // Admin: Create new topic
+  static async createTopic(topicData: Partial<Topic>): Promise<Topic> {
+    return new Promise((resolve) => {
+      const newTopic: Topic = {
+        id: `topic_${Date.now()}`,
+        title: topicData.title || 'Untitled',
+        description: topicData.description || '',
+        content: topicData.content || '',
+        author_username: topicData.author_username || 'anonymous',
+        author_avatar: topicData.author_avatar || '',
+        author_id: topicData.author_id || 'user_2',
+        category_name: topicData.category_name || 'Questions',
+        category_color: topicData.category_color || '#3B82F6',
+        category_id: topicData.category_id || 'cat_1',
+        status: 'pending',
+        is_featured: false,
+        is_hot: false,
+        is_new: true,
+        view_count: 0,
+        reply_count: 0,
+        like_count: 0,
+        bookmark_count: 0,
+        share_count: 0,
+        tags: topicData.tags || [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      
+      mockTopics.push(newTopic);
+      setTimeout(() => resolve(newTopic), 100);
+    });
+  }
+
+  // Get topic by ID
+  static async getAllTopicById(topicId: string): Promise<Topic> {
+    return new Promise((resolve) => {
+      const topic = mockTopics.find(t => t.id === topicId);
+      setTimeout(() => resolve(topic!), 100);
+    });
+  }
+
+  // Create reply
+  static async createReply(replyData: Partial<Reply>): Promise<Reply> {
+    return new Promise((resolve) => {
+      const newReply: Reply = {
+        id: `reply_${Date.now()}`,
+        topic_id: replyData.topic_id || '',
+        author_id: replyData.author_id || 'user_1',
+        author_username: replyData.author_username || 'admin',
+        author_avatar: replyData.author_avatar || '',
+        content: replyData.content || '',
+        tutorial_id: replyData.tutorial_id || '',
+        parent_reply_id: replyData.parent_reply_id || '',
+        is_accepted: false,
+        is_helpful: false,
+        like_count: 0,
+        dislike_count: 0,
+        reply_count: 0,
+                  created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      
+      mockReplies.push(newReply);
+      setTimeout(() => resolve(newReply), 100);
+    });
+  }
+
+  // Edit reply
+  static async editReply(replyData: { id: string; content: string }): Promise<Reply> {
+    return new Promise((resolve) => {
+      const reply = mockReplies.find(r => r.id === replyData.id);
+      if (reply) {
+        reply.content = replyData.content;
+        reply.updated_at = new Date().toISOString();
+      }
+      setTimeout(() => resolve(reply!), 100);
+    });
+  }
+
+  // Delete reply
+  static async deleteReply(replyId: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      const index = mockReplies.findIndex(r => r.id === replyId);
+      if (index !== -1) {
+        mockReplies.splice(index, 1);
+      }
+      setTimeout(() => resolve(true), 100);
+    });
+  }
+
+  // Get analytics data
+  static async getAnalytics(): Promise<{
+    totalUsers: number;
+    totalTopics: number;
+    totalReplies: number;
+    pendingTopics: number;
+    approvedTopics: number;
+    rejectedTopics: number;
+    activeUsers: number;
+    totalViews: number;
+    totalLikes: number;
+  }> {
+    return new Promise((resolve) => {
+      const analytics = {
+        totalUsers: mockUsers.length,
+        totalTopics: mockTopics.length,
+        totalReplies: mockReplies.length,
+        pendingTopics: mockTopics.filter(t => t.status === 'pending').length,
+        approvedTopics: mockTopics.filter(t => t.status === 'approved').length,
+        rejectedTopics: mockTopics.filter(t => t.status === 'rejected').length,
+        activeUsers: mockUsers.filter(u => u.is_active).length,
+        totalViews: mockTopics.reduce((sum, t) => sum + t.view_count, 0),
+        totalLikes: mockTopics.reduce((sum, t) => sum + t.like_count, 0),
+      };
+      setTimeout(() => resolve(analytics), 100);
     });
   }
 }
@@ -1144,27 +509,18 @@ export const useApi = () => {
   return {
     getAllCategories: ApiService.getAllCategories,
     getAllTopics: ApiService.getAllTopics,
-    createTopic: ApiService.createTopic,
-    getTopicsByCategory: ApiService.getTopicsByCategory,
-    getTopicById: ApiService.getTopicById,
-    getAllTopicById: ApiService.getAllTopicById,
-    updateTopic: ApiService.updateTopic,
-    deleteTopic: ApiService.deleteTopic,
-    getRepliesByTopic: ApiService.getRepliesByTopic,
-    getReplyById: ApiService.getReplyById,
-    createReply: ApiService.createReply,
-    updateReply: ApiService.updateReply,
-    deleteReply: ApiService.deleteReply,
-    editReply: ApiService.editReply,
-    likeReply: ApiService.likeReply,
-    acceptReply: ApiService.acceptReply,
-    getAllTags: ApiService.getAllTags,
-    getTagsByTopic: ApiService.getTagsByTopic,
-    getTopicsByTag: ApiService.getTopicsByTag,
-    addTagToTopic: ApiService.addTagToTopic,
-    removeTagFromTopic: ApiService.removeTagFromTopic,
-    getAllTopicTags: ApiService.getAllTopicTags,
+    getTopicsByStatus: ApiService.getTopicsByStatus,
     getAllUsers: ApiService.getAllUsers,
-    getUserById: ApiService.getUserById,
+    getAllReplies: ApiService.getAllReplies,
+    getAllTags: ApiService.getAllTags,
+    approveTopic: ApiService.approveTopic,
+    rejectTopic: ApiService.rejectTopic,
+    deleteTopic: ApiService.deleteTopic,
+    createTopic: ApiService.createTopic,
+    getAllTopicById: ApiService.getAllTopicById,
+    createReply: ApiService.createReply,
+    editReply: ApiService.editReply,
+    deleteReply: ApiService.deleteReply,
+    getAnalytics: ApiService.getAnalytics,
   };
 };

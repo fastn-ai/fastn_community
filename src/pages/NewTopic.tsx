@@ -13,14 +13,15 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { useApi } from "@/services/api";
-import { useAuth } from "@/contexts/AuthContext";
+// Removed auth context import
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { Category } from "@/services/api";
 
 const NewTopic = () => {
   const navigate = useNavigate();
   const { createTopic, getAllCategories } = useApi();
-  const { user } = useAuth();
+  // Mock user data since we removed authentication
+  const user = { id: 'user_1', username: 'admin', email: 'admin@fastn.ai' };
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
