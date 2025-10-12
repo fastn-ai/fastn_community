@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { ApiService, Topic, Category } from "@/services/api";
 import { getTagColor } from "@/lib/utils";
+import CreateTopicModal from "@/components/ui/create-topic-modal";
 import { queryKeys } from "@/services/queryClient";
 import VirtualizedList from "./VirtualizedList";
 import InfiniteScroll from "./InfiniteScroll";
@@ -248,6 +249,7 @@ TopicItem.displayName = 'TopicItem';
 const OptimizedTopicList: React.FC<OptimizedTopicListProps> = ({ sidebarOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [isCreateTopicModalOpen, setIsCreateTopicModalOpen] = useState(false);
   
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("all");
@@ -454,7 +456,7 @@ const OptimizedTopicList: React.FC<OptimizedTopicListProps> = ({ sidebarOpen }) 
                 Categories
               </Button>
               <Button
-                onClick={() => navigate("/create")}
+                onClick={() => setIsCreateTopicModalOpen(true)}
                 className="hidden sm:flex items-center space-x-2"
               >
                 <Plus className="w-4 h-4" />
@@ -662,6 +664,13 @@ const OptimizedTopicList: React.FC<OptimizedTopicListProps> = ({ sidebarOpen }) 
           )}
         </div>
       </div>
+      
+      {/* Create Topic Modal */}
+      <CreateTopicModal 
+        isOpen={isCreateTopicModalOpen}
+        onClose={() => setIsCreateTopicModalOpen(false)}
+        position="bottom"
+      />
     </PerformanceMonitor>
   );
 };

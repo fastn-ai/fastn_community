@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Search, Bell, User, Menu, Plus, Settings, MessageSquare, LogOut, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,10 +13,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import CreateTopicModal from "@/components/ui/create-topic-modal";
 
 const Header = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
+  const [isCreateTopicModalOpen, setIsCreateTopicModalOpen] = useState(false);
+  
+  // Check if user is on topic pages
+  const isOnTopicPage = location.pathname === '/' || location.pathname === '/top';
   
   // Mock user data since we removed authentication
   const user = {
@@ -139,10 +145,10 @@ const Header = () => {
 
         {/* Right side actions */}
         <div className="flex items-center space-x-4">
-          {/* New Topic Button - Only show when authenticated */}
-          {isAuthenticated && (
+          {/* New Topic Button - Only show when authenticated and NOT on topic pages */}
+          {isAuthenticated && !isOnTopicPage && (
             <Button 
-              onClick={() => navigate("/create")}
+              onClick={() => setIsCreateTopicModalOpen(true)}
               className="hidden sm:flex items-center space-x-2"
             >
               <Plus className="w-4 h-4" />
@@ -263,6 +269,13 @@ const Header = () => {
           </Button>
         </div>
       </div>
+      
+      {/* Create Topic Modal */}
+      <CreateTopicModal 
+        isOpen={isCreateTopicModalOpen}
+        onClose={() => setIsCreateTopicModalOpen(false)}
+        position="top"
+      />
     </header>
   );
 };

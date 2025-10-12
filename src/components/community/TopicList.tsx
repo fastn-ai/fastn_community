@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import { ApiService, Topic, Category } from "@/services/api";
 import { getTagColor } from "@/lib/utils";
+import CreateTopicModal from "@/components/ui/create-topic-modal";
 
 interface TopicListProps {
   sidebarOpen: boolean;
@@ -50,6 +51,7 @@ interface TopicListProps {
 const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [isCreateTopicModalOpen, setIsCreateTopicModalOpen] = useState(false);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -448,7 +450,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
               Categories
             </Button>
             <Button
-              onClick={() => navigate("/create")}
+              onClick={() => setIsCreateTopicModalOpen(true)}
               className="hidden sm:flex items-center space-x-2"
             >
               <Plus className="w-4 h-4" />
@@ -757,6 +759,13 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
           </div>
         )}
       </div>
+      
+      {/* Create Topic Modal */}
+      <CreateTopicModal 
+        isOpen={isCreateTopicModalOpen}
+        onClose={() => setIsCreateTopicModalOpen(false)}
+        position="bottom"
+      />
     </div>
   );
 };

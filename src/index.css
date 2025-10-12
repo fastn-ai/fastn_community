@@ -4,6 +4,20 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+
 /* Modern Design System following performance optimization guidelines
    - Clean, minimalistic design with consistent color palette
    - Readable sans-serif fonts (Inter, Roboto, Poppins)
