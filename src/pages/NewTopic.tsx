@@ -13,15 +13,22 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { useApi } from "@/services/api";
-// Removed auth context import
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AuthGuard } from "@/components/auth/AuthGuard";
+import { useAuth } from "react-oidc-context";
 import type { Category } from "@/services/api";
 
 const NewTopic = () => {
   const navigate = useNavigate();
   const { createTopic, getAllCategories } = useApi();
-  // Mock user data since we removed authentication
-  const user = { id: 'user_1', username: 'admin', email: 'admin@fastn.ai' };
+  const auth = useAuth();
+  
+  // Get user data from authentication context
+  const user = auth.user ? {
+    id: auth.user.profile.sub,
+    username: auth.user.profile.preferred_username || auth.user.profile.name || auth.user.profile.email?.split('@')[0] || 'user',
+    email: auth.user.profile.email
+  } : null;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
@@ -174,9 +181,10 @@ const NewTopic = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <div className="flex">
+    <AuthGuard requireAuth={true}>
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="flex">
         {/* Mobile Sidebar Toggle */}
         <div className="md:hidden fixed top-20 left-4 z-50">
           <Button
@@ -546,8 +554,9 @@ const NewTopic = () => {
             </div>
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </AuthGuard>
   );
 };
 
