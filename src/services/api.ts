@@ -1,6 +1,9 @@
 // Mock API Service for fastn community platform
 // This is a frontend-only implementation with mock data
 
+import { INSERT_USER_API_URL, INSERT_USER_SPACE_ID, CUSTOM_AUTH_KEY, CUSTOM_AUTH_TOKEN_KEY, TENANT_ID_KEY } from "@/constants";
+import { getCookie } from "@/routes/login/oauth";
+
 // Mock data interfaces
 export interface Topic {
   id: string;
@@ -97,6 +100,28 @@ export interface ApiResponse<T> {
   success: boolean;
   data: T;
   message?: string;
+}
+
+export interface InsertUserPayload {
+  data: {
+    id: string;
+    username: string;
+    email: string;
+    avatar?: string;
+    bio?: string;
+    location?: string;
+    website?: string;
+    twitter?: string;
+    github?: string;
+    linkedin?: string;
+    role_id?: number;
+    is_verified?: boolean;
+    is_active?: boolean;
+    last_login?: string;
+    created_at?: string;
+    updated_at?: string;
+  };
+  action: "insertUser";
 }
 
 // Mock data storage
@@ -502,6 +527,39 @@ export class ApiService {
       setTimeout(() => resolve(analytics), 100);
     });
   }
+}
+
+export async function insertUser(payload: InsertUserPayload, authToken: string) {
+  const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
+  const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
+  const tenantId = getCookie(TENANT_ID_KEY) || "";
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "x-fastn-space-id": INSERT_USER_SPACE_ID,
+    stage: "DRAFT",
+  };
+
+  if (isCustomAuth && customAuthToken) {
+    headers["x-fastn-custom-auth"] = "true";
+    headers["authorization"] = customAuthToken; // raw JWT for custom auth
+    if (tenantId) headers["x-fastn-space-tenantid"] = tenantId;
+  } else {
+    headers["authorization"] = `Bearer ${authToken}`;
+  }
+
+  const res = await fetch(INSERT_USER_API_URL, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ input: payload }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`insertUser failed: ${res.status} ${res.statusText} - ${text}`);
+  }
+
+  return res.json();
 }
 
 // Hook for using API in React components

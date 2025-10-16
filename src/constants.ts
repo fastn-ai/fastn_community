@@ -16,3 +16,6 @@ export const DEV_MODE_AUTH = import.meta.env.VITE_DEV_MODE_AUTH === 'true' || fa
 // Other constants
 export const DEFAULT_PAGE_SIZE = 20;
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+export const INSERT_USER_API_URL = import.meta.env.VITE_INSERT_USER_API_URL || "https://qa.fastn.ai/api/v1/crudUser";
+export const INSERT_USER_API_KEY = import.meta.env.VITE_INSERT_USER_API_KEY || "";
+export const INSERT_USER_SPACE_ID = import.meta.env.VITE_INSERT_USER_SPACE_ID || "dce5d31a-5b34-437f-abcf-af40cb7fd6a9";
