@@ -1,7 +1,7 @@
 // Mock API Service for fastn community platform
 // This is a frontend-only implementation with mock data
 
-import { INSERT_USER_API_URL, FASTN_SPACE_ID, CUSTOM_AUTH_KEY, CUSTOM_AUTH_TOKEN_KEY, TENANT_ID_KEY, CRUD_CATEGORIES_API_URL } from "@/constants";
+import { INSERT_USER_API_URL, FASTN_SPACE_ID, CUSTOM_AUTH_KEY, CUSTOM_AUTH_TOKEN_KEY, TENANT_ID_KEY, CRUD_CATEGORIES_API_URL, CRUD_TAGS_API_URL } from "@/constants";
 import { getCookie } from "@/routes/login/oauth";
 
 // Mock data interfaces
@@ -126,6 +126,19 @@ export interface InsertUserPayload {
 
 export interface CrudCategoriesPayload {
   action: "getAllCategories" | "createCategory" | "updateCategory" | "deleteCategory";
+  data?: {
+    id?: string;
+    name?: string;
+    slug?: string;
+    description?: string;
+    is_active?: boolean;
+    created_at?: string;
+    updated_at?: string;
+  };
+}
+
+export interface CrudTagsPayload {
+  action: "getAllTags" | "createTag" | "updateTag" | "deleteTag";
   data?: {
     id?: string;
     name?: string;
@@ -556,9 +569,52 @@ export class ApiService {
 
   // Get all tags
   static async getAllTags(): Promise<Tag[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => resolve([...mockTags]), 100);
-    });
+    try {
+      // Try to get auth token from user manager
+      const { getUser } = await import("@/services/users/user-manager");
+      const user = getUser();
+      const authToken = user?.access_token || "";
+      
+      if (!authToken) {
+        console.warn("No auth token available, falling back to mock data");
+        return new Promise((resolve) => {
+          setTimeout(() => resolve([...mockTags]), 100);
+        });
+      }
+
+      const payload: CrudTagsPayload = {
+        action: "getAllTags"
+      };
+
+      const response = await crudTags(payload, authToken);
+      
+      // Transform API response to match Tag interface
+      // The API returns data in response.result, not response.data
+      if (response && response.result) {
+        const tags = Array.isArray(response.result) ? response.result : [];
+        const transformedTags = tags.map((tag: any) => ({
+          id: tag.id?.toString() || '',
+          name: tag.name || '',
+          description: tag.description || '',
+          slug: tag.slug || '',
+          color: tag.color || '#3B82F6',
+          topics_count: tag.topics_count || 0,
+          is_active: tag.is_active !== false,
+          created_at: tag.created_at || new Date().toISOString(),
+          updated_at: tag.updated_at || new Date().toISOString(),
+        }));
+        
+        return transformedTags;
+      }
+      
+      console.warn("No data in API response, falling back to mock data");
+      return [...mockTags];
+    } catch (error) {
+      console.error("Error fetching tags from API, falling back to mock data:", error);
+      return new Promise((resolve) => {
+        setTimeout(() => resolve([...mockTags]), 100);
+      });
+    }
   }
 
   // Admin: Approve topic
@@ -781,6 +837,39 @@ export async function crudCategories(payload: CrudCategoriesPayload, authToken: 
   return res.json();
 }
 
+export async function crudTags(payload: CrudTagsPayload, authToken: string) {
+  const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
+  const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
+  const tenantId = getCookie(TENANT_ID_KEY) || "";
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "x-fastn-space-id": FASTN_SPACE_ID,
+    stage: "DRAFT",
+  };
+
+  if (isCustomAuth && customAuthToken) {
+    headers["x-fastn-custom-auth"] = "true";
+    headers["authorization"] = customAuthToken; // raw JWT for custom auth
+    if (tenantId) headers["x-fastn-space-tenantid"] = tenantId;
+  } else {
+    headers["authorization"] = `Bearer ${authToken}`;
+  }
+
+  const res = await fetch(CRUD_TAGS_API_URL, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ input: payload }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`crudTags failed: ${res.status} ${res.statusText} - ${text}`);
+  }
+
+  return res.json();
+}
+
 // Hook for using API in React components
 export const useApi = () => {
   return {
@@ -804,5 +893,7 @@ export const useApi = () => {
     getAnalytics: ApiService.getAnalytics,
     // Categories API functions
     crudCategories,
+    // Tags API functions
+    crudTags,
   };
 };

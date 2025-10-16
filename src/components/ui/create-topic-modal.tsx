@@ -20,7 +20,7 @@ interface CreateTopicModalProps {
 
 const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicModalProps) => {
   const navigate = useNavigate()
-  const { createTopic, getAllCategories } = useApi()
+  const { createTopic, getAllCategories, getAllTags } = useApi()
   const modalRef = useRef<HTMLDivElement>(null)
   const auth = useAuth()
   
@@ -43,22 +43,12 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
   // Categories state
   const [categories, setCategories] = useState<Category[]>([])
   const [isLoadingCategories, setIsLoadingCategories] = useState(true)
+  
+  // Tags state
+  const [availableTags, setAvailableTags] = useState<any[]>([])
+  const [isLoadingTags, setIsLoadingTags] = useState(true)
 
-  // Static tags - no backend needed
-  const availableTags = [
-    { id: 'tag_1', name: 'fastn', color: '#8B5CF6' },
-    { id: 'tag_2', name: 'development', color: '#06B6D4' },
-    { id: 'tag_3', name: 'api', color: '#10B981' },
-    { id: 'tag_4', name: 'integration', color: '#F59E0B' },
-    { id: 'tag_5', name: 'workflow', color: '#EF4444' },
-    { id: 'tag_6', name: 'database', color: '#8B5CF6' },
-    { id: 'tag_7', name: 'authentication', color: '#06B6D4' },
-    { id: 'tag_8', name: 'deployment', color: '#10B981' },
-    { id: 'tag_9', name: 'testing', color: '#F59E0B' },
-    { id: 'tag_10', name: 'performance', color: '#EF4444' },
-    { id: 'tag_11', name: 'security', color: '#8B5CF6' },
-    { id: 'tag_12', name: 'best-practices', color: '#06B6D4' },
-  ]
+  // Tags are now fetched from API
   
   const [formData, setFormData] = useState({
     topicName: '',
@@ -70,25 +60,33 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
     allowRating: true,
   })
 
-  // Fetch categories from API
+  // Fetch categories and tags from API
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchData = async () => {
       try {
         setIsLoadingCategories(true)
-        const fetchedCategories = await getAllCategories()
+        setIsLoadingTags(true)
+        
+        const [fetchedCategories, fetchedTags] = await Promise.all([
+          getAllCategories(),
+          getAllTags()
+        ])
+        
         setCategories(fetchedCategories)
+        setAvailableTags(fetchedTags)
       } catch (error) {
-        console.error('Error fetching categories:', error)
-        setError('Failed to load categories. Please try again.')
+        console.error('Error fetching data:', error)
+        setError('Failed to load data. Please try again.')
       } finally {
         setIsLoadingCategories(false)
+        setIsLoadingTags(false)
       }
     }
 
     if (isOpen) {
-      fetchCategories()
+      fetchData()
     }
-  }, [isOpen, getAllCategories])
+  }, [isOpen, getAllCategories, getAllTags])
 
   const categoryTemplates = {
     'question': `<!-- Thank you for asking a question! Please provide as much detail as possible to help us give you the best answer. -->
@@ -539,7 +537,11 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
                       
                       {/* Tag Options */}
                       <div className="max-h-[200px] overflow-y-auto">
-                        {filteredTags.length > 0 ? (
+                        {isLoadingTags ? (
+                          <div className="p-2 text-sm text-muted-foreground text-center">
+                            Loading tags...
+                          </div>
+                        ) : filteredTags.length > 0 ? (
                           filteredTags.map((tag) => (
                             <SelectItem 
                               key={tag.id} 

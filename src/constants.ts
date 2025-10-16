@@ -24,3 +24,4 @@ export const FASTN_SPACE_ID = import.meta.env.VITE_FASTN_SPACE_ID || "dce5d31a-5
 // API URLs
 export const INSERT_USER_API_URL = import.meta.env.VITE_INSERT_USER_API_URL || "https://qa.fastn.ai/api/v1/crudUser";
 export const CRUD_CATEGORIES_API_URL = import.meta.env.VITE_CRUD_CATEGORIES_API_URL || "https://qa.fastn.ai/api/v1/crudCategories";
+export const CRUD_TAGS_API_URL = import.meta.env.VITE_CRUD_TAGS_API_URL || "https://qa.fastn.ai/api/v1/crudTags";
