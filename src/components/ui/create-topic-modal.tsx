@@ -8,7 +8,7 @@ import { Badge } from './badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select'
 import { Alert, AlertDescription } from './alert'
 import { Textarea } from './textarea'
-import { useApi } from '@/services/api'
+import { useApi, type Category } from '@/services/api'
 import { useAuth } from 'react-oidc-context'
 import { AuthGuard } from '@/components/auth/AuthGuard'
 
@@ -20,7 +20,7 @@ interface CreateTopicModalProps {
 
 const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicModalProps) => {
   const navigate = useNavigate()
-  const { createTopic } = useApi()
+  const { createTopic, getAllCategories } = useApi()
   const modalRef = useRef<HTMLDivElement>(null)
   const auth = useAuth()
   
@@ -39,6 +39,10 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
   const [tagSearchQuery, setTagSearchQuery] = useState('')
   const [categorySearchQuery, setCategorySearchQuery] = useState('')
   const [templateApplied, setTemplateApplied] = useState(false)
+  
+  // Categories state
+  const [categories, setCategories] = useState<Category[]>([])
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true)
 
   // Static tags - no backend needed
   const availableTags = [
@@ -66,12 +70,25 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
     allowRating: true,
   })
 
-  const topicCategories = [
-    { id: 'cat_1', name: 'Questions', color: '#3B82F6' },
-    { id: 'cat_2', name: 'Built with fastn', color: '#8B5CF6' },
-    { id: 'cat_3', name: 'Feature Request', color: '#10B981' },
-    { id: 'cat_4', name: 'Feedback', color: '#F59E0B' }
-  ]
+  // Fetch categories from API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setIsLoadingCategories(true)
+        const fetchedCategories = await getAllCategories()
+        setCategories(fetchedCategories)
+      } catch (error) {
+        console.error('Error fetching categories:', error)
+        setError('Failed to load categories. Please try again.')
+      } finally {
+        setIsLoadingCategories(false)
+      }
+    }
+
+    if (isOpen) {
+      fetchCategories()
+    }
+  }, [isOpen, getAllCategories])
 
   const categoryTemplates = {
     'Questions': `<!-- Thank you for opening a feature request. If this is for a node, please add the node subcategory. Otherwise, follow the below template. -->
@@ -243,7 +260,7 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
   )
 
   // Filter categories based on search query
-  const filteredCategories = topicCategories.filter(category => 
+  const filteredCategories = categories.filter(category => 
     category.name.toLowerCase().includes(categorySearchQuery.toLowerCase())
   )
 
@@ -465,7 +482,11 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
                       
                       {/* Category Options */}
                       <div className="max-h-[200px] overflow-y-auto">
-                        {filteredCategories.length > 0 ? (
+                        {isLoadingCategories ? (
+                          <div className="p-2 text-sm text-muted-foreground text-center">
+                            Loading categories...
+                          </div>
+                        ) : filteredCategories.length > 0 ? (
                           filteredCategories.map((category) => (
                             <SelectItem key={category.id} value={category.name}>
                               <div className="flex items-center gap-2">

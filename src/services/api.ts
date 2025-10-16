@@ -1,7 +1,7 @@
 // Mock API Service for fastn community platform
 // This is a frontend-only implementation with mock data
 
-import { INSERT_USER_API_URL, INSERT_USER_SPACE_ID, CUSTOM_AUTH_KEY, CUSTOM_AUTH_TOKEN_KEY, TENANT_ID_KEY } from "@/constants";
+import { INSERT_USER_API_URL, FASTN_SPACE_ID, CUSTOM_AUTH_KEY, CUSTOM_AUTH_TOKEN_KEY, TENANT_ID_KEY, CRUD_CATEGORIES_API_URL } from "@/constants";
 import { getCookie } from "@/routes/login/oauth";
 
 // Mock data interfaces
@@ -122,6 +122,19 @@ export interface InsertUserPayload {
     updated_at?: string;
   };
   action: "insertUser";
+}
+
+export interface CrudCategoriesPayload {
+  action: "getAllCategories" | "createCategory" | "updateCategory" | "deleteCategory";
+  data?: {
+    id?: string;
+    name?: string;
+    slug?: string;
+    description?: string;
+    is_active?: boolean;
+    created_at?: string;
+    updated_at?: string;
+  };
 }
 
 // Mock data storage
@@ -334,9 +347,182 @@ if (mockTopics.length === 0) {
 export class ApiService {
   // Get all categories
   static async getAllCategories(): Promise<Category[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => resolve([...mockCategories]), 100);
-    });
+    try {
+      // Try to get auth token from user manager
+      const { getUser } = await import("@/services/users/user-manager");
+      const user = getUser();
+      const authToken = user?.access_token || "";
+      
+      if (!authToken) {
+        console.warn("No auth token available, falling back to mock data");
+        return new Promise((resolve) => {
+          setTimeout(() => resolve([...mockCategories]), 100);
+        });
+      }
+
+      const payload: CrudCategoriesPayload = {
+        action: "getAllCategories"
+      };
+
+      const response = await crudCategories(payload, authToken);
+      
+      // Transform API response to match Category interface
+      // The API returns data in response.result, not response.data
+      if (response && response.result) {
+        const categories = Array.isArray(response.result) ? response.result : [];
+        const transformedCategories = categories.map((cat: any) => ({
+          id: cat.id?.toString() || '',
+          name: cat.name || '',
+          description: cat.description || '',
+          slug: cat.slug || '',
+          icon: cat.icon || 'folder',
+          color: cat.color || '#3B82F6',
+          topics_count: cat.topics_count || 0,
+          tutorials_count: cat.tutorials_count || 0,
+          is_active: cat.is_active !== false,
+          created_at: cat.created_at || new Date().toISOString(),
+          updated_at: cat.updated_at || new Date().toISOString(),
+        }));
+        
+        return transformedCategories;
+      }
+      
+      console.warn("No data in API response, falling back to mock data");
+      return [...mockCategories];
+    } catch (error) {
+      console.error("Error fetching categories from API, falling back to mock data:", error);
+      return new Promise((resolve) => {
+        setTimeout(() => resolve([...mockCategories]), 100);
+      });
+    }
+  }
+
+  // Create a new category
+  static async createCategory(categoryData: {
+    name: string;
+    slug: string;
+    description?: string;
+    is_active?: boolean;
+  }): Promise<Category> {
+    try {
+      const { getUser } = await import("@/services/users/user-manager");
+      const user = getUser();
+      const authToken = user?.access_token || "";
+      
+      if (!authToken) {
+        throw new Error("No auth token available");
+      }
+
+      const payload: CrudCategoriesPayload = {
+        action: "createCategory",
+        data: {
+          name: categoryData.name,
+          slug: categoryData.slug,
+          description: categoryData.description,
+          is_active: categoryData.is_active !== false,
+        }
+      };
+
+      const response = await crudCategories(payload, authToken);
+      
+      if (response && response.data) {
+        const cat = response.data;
+        return {
+          id: cat.id?.toString() || '',
+          name: cat.name || '',
+          description: cat.description || '',
+          slug: cat.slug || '',
+          icon: cat.icon || 'folder',
+          color: cat.color || '#3B82F6',
+          topics_count: 0,
+          tutorials_count: 0,
+          is_active: cat.is_active !== false,
+          created_at: cat.created_at || new Date().toISOString(),
+          updated_at: cat.updated_at || new Date().toISOString(),
+        };
+      }
+      
+      throw new Error("Failed to create category");
+    } catch (error) {
+      console.error("Error creating category:", error);
+      throw error;
+    }
+  }
+
+  // Update an existing category
+  static async updateCategory(categoryId: string, categoryData: {
+    name?: string;
+    slug?: string;
+    description?: string;
+    is_active?: boolean;
+  }): Promise<Category> {
+    try {
+      const { getUser } = await import("@/services/users/user-manager");
+      const user = getUser();
+      const authToken = user?.access_token || "";
+      
+      if (!authToken) {
+        throw new Error("No auth token available");
+      }
+
+      const payload: CrudCategoriesPayload = {
+        action: "updateCategory",
+        data: {
+          id: categoryId,
+          ...categoryData
+        }
+      };
+
+      const response = await crudCategories(payload, authToken);
+      
+      if (response && response.data) {
+        const cat = response.data;
+        return {
+          id: cat.id?.toString() || '',
+          name: cat.name || '',
+          description: cat.description || '',
+          slug: cat.slug || '',
+          icon: cat.icon || 'folder',
+          color: cat.color || '#3B82F6',
+          topics_count: cat.topics_count || 0,
+          tutorials_count: cat.tutorials_count || 0,
+          is_active: cat.is_active !== false,
+          created_at: cat.created_at || new Date().toISOString(),
+          updated_at: cat.updated_at || new Date().toISOString(),
+        };
+      }
+      
+      throw new Error("Failed to update category");
+    } catch (error) {
+      console.error("Error updating category:", error);
+      throw error;
+    }
+  }
+
+  // Delete a category
+  static async deleteCategory(categoryId: string): Promise<boolean> {
+    try {
+      const { getUser } = await import("@/services/users/user-manager");
+      const user = getUser();
+      const authToken = user?.access_token || "";
+      
+      if (!authToken) {
+        throw new Error("No auth token available");
+      }
+
+      const payload: CrudCategoriesPayload = {
+        action: "deleteCategory",
+        data: {
+          id: categoryId
+        }
+      };
+
+      const response = await crudCategories(payload, authToken);
+      return response && response.success !== false;
+    } catch (error) {
+      console.error("Error deleting category:", error);
+      throw error;
+    }
   }
 
   // Get all topics
@@ -536,7 +722,7 @@ export async function insertUser(payload: InsertUserPayload, authToken: string) 
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "x-fastn-space-id": INSERT_USER_SPACE_ID,
+    "x-fastn-space-id": FASTN_SPACE_ID,
     stage: "DRAFT",
   };
 
@@ -562,10 +748,46 @@ export async function insertUser(payload: InsertUserPayload, authToken: string) 
   return res.json();
 }
 
+export async function crudCategories(payload: CrudCategoriesPayload, authToken: string) {
+  const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
+  const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
+  const tenantId = getCookie(TENANT_ID_KEY) || "";
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "x-fastn-space-id": FASTN_SPACE_ID,
+    stage: "DRAFT",
+  };
+
+  if (isCustomAuth && customAuthToken) {
+    headers["x-fastn-custom-auth"] = "true";
+    headers["authorization"] = customAuthToken; // raw JWT for custom auth
+    if (tenantId) headers["x-fastn-space-tenantid"] = tenantId;
+  } else {
+    headers["authorization"] = `Bearer ${authToken}`;
+  }
+
+  const res = await fetch(CRUD_CATEGORIES_API_URL, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ input: payload }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`crudCategories failed: ${res.status} ${res.statusText} - ${text}`);
+  }
+
+  return res.json();
+}
+
 // Hook for using API in React components
 export const useApi = () => {
   return {
     getAllCategories: ApiService.getAllCategories,
+    createCategory: ApiService.createCategory,
+    updateCategory: ApiService.updateCategory,
+    deleteCategory: ApiService.deleteCategory,
     getAllTopics: ApiService.getAllTopics,
     getTopicsByStatus: ApiService.getTopicsByStatus,
     getAllUsers: ApiService.getAllUsers,
@@ -580,5 +802,7 @@ export const useApi = () => {
     editReply: ApiService.editReply,
     deleteReply: ApiService.deleteReply,
     getAnalytics: ApiService.getAnalytics,
+    // Categories API functions
+    crudCategories,
   };
 };

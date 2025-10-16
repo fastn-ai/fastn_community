@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Menu,
@@ -38,13 +38,13 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import Header from "@/components/community/Header";
 import Sidebar from "@/components/community/Sidebar";
-import { useApi } from "@/services/api";
+import { useApi, type Category } from "@/services/api";
 // Removed auth context import
 
 const UnifiedForm = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { createTopic } = useApi();
+  const { createTopic, getAllCategories } = useApi();
   // Mock user data since we removed authentication
   const user = { id: 'user_1', username: 'admin', email: 'admin@fastn.ai' };
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -55,6 +55,10 @@ const UnifiedForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const hasSubmitted = useRef(false);
+  
+  // Categories state
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
 
   // Form data that adapts based on category
   const [formData, setFormData] = useState({
@@ -87,14 +91,23 @@ const UnifiedForm = () => {
     },
   ];
 
-  const topicCategories = ["Announcements", "Questions", "Built with fastn"];
+  // Fetch categories from API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setIsLoadingCategories(true);
+        const fetchedCategories = await getAllCategories();
+        setCategories(fetchedCategories);
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+        setError("Failed to load categories. Please try again.");
+      } finally {
+        setIsLoadingCategories(false);
+      }
+    };
 
-  // Category ID mapping (you may need to adjust these based on your actual category IDs)
-  const categoryIdMapping: { [key: string]: string } = {
-    Announcements: "id_1754163675_740242", // Default category ID
-    Questions: "id_1754163675_740242", // Default category ID
-    "Built with fastn": "id_1754163675_740242", // Default category ID
-  };
+    fetchCategories();
+  }, [getAllCategories]);
 
   const tutorialCategories = [
     "Getting Started",
@@ -229,8 +242,7 @@ const UnifiedForm = () => {
           content: formData.content,
           author_id: user.id, // Use actual user ID
           author_username: user.username || user.email?.split("@")[0] || "user", // Use actual username
-          category_id:
-            categoryIdMapping[formData.category] || "id_1754163675_740242", // Map category name to ID
+          category_id: formData.category || "", // Use category ID directly
           is_featured: formData.featured,
           is_hot: false,
           is_new: true,
@@ -438,14 +450,23 @@ const UnifiedForm = () => {
                               <SelectValue placeholder="Select category" />
                             </SelectTrigger>
                             <SelectContent>
-                              {(isTopic
-                                ? topicCategories
-                                : tutorialCategories
-                              ).map((category) => (
-                                <SelectItem key={category} value={category}>
-                                  {category}
+                              {isLoadingCategories ? (
+                                <SelectItem value="" disabled>
+                                  Loading categories...
                                 </SelectItem>
-                              ))}
+                              ) : isTopic ? (
+                                categories.map((category) => (
+                                  <SelectItem key={category.id} value={category.id}>
+                                    {category.name}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                tutorialCategories.map((category) => (
+                                  <SelectItem key={category} value={category}>
+                                    {category}
+                                  </SelectItem>
+                                ))
+                              )}
                             </SelectContent>
                           </Select>
                         </div>
