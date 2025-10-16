@@ -91,29 +91,33 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
   }, [isOpen, getAllCategories])
 
   const categoryTemplates = {
-    'Questions': `<!-- Thank you for opening a feature request. If this is for a node, please add the node subcategory. Otherwise, follow the below template. -->
+    'question': `<!-- Thank you for asking a question! Please provide as much detail as possible to help us give you the best answer. -->
 
-**The idea is:**
+**What are you trying to achieve?**
 
-<!-- Describe the idea in detail -->
+<!-- Describe what you're trying to accomplish -->
 
-**My use case:**
+**What have you tried so far?**
 
-<!-- Share use cases to help us understand better. -->
+<!-- Share what you've already attempted -->
 
-**I think it would be beneficial to add this because:**
+**Current setup:**
 
-<!-- What problem will this new feature solve? -->
+<!-- Describe your current environment, versions, etc. -->
 
-**Any resources to support this?**
+**Expected behavior:**
 
-<!-- Link to external documentation, etc. -->
+<!-- What should happen? -->
 
-**Are you willing to work on this?**
+**Actual behavior:**
 
-<!-- Don't forget to upvote this request. The more votes this Feature Request gets, the higher the priority. -->`,
+<!-- What actually happens? -->
+
+**Additional context:**
+
+<!-- Any other details that might help -->`,
     
-    'Built with fastn': `<!-- Thank you for sharing your fastn project! Please provide details about your implementation. -->
+    'bult with fastn': `<!-- Thank you for sharing your fastn project! Please provide details about your implementation. -->
 
 **Project Overview:**
 
@@ -143,7 +147,7 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
 
 <!-- What challenges did you face and how did you solve them? -->`,
     
-    'Feature Request': `<!-- Thank you for opening a feature request. If this is for a node, please add the node subcategory. Otherwise, follow the below template. -->
+    'request feature': `<!-- Thank you for opening a feature request. If this is for a node, please add the node subcategory. Otherwise, follow the below template. -->
 
 **The idea is:**
 
@@ -165,7 +169,7 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
 
 <!-- Don't forget to upvote this request. The more votes this Feature Request gets, the higher the priority. -->`,
     
-    'Feedback': `<!-- Thank you for providing feedback! Your input helps us improve fastn. -->
+    'feadback': `<!-- Thank you for providing feedback! Your input helps us improve fastn. -->
 
 **Type of Feedback:**
 
@@ -188,12 +192,7 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
 <!-- Any other relevant information -->`
   }
   
-  const categoryIdMapping: { [key: string]: string } = {
-    Questions: 'id_1754163675_740242',
-    'Built with fastn': 'id_1754163675_740242',
-    'Feature Request': 'id_1754163675_740242',
-    Feedback: 'id_1754163675_740242',
-  }
+  // Category ID mapping is no longer needed since we use API category IDs directly
 
   // Reset form when modal opens/closes
   useEffect(() => {
@@ -304,7 +303,7 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
         content: formData.content,
         author_id: user.id,
         author_username: user.username || user.email?.split('@')[0] || 'user',
-        category_id: categoryIdMapping[formData.category] || 'id_1754163675_740242',
+        category_id: categories.find(cat => cat.name === formData.category)?.id || '',
         is_featured: formData.featured,
         is_hot: false,
         is_new: true,
