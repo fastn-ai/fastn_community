@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "react-oidc-context";
 import {
   Select,
   SelectContent,
@@ -249,7 +250,11 @@ TopicItem.displayName = 'TopicItem';
 const OptimizedTopicList: React.FC<OptimizedTopicListProps> = ({ sidebarOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const auth = useAuth();
   const [isCreateTopicModalOpen, setIsCreateTopicModalOpen] = useState(false);
+  
+  // Check if user is authenticated
+  const isAuthenticated = auth.isAuthenticated && auth.user;
   
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("all");
@@ -455,13 +460,15 @@ const OptimizedTopicList: React.FC<OptimizedTopicListProps> = ({ sidebarOpen }) 
                 <FolderOpen className="h-4 w-4 text-blue-600" />
                 Categories
               </Button>
-              <Button
-                onClick={() => setIsCreateTopicModalOpen(true)}
-                className="hidden sm:flex items-center space-x-2"
-              >
-                <Plus className="w-4 h-4" />
-                <span>New Topic</span>
-              </Button>
+              {isAuthenticated && (
+                <Button
+                  onClick={() => setIsCreateTopicModalOpen(true)}
+                  className="hidden sm:flex items-center space-x-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>New Topic</span>
+                </Button>
+              )}
             </div>
           </div>
 

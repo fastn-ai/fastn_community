@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Alert, AlertDescription } from './alert'
 import { Textarea } from './textarea'
 import { useApi } from '@/services/api'
+import { useAuth } from 'react-oidc-context'
+import { AuthGuard } from '@/components/auth/AuthGuard'
 
 interface CreateTopicModalProps {
   isOpen: boolean
@@ -20,9 +22,14 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
   const navigate = useNavigate()
   const { createTopic } = useApi()
   const modalRef = useRef<HTMLDivElement>(null)
+  const auth = useAuth()
   
-  // Mock user data since we removed authentication
-  const user = { id: 'user_1', username: 'admin', email: 'admin@fastn.ai' }
+  // Get user data from authentication context
+  const user = auth.user ? {
+    id: auth.user.profile.sub,
+    username: auth.user.profile.preferred_username || auth.user.profile.name || auth.user.profile.email?.split('@')[0] || 'user',
+    email: auth.user.profile.email
+  } : null
   
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -323,6 +330,7 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
   const animationClass = position === 'top' ? 'animate-slide-down' : 'animate-slide-up'
 
   return (
+    <AuthGuard requireAuth={true}>
     <div className={containerClasses}>
       {/* Backdrop */}
       <div className={backdropClasses} />
@@ -609,6 +617,7 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
       </div>
 
     </div>
+    </AuthGuard>
   )
 }
 

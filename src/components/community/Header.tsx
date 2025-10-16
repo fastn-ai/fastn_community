@@ -14,25 +14,39 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import CreateTopicModal from "@/components/ui/create-topic-modal";
+import { useAuth } from "react-oidc-context";
+import { signOut } from "@/services/users/user-manager";
 
 const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateTopicModalOpen, setIsCreateTopicModalOpen] = useState(false);
+  const auth = useAuth();
   
   // Check if user is on topic pages
   const isOnTopicPage = location.pathname === '/' || location.pathname === '/top';
   
-  // Mock user data since we removed authentication
-  const user = {
-    id: 'user_1',
-    username: 'admin',
-    email: 'admin@fastn.ai',
-  };
-  const isAuthenticated = true;
-  const logout = () => {
-    console.log('Logout clicked');
+  // Get user data from authentication context
+  const user = auth.user ? {
+    id: auth.user.profile.sub,
+    username: auth.user.profile.preferred_username || auth.user.profile.name || auth.user.profile.email?.split('@')[0] || 'user',
+    email: auth.user.profile.email
+  } : null;
+  
+  const isAuthenticated = auth.isAuthenticated && auth.user;
+  
+  const logout = async () => {
+    try {
+      await signOut();
+      // signOut handles the redirect and session clearing
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Fallback: clear session and navigate manually
+      localStorage.clear();
+      sessionStorage.clear();
+      navigate('/');
+    }
   };
 
   const notifications = [
@@ -220,48 +234,68 @@ const Header = () => {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* User Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="flex items-center space-x-2">
-                <Avatar className="w-6 h-6">
-                  <AvatarFallback className="bg-gradient-primary text-white text-xs">
-                    {user.username.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="hidden sm:inline text-sm font-medium">
-                  {user.username}
-                </span>
+          {/* User Menu / Auth Buttons */}
+          {isAuthenticated ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="flex items-center space-x-2">
+                  <Avatar className="w-6 h-6">
+                    <AvatarFallback className="bg-gradient-primary text-white text-xs">
+                      {user?.username?.charAt(0).toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="hidden sm:inline text-sm font-medium">
+                    {user?.username || 'User'}
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel className="flex items-center space-x-2">
+                  <Avatar className="w-8 h-8">
+                    <AvatarFallback className="bg-gradient-primary text-white">
+                      {user?.username?.charAt(0).toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-sm font-medium">{user?.username || 'User'}</p>
+                    <p className="text-xs text-muted-foreground">{user?.email || 'user@example.com'}</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate("/admin")}>
+                  <Settings className="w-4 h-4 mr-2" />
+                  Admin Dashboard
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  My Topics
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={logout}>
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <div className="flex items-center space-x-2">
+              <Button 
+                variant="outline" 
+                onClick={() => navigate('/login')} 
+                className="flex items-center space-x-2"
+              >
+                <LogIn className="w-4 h-4" />
+                <span className="hidden sm:inline">Sign In</span>
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel className="flex items-center space-x-2">
-                <Avatar className="w-8 h-8">
-                  <AvatarFallback className="bg-gradient-primary text-white">
-                    {user.username.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="text-sm font-medium">{user.username}</p>
-                  <p className="text-xs text-muted-foreground">{user.email}</p>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate("/admin")}>
-                <Settings className="w-4 h-4 mr-2" />
-                Admin Dashboard
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <MessageSquare className="w-4 h-4 mr-2" />
-                My Topics
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={logout}>
-                <LogOut className="w-4 h-4 mr-2" />
-                Log out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              <Button 
+                onClick={() => navigate('/login')} 
+                className="flex items-center space-x-2"
+              >
+                <User className="w-4 h-4" />
+                <span className="hidden sm:inline">Sign Up</span>
+              </Button>
+            </div>
+          )}
 
           {/* Mobile menu */}
           <Button variant="ghost" size="sm" className="md:hidden">

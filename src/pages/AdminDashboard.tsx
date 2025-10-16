@@ -64,6 +64,7 @@ import {
 } from 'lucide-react';
 import { ApiService, Topic, User, Category } from '@/services/api';
 import { toast } from '@/hooks/use-toast';
+import { AuthGuard } from '@/components/auth/AuthGuard';
 
 const AdminDashboard = () => {
   const queryClient = useQueryClient();
@@ -208,8 +209,9 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
+    <AuthGuard requireAuth={true} requireAdmin={true}>
+      <div className="min-h-screen bg-gray-50">
+        <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -653,8 +655,9 @@ const AdminDashboard = () => {
             </div>
           </TabsContent>
         </Tabs>
+        </div>
       </div>
-    </div>
+    </AuthGuard>
   );
 };
 
