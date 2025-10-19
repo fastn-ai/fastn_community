@@ -1,8 +1,9 @@
 // Mock API Service for fastn community platform
 // This is a frontend-only implementation with mock data
 
-import { INSERT_USER_API_URL, FASTN_SPACE_ID, CUSTOM_AUTH_KEY, CUSTOM_AUTH_TOKEN_KEY, TENANT_ID_KEY, CRUD_CATEGORIES_API_URL, CRUD_TAGS_API_URL } from "@/constants";
+import { INSERT_USER_API_URL, FASTN_SPACE_ID, CUSTOM_AUTH_KEY, CUSTOM_AUTH_TOKEN_KEY, TENANT_ID_KEY, CRUD_CATEGORIES_API_URL, CRUD_TAGS_API_URL, CRUD_TOPICS_API_URL } from "@/constants";
 import { getCookie } from "@/routes/login/oauth";
+import { generateConsistentColor, PREDEFINED_COLORS } from "@/lib/utils";
 
 // Mock data interfaces
 export interface Topic {
@@ -16,6 +17,7 @@ export interface Topic {
   category_name: string;
   category_color?: string;
   category_id?: string;
+  tag_id?: string;
   status?: 'pending' | 'approved' | 'rejected';
   is_featured?: boolean;
   is_hot?: boolean;
@@ -145,6 +147,25 @@ export interface CrudTagsPayload {
     slug?: string;
     description?: string;
     is_active?: boolean;
+    created_at?: string;
+    updated_at?: string;
+  };
+}
+
+export interface CrudTopicsPayload {
+  action: "getAllTopics" | "insertTopics" | "updateTopic" | "deleteTopic";
+  data?: {
+    id?: string;
+    author_id?: string;
+    category_id?: number | null;
+    tag_id?: number | null;
+    title?: string;
+    description?: string;
+    content?: string;
+    status?: "pending" | "published" | "draft" | "rejected";
+    view_count?: number;
+    reply_count?: number;
+    like_count?: number;
     created_at?: string;
     updated_at?: string;
   };
@@ -361,13 +382,21 @@ export class ApiService {
   // Get all categories
   static async getAllCategories(): Promise<Category[]> {
     try {
+      console.log('🔍 getAllCategories: Starting...')
       // Try to get auth token from user manager
       const { getUser } = await import("@/services/users/user-manager");
       const user = getUser();
       const authToken = user?.access_token || "";
       
+      console.log('🔍 getAllCategories: User and token check:', {
+        hasUser: !!user,
+        hasAuthToken: !!authToken,
+        userProfile: user?.profile,
+        tokenLength: authToken?.length
+      })
+      
       if (!authToken) {
-        console.warn("No auth token available, falling back to mock data");
+        console.warn("⚠️ No auth token available, falling back to mock data");
         return new Promise((resolve) => {
           setTimeout(() => resolve([...mockCategories]), 100);
         });
@@ -376,20 +405,23 @@ export class ApiService {
       const payload: CrudCategoriesPayload = {
         action: "getAllCategories"
       };
-
+      console.log('🚀 getAllCategories: Making API call with payload:', payload)
       const response = await crudCategories(payload, authToken);
+      
+      console.log('📥 getAllCategories: API response:', response)
       
       // Transform API response to match Category interface
       // The API returns data in response.result, not response.data
       if (response && response.result) {
         const categories = Array.isArray(response.result) ? response.result : [];
-        const transformedCategories = categories.map((cat: any) => ({
+        console.log('✅ getAllCategories: Found categories:', categories.length)
+        const transformedCategories = categories.map((cat: any, index: number) => ({
           id: cat.id?.toString() || '',
           name: cat.name || '',
           description: cat.description || '',
           slug: cat.slug || '',
           icon: cat.icon || 'folder',
-          color: cat.color || '#3B82F6',
+          color: cat.color || generateConsistentColor(cat.name || `category-${index}`),
           topics_count: cat.topics_count || 0,
           tutorials_count: cat.tutorials_count || 0,
           is_active: cat.is_active !== false,
@@ -397,10 +429,11 @@ export class ApiService {
           updated_at: cat.updated_at || new Date().toISOString(),
         }));
         
+        console.log('🔄 getAllCategories: Transformed categories:', transformedCategories)
         return transformedCategories;
       }
       
-      console.warn("No data in API response, falling back to mock data");
+      console.warn("⚠️ No data in API response, falling back to mock data");
       return [...mockCategories];
     } catch (error) {
       console.error("Error fetching categories from API, falling back to mock data:", error);
@@ -446,7 +479,7 @@ export class ApiService {
           description: cat.description || '',
           slug: cat.slug || '',
           icon: cat.icon || 'folder',
-          color: cat.color || '#3B82F6',
+          color: cat.color || generateConsistentColor(cat.name || 'new-category'),
           topics_count: 0,
           tutorials_count: 0,
           is_active: cat.is_active !== false,
@@ -496,7 +529,7 @@ export class ApiService {
           description: cat.description || '',
           slug: cat.slug || '',
           icon: cat.icon || 'folder',
-          color: cat.color || '#3B82F6',
+          color: cat.color || generateConsistentColor(cat.name || 'updated-category'),
           topics_count: cat.topics_count || 0,
           tutorials_count: cat.tutorials_count || 0,
           is_active: cat.is_active !== false,
@@ -592,12 +625,12 @@ export class ApiService {
       // The API returns data in response.result, not response.data
       if (response && response.result) {
         const tags = Array.isArray(response.result) ? response.result : [];
-        const transformedTags = tags.map((tag: any) => ({
+        const transformedTags = tags.map((tag: any, index: number) => ({
           id: tag.id?.toString() || '',
           name: tag.name || '',
           description: tag.description || '',
           slug: tag.slug || '',
-          color: tag.color || '#3B82F6',
+          color: tag.color || generateConsistentColor(tag.name || `tag-${index}`),
           topics_count: tag.topics_count || 0,
           is_active: tag.is_active !== false,
           created_at: tag.created_at || new Date().toISOString(),
@@ -652,37 +685,95 @@ export class ApiService {
     });
   }
 
-  // Admin: Create new topic
+  // Create new topic
   static async createTopic(topicData: Partial<Topic>): Promise<Topic> {
-    return new Promise((resolve) => {
-      const newTopic: Topic = {
-        id: `topic_${Date.now()}`,
-        title: topicData.title || 'Untitled',
-        description: topicData.description || '',
-        content: topicData.content || '',
-        author_username: topicData.author_username || 'anonymous',
-        author_avatar: topicData.author_avatar || '',
-        author_id: topicData.author_id || 'user_2',
-        category_name: topicData.category_name || 'Questions',
-        category_color: topicData.category_color || '#3B82F6',
-        category_id: topicData.category_id || 'cat_1',
-        status: 'pending',
-        is_featured: false,
-        is_hot: false,
-        is_new: true,
-        view_count: 0,
-        reply_count: 0,
-        like_count: 0,
-        bookmark_count: 0,
-        share_count: 0,
-        tags: topicData.tags || [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
+    try {
+      // Try to get auth token from user manager
+      const { getUser } = await import("@/services/users/user-manager");
+      const user = getUser();
+      const authToken = user?.access_token || "";
       
-      mockTopics.push(newTopic);
-      setTimeout(() => resolve(newTopic), 100);
-    });
+      if (!authToken) {
+        throw new Error("No auth token available");
+      }
+
+      // Helper function to safely convert to integer or null
+      const safeParseInt = (value: string | number | null | undefined): number | null => {
+        if (value === null || value === undefined || value === '' || value === 'null') {
+          return null;
+        }
+        if (typeof value === 'number') {
+          return value;
+        }
+        const parsed = parseInt(value);
+        return isNaN(parsed) ? null : parsed;
+      };
+
+      const payload: CrudTopicsPayload = {
+        action: "insertTopics",
+        data: {
+          author_id: topicData.author_id,
+          category_id: safeParseInt(topicData.category_id),
+          tag_id: safeParseInt(topicData.tag_id),
+          title: topicData.title,
+          description: topicData.description,
+          content: topicData.content,
+          status: "published",
+          view_count: 0,
+          reply_count: 0,
+          like_count: 0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }
+      };
+
+      console.log("🚀 Creating topic with payload:", JSON.stringify(payload, null, 2));
+      console.log("🔍 Original topicData:", {
+        category_id: topicData.category_id,
+        tag_id: topicData.tag_id,
+        category_id_type: typeof topicData.category_id,
+        tag_id_type: typeof topicData.tag_id
+      });
+      console.log("🔍 Parsed values:", {
+        parsed_category_id: safeParseInt(topicData.category_id),
+        parsed_tag_id: safeParseInt(topicData.tag_id)
+      });
+
+      const response = await crudTopics(payload, authToken);
+      
+      if (response && response.data) {
+        const topic = response.data;
+        return {
+          id: topic.id?.toString() || '',
+          title: topic.title || '',
+          description: topic.description || '',
+          content: topic.content || '',
+          author_username: topicData.author_username || 'anonymous',
+          author_avatar: topicData.author_avatar || '',
+          author_id: topic.author_id || '',
+          category_name: topicData.category_name || '',
+          category_color: topicData.category_color || '#3B82F6',
+          category_id: topic.category_id?.toString() || '',
+          status: topic.status || 'published',
+          is_featured: false,
+          is_hot: false,
+          is_new: true,
+          view_count: topic.view_count || 0,
+          reply_count: topic.reply_count || 0,
+          like_count: topic.like_count || 0,
+          bookmark_count: 0,
+          share_count: 0,
+          tags: topicData.tags || [],
+          created_at: topic.created_at || new Date().toISOString(),
+          updated_at: topic.updated_at || new Date().toISOString(),
+        };
+      }
+      
+      throw new Error("Failed to create topic");
+    } catch (error) {
+      console.error("Error creating topic:", error);
+      throw error;
+    }
   }
 
   // Get topic by ID
@@ -870,6 +961,43 @@ export async function crudTags(payload: CrudTagsPayload, authToken: string) {
   return res.json();
 }
 
+export async function crudTopics(payload: CrudTopicsPayload, authToken: string) {
+  const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
+  const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
+  const tenantId = getCookie(TENANT_ID_KEY) || "";
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "x-fastn-space-id": FASTN_SPACE_ID,
+    stage: "DRAFT",
+  };
+
+  if (isCustomAuth && customAuthToken) {
+    headers["x-fastn-custom-auth"] = "true";
+    headers["authorization"] = customAuthToken; // raw JWT for custom auth
+    if (tenantId) headers["x-fastn-space-tenantid"] = tenantId;
+  } else {
+    headers["authorization"] = `Bearer ${authToken}`;
+  }
+
+  console.log("🌐 Topics API Request:");
+  console.log("  URL:", CRUD_TOPICS_API_URL);
+  console.log("  Final payload being sent:", JSON.stringify({ input: payload }, null, 2));
+
+  const res = await fetch(CRUD_TOPICS_API_URL, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ input: payload }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`crudTopics failed: ${res.status} ${res.statusText} - ${text}`);
+  }
+
+  return res.json();
+}
+
 // Hook for using API in React components
 export const useApi = () => {
   return {
@@ -895,5 +1023,7 @@ export const useApi = () => {
     crudCategories,
     // Tags API functions
     crudTags,
+    // Topics API functions
+    crudTopics,
   };
 };

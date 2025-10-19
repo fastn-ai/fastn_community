@@ -34,3 +34,65 @@ export function getTagColor(tag: string): string {
   const index = Math.abs(hash) % colors.length;
   return colors[index];
 }
+
+// Generate consistent color based on string hash
+export function generateConsistentColor(str: string): string {
+  // Create a hash from the string to ensure consistent colors
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  
+  // Use the hash to select from a predefined set of colors
+  const colors = [
+    '#3B82F6', // Blue
+    '#10B981', // Emerald
+    '#F59E0B', // Amber
+    '#EF4444', // Red
+    '#8B5CF6', // Violet
+    '#06B6D4', // Cyan
+    '#84CC16', // Lime
+    '#F97316', // Orange
+    '#EC4899', // Pink
+    '#6366F1', // Indigo
+    '#14B8A6', // Teal
+    '#F43F5E', // Rose
+    '#A855F7', // Purple
+    '#22C55E', // Green
+    '#EAB308', // Yellow
+    '#DC2626', // Red-600
+    '#2563EB', // Blue-600
+    '#059669', // Emerald-600
+    '#7C3AED', // Violet-600
+    '#0891B2', // Cyan-600
+  ];
+  
+  const index = Math.abs(hash) % colors.length;
+  return colors[index];
+}
+
+// Predefined beautiful colors for categories and tags
+export const PREDEFINED_COLORS = [
+  '#3B82F6', // Blue
+  '#10B981', // Emerald
+  '#F59E0B', // Amber
+  '#EF4444', // Red
+  '#8B5CF6', // Violet
+  '#06B6D4', // Cyan
+  '#84CC16', // Lime
+  '#F97316', // Orange
+  '#EC4899', // Pink
+  '#6366F1', // Indigo
+  '#14B8A6', // Teal
+  '#F43F5E', // Rose
+  '#A855F7', // Purple
+  '#22C55E', // Green
+  '#EAB308', // Yellow
+  '#DC2626', // Red-600
+  '#2563EB', // Blue-600
+  '#059669', // Emerald-600
+  '#7C3AED', // Violet-600
+  '#0891B2', // Cyan-600
+];

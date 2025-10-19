@@ -64,16 +64,47 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
   useEffect(() => {
     const fetchData = async () => {
       try {
+        console.log('🔄 Starting to fetch categories and tags...')
         setIsLoadingCategories(true)
         setIsLoadingTags(true)
         
+        // Fetch categories and tags separately to handle partial failures
+        const categoriesPromise = getAllCategories().catch(error => {
+          console.error('❌ Error fetching categories:', error)
+          return [] // Return empty array if categories fail
+        })
+        
+        const tagsPromise = getAllTags().catch(error => {
+          console.error('❌ Error fetching tags:', error)
+          return [] // Return empty array if tags fail
+        })
+        
         const [fetchedCategories, fetchedTags] = await Promise.all([
-          getAllCategories(),
-          getAllTags()
+          categoriesPromise,
+          tagsPromise
         ])
+        
+        console.log('✅ Fetched data:', {
+          categoriesCount: fetchedCategories.length,
+          tagsCount: fetchedTags.length,
+          categories: fetchedCategories,
+          tags: fetchedTags
+        })
         
         setCategories(fetchedCategories)
         setAvailableTags(fetchedTags)
+        
+        // Show specific error messages for partial failures
+        if (fetchedCategories.length === 0 && fetchedTags.length === 0) {
+          setError('Failed to load categories and tags. Please refresh the page and try again.')
+        } else if (fetchedCategories.length === 0) {
+          setError('Failed to load categories. You can still create topics without categories.')
+        } else if (fetchedTags.length === 0) {
+          setError('Failed to load tags. You can still create topics without tags.')
+        } else {
+          // Clear any previous errors if both loaded successfully
+          setError(null)
+        }
       } catch (error) {
         console.error('Error fetching data:', error)
         setError('Failed to load data. Please try again.')
@@ -263,7 +294,7 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
 
   const applyTemplate = (category: string) => {
     const template = categoryTemplates[category as keyof typeof categoryTemplates]
-    if (template) {
+    if (template && category) {
       // Keep template as plain text for textarea
       setFormData(prev => ({ ...prev, content: template }))
       setTemplateApplied(true)
@@ -295,13 +326,26 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
         return
       }
 
+      // Check if we have at least categories or tags available
+      if (categories.length === 0 && availableTags.length === 0) {
+        setError('Unable to load categories and tags. Please refresh the page and try again.')
+        return
+      }
+
+      // Find the first selected tag's ID (only if tags are available)
+      const firstSelectedTag = availableTags.length > 0 ? availableTags.find(tag => selectedTags.includes(tag.name)) : null;
+      
+      // Find category ID (only if categories are available)
+      const selectedCategory = categories.length > 0 ? categories.find(cat => cat.name === formData.category) : null;
+      
       const topicData = {
         title: formData.topicName || formData.title,
         description: formData.description,
         content: formData.content,
         author_id: user.id,
         author_username: user.username || user.email?.split('@')[0] || 'user',
-        category_id: categories.find(cat => cat.name === formData.category)?.id || '',
+        category_id: selectedCategory?.id || null,
+        tag_id: firstSelectedTag?.id || null,
         is_featured: formData.featured,
         is_hot: false,
         is_new: true,
@@ -312,6 +356,14 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
         share_count: 0,
         tags: selectedTags,
       }
+
+      console.log("🔍 Topic data being sent:", {
+        ...topicData,
+        selectedCategory: selectedCategory?.name,
+        firstSelectedTag: firstSelectedTag?.name,
+        categoriesCount: categories.length,
+        tagsCount: availableTags.length
+      });
 
       const createdTopic = await createTopic(topicData)
       console.log('Topic created successfully:', createdTopic)
@@ -606,11 +658,10 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
               <Label htmlFor="content" className="text-sm font-medium text-muted-foreground">Content</Label>
               <Textarea
                 id="content"
-                placeholder={formData.category ? "Start typing your content..." : "Select a category before typing here..."}
+                placeholder="Start typing your content..."
                 value={formData.content}
                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                 className="min-h-[300px] resize-none"
-                disabled={!formData.category}
               />
             </div>
 
@@ -619,7 +670,7 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
             <div className="flex gap-3 pt-4 border-t border-border/50">
               <Button
                 type="submit"
-                disabled={isSubmitting || !formData.topicName || !formData.category || !formData.content}
+                disabled={isSubmitting || !formData.topicName || !formData.content}
                 className="flex-1 h-9 bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
               >
                 {isSubmitting ? 'Creating Topic...' : '+ Create Topic'}
