@@ -1,13 +1,13 @@
 // Mock API Service for fastn community platform
 // This is a frontend-only implementation with mock data
 
-import { INSERT_USER_API_URL, FASTN_SPACE_ID, CUSTOM_AUTH_KEY, CUSTOM_AUTH_TOKEN_KEY, TENANT_ID_KEY, CRUD_CATEGORIES_API_URL, CRUD_TAGS_API_URL, CRUD_TOPICS_API_URL } from "@/constants";
+import { INSERT_USER_API_URL, FASTN_SPACE_ID, CUSTOM_AUTH_KEY, CUSTOM_AUTH_TOKEN_KEY, TENANT_ID_KEY, CRUD_CATEGORIES_API_URL, CRUD_TAGS_API_URL, CRUD_TOPICS_API_URL, GET_TOPIC_BY_USER_API_URL, INSERT_TOPIC_TAGS_API_URL, INSERT_TOPICS_API_URL } from "@/constants";
 import { getCookie } from "@/routes/login/oauth";
 import { generateConsistentColor, PREDEFINED_COLORS } from "@/lib/utils";
 
 // Mock data interfaces
 export interface Topic {
-  id: string;
+  id: number;
   title: string;
   description: string;
   content?: string;
@@ -153,7 +153,7 @@ export interface CrudTagsPayload {
 }
 
 export interface CrudTopicsPayload {
-  action: "getAllTopics" | "insertTopics" | "updateTopic" | "deleteTopic";
+  action: "getAllTopics" | "updateTopic" | "deleteTopic";
   data?: {
     id?: string;
     author_id?: string;
@@ -168,6 +168,38 @@ export interface CrudTopicsPayload {
     like_count?: number;
     created_at?: string;
     updated_at?: string;
+  };
+}
+
+// Separate payload interfaces for the extracted endpoints
+export interface GetTopicByUserPayload {
+  action: "getTopicByUser";
+  data?: {
+    user_id?: string;
+    author_id?: string;
+  };
+}
+
+export interface InsertTopicsPayload {
+  action: "insertTopics";
+  data?: {
+    author_id?: string;
+    category_id?: number | null;
+    title?: string;
+    description?: string;
+    content?: string;
+    status?: "pending" | "published" | "draft" | "rejected";
+    view_count?: number;
+    reply_count?: number;
+    like_count?: number;
+  };
+}
+
+export interface InsertTopicTagsPayload {
+  action: "insertTopic_tags";
+  data?: {
+    topic_id?: number;
+    tag_ids?: number[];
   };
 }
 
@@ -272,7 +304,7 @@ const initializeMockData = () => {
   // Mock Topics
   mockTopics = [
     {
-      id: 'topic_1',
+      id: 1,
       title: 'Welcome to Fastn Community!',
       description: 'This is our first community post. Welcome everyone!',
       content: 'Welcome to the Fastn community platform. This is where developers can share knowledge, ask questions, and collaborate.',
@@ -296,7 +328,7 @@ const initializeMockData = () => {
       updated_at: new Date().toISOString(),
     },
     {
-      id: 'topic_2',
+      id: 2,
       title: 'How to get started with Fastn?',
       description: 'Looking for guidance on getting started with Fastn development.',
       content: 'I am new to Fastn and would like to know the best way to get started. Any recommendations?',
@@ -320,7 +352,7 @@ const initializeMockData = () => {
       updated_at: new Date().toISOString(),
     },
     {
-      id: 'topic_3',
+      id: 3,
       title: 'Best practices for Fastn development',
       description: 'Share your best practices and tips for Fastn development.',
       content: 'This is a pending post that needs admin approval.',
@@ -653,7 +685,7 @@ export class ApiService {
   // Admin: Approve topic
   static async approveTopic(topicId: string): Promise<Topic> {
     return new Promise((resolve) => {
-      const topic = mockTopics.find(t => t.id === topicId);
+      const topic = mockTopics.find(t => t.id.toString() === topicId);
       if (topic) {
         topic.status = 'approved';
         topic.updated_at = new Date().toISOString();
@@ -665,7 +697,7 @@ export class ApiService {
   // Admin: Reject topic
   static async rejectTopic(topicId: string): Promise<Topic> {
     return new Promise((resolve) => {
-      const topic = mockTopics.find(t => t.id === topicId);
+      const topic = mockTopics.find(t => t.id.toString() === topicId);
       if (topic) {
         topic.status = 'rejected';
         topic.updated_at = new Date().toISOString();
@@ -677,7 +709,7 @@ export class ApiService {
   // Admin: Delete topic
   static async deleteTopic(topicId: string): Promise<boolean> {
     return new Promise((resolve) => {
-      const index = mockTopics.findIndex(t => t.id === topicId);
+      const index = mockTopics.findIndex(t => t.id.toString() === topicId);
       if (index !== -1) {
         mockTopics.splice(index, 1);
       }
@@ -709,12 +741,11 @@ export class ApiService {
         return isNaN(parsed) ? null : parsed;
       };
 
-      const payload: CrudTopicsPayload = {
+      const payload: InsertTopicsPayload = {
         action: "insertTopics",
         data: {
           author_id: topicData.author_id,
           category_id: safeParseInt(topicData.category_id),
-          tag_id: safeParseInt(topicData.tag_id),
           title: topicData.title,
           description: topicData.description,
           content: topicData.content,
@@ -722,29 +753,44 @@ export class ApiService {
           view_count: 0,
           reply_count: 0,
           like_count: 0,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
         }
       };
 
-      console.log("🚀 Creating topic with payload:", JSON.stringify(payload, null, 2));
-      console.log("🔍 Original topicData:", {
-        category_id: topicData.category_id,
-        tag_id: topicData.tag_id,
-        category_id_type: typeof topicData.category_id,
-        tag_id_type: typeof topicData.tag_id
-      });
-      console.log("🔍 Parsed values:", {
-        parsed_category_id: safeParseInt(topicData.category_id),
-        parsed_tag_id: safeParseInt(topicData.tag_id)
-      });
 
-      const response = await crudTopics(payload, authToken);
+      const response = await insertTopics(payload, authToken);
       
       if (response && response.data) {
         const topic = response.data;
-        return {
-          id: topic.id?.toString() || '',
+        
+        // WORKAROUND: If no ID is returned, try to get the latest topic ID
+        console.log( "topic", topic)
+        let topicId = topic.id || '';
+        if (!topicId || topicId === '') {
+          try {
+            const allTopics = await ApiService.getAllTopics();
+            if (allTopics && allTopics.length > 0) {
+              // Find the topic that matches our created topic (by title and author)
+              const matchingTopic = allTopics.find(t => 
+                t.title === topicData.title && 
+                t.author_id === topicData.author_id
+              );
+              if (matchingTopic) {
+                topicId = matchingTopic.id.toString();
+              } else {
+                // Fallback: use the highest ID (most recent)
+                const latestTopic = allTopics.reduce((latest, current) => 
+                  current.id > latest.id ? current : latest
+                );
+                topicId = latestTopic.id.toString();
+              }
+            }
+          } catch (error) {
+            // Failed to get latest topic ID, continue without tag insertion
+          }
+        }
+        
+        const createdTopic = {
+          id: topicId,
           title: topic.title || '',
           description: topic.description || '',
           content: topic.content || '',
@@ -764,14 +810,38 @@ export class ApiService {
           bookmark_count: 0,
           share_count: 0,
           tags: topicData.tags || [],
-          created_at: topic.created_at || new Date().toISOString(),
-          updated_at: topic.updated_at || new Date().toISOString(),
+         
         };
+
+        // Insert tags if they exist and we have a valid topic ID
+        if (topicData.tags && topicData.tags.length > 0 && createdTopic.id && createdTopic.id !== '') {
+          try {
+            // Get all available tags to convert names to IDs
+            const allTags = await ApiService.getAllTags();
+            
+            // Convert tag names to tag IDs
+            const tagIds = topicData.tags
+              .map(tagName => {
+                const tag = allTags.find(t => t.name === tagName);
+                return tag ? Number(tag.id) : null;
+              })
+              .filter(id => id !== null) as number[];
+            
+            if (tagIds.length > 0) {
+                console.log("createdTopic",createdTopic)
+              await ApiService.insertTopicTags(Number(createdTopic.id), tagIds);
+
+            }
+          } catch (tagError) {
+            // Don't throw error here - topic creation succeeded, tag insertion failed
+          }
+        }
+
+        return createdTopic;
       }
       
       throw new Error("Failed to create topic");
     } catch (error) {
-      console.error("Error creating topic:", error);
       throw error;
     }
   }
@@ -779,9 +849,117 @@ export class ApiService {
   // Get topic by ID
   static async getAllTopicById(topicId: string): Promise<Topic> {
     return new Promise((resolve) => {
-      const topic = mockTopics.find(t => t.id === topicId);
+      const topic = mockTopics.find(t => t.id.toString() === topicId);
       setTimeout(() => resolve(topic!), 100);
     });
+  }
+
+  // Get topics by user
+  static async getTopicByUser(userId: string): Promise<Topic[]> {
+    try {
+      const { getUser } = await import("@/services/users/user-manager");
+      const user = getUser();
+      const authToken = user?.access_token || "";
+      
+      if (!authToken) {
+        throw new Error("No auth token available");
+      }
+
+      const payload: GetTopicByUserPayload = {
+        action: "getTopicByUser",
+        data: {
+          user_id: userId,
+          author_id: userId
+        }
+      };
+
+      const response = await getTopicByUser(payload, authToken);
+      
+      if (response && response.result) {
+        const topics = Array.isArray(response.result) ? response.result : [];
+        return topics.map((topic: any) => ({
+          id: topic.id?.toString() || '',
+          title: topic.title || '',
+          description: topic.description || '',
+          content: topic.content || '',
+          author_username: topic.author_username || '',
+          author_avatar: topic.author_avatar || '',
+          author_id: topic.author_id || '',
+          category_name: topic.category_name || '',
+          category_color: topic.category_color || '#3B82F6',
+          category_id: topic.category_id?.toString() || '',
+          status: topic.status || 'published',
+          is_featured: topic.is_featured || false,
+          is_hot: topic.is_hot || false,
+          is_new: topic.is_new || false,
+          view_count: topic.view_count || 0,
+          reply_count: topic.reply_count || 0,
+          like_count: topic.like_count || 0,
+          bookmark_count: topic.bookmark_count || 0,
+          share_count: topic.share_count || 0,
+          tags: topic.tags || [],
+          created_at: topic.created_at || new Date().toISOString(),
+          updated_at: topic.updated_at || new Date().toISOString(),
+        }));
+      }
+      
+      return [];
+    } catch (error) {
+      console.error("Error fetching topics by user:", error);
+      return [];
+    }
+  }
+
+  // Insert topic tags
+  static async insertTopicTags(topicId: number, tagIds: number[]): Promise<void> {
+    try {
+      const { getUser } = await import("@/services/users/user-manager");
+      const user = getUser();
+      const authToken = user?.access_token || "";
+      
+      if (!authToken) {
+        throw new Error("No auth token available");
+      }
+
+      // Validate inputs
+      if (!topicId || topicId <= 0) {
+        throw new Error(`Invalid topic ID: ${topicId}`);
+      }
+      
+      if (!tagIds || tagIds.length === 0) {
+        console.warn(`No tag IDs provided for topic ${topicId}`);
+        return;
+      }
+
+      // Filter out any invalid tag IDs
+      const validTagIds = tagIds.filter(id => id && id > 0);
+      if (validTagIds.length === 0) {
+        console.warn(`No valid tag IDs provided for topic ${topicId}`);
+        return;
+      }
+
+      console.log(`Inserting tags for topic ${topicId}:`, validTagIds);
+
+      // Insert all tags in a single request
+      const payload: InsertTopicTagsPayload = {
+        action: "insertTopic_tags",
+        data: {
+          topic_id: topicId,
+          tag_ids: validTagIds
+        }
+      };
+
+      console.log("Payload being sent:", JSON.stringify(payload, null, 2));
+
+      const response = await insertTopicTags(payload, authToken);
+      
+      if (!response) {
+        throw new Error(`Failed to insert tags for topic ${topicId}`);
+      }
+    } catch (error) {
+      console.error("Error in insertTopicTags:", error);
+      throw error;
+    }
   }
 
   // Create reply
@@ -801,7 +979,7 @@ export class ApiService {
         like_count: 0,
         dislike_count: 0,
         reply_count: 0,
-                  created_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
       
@@ -980,10 +1158,6 @@ export async function crudTopics(payload: CrudTopicsPayload, authToken: string) 
     headers["authorization"] = `Bearer ${authToken}`;
   }
 
-  console.log("🌐 Topics API Request:");
-  console.log("  URL:", CRUD_TOPICS_API_URL);
-  console.log("  Final payload being sent:", JSON.stringify({ input: payload }, null, 2));
-
   const res = await fetch(CRUD_TOPICS_API_URL, {
     method: "POST",
     headers,
@@ -993,6 +1167,106 @@ export async function crudTopics(payload: CrudTopicsPayload, authToken: string) 
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`crudTopics failed: ${res.status} ${res.statusText} - ${text}`);
+  }
+
+  return res.json();
+}
+
+// Separate API functions for the extracted endpoints
+export async function getTopicByUser(payload: GetTopicByUserPayload, authToken: string) {
+  const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
+  const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
+  const tenantId = getCookie(TENANT_ID_KEY) || "";
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "x-fastn-space-id": FASTN_SPACE_ID,
+    stage: "DRAFT",
+  };
+
+  if (isCustomAuth && customAuthToken) {
+    headers["x-fastn-custom-auth"] = "true";
+    headers["authorization"] = customAuthToken; // raw JWT for custom auth
+    if (tenantId) headers["x-fastn-space-tenantid"] = tenantId;
+  } else {
+    headers["authorization"] = `Bearer ${authToken}`;
+  }
+
+  const res = await fetch(GET_TOPIC_BY_USER_API_URL, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ input: payload }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`getTopicByUser failed: ${res.status} ${res.statusText} - ${text}`);
+  }
+
+  return res.json();
+}
+
+export async function insertTopics(payload: InsertTopicsPayload, authToken: string) {
+  const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
+  const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
+  const tenantId = getCookie(TENANT_ID_KEY) || "";
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "x-fastn-space-id": FASTN_SPACE_ID,
+    stage: "DRAFT",
+  };
+
+  if (isCustomAuth && customAuthToken) {
+    headers["x-fastn-custom-auth"] = "true";
+    headers["authorization"] = customAuthToken; // raw JWT for custom auth
+    if (tenantId) headers["x-fastn-space-tenantid"] = tenantId;
+  } else {
+    headers["authorization"] = `Bearer ${authToken}`;
+  }
+
+  const res = await fetch(INSERT_TOPICS_API_URL, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ input: payload }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`insertTopics failed: ${res.status} ${res.statusText} - ${text}`);
+  }
+
+  return res.json();
+}
+
+export async function insertTopicTags(payload: InsertTopicTagsPayload, authToken: string) {
+  const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
+  const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
+  const tenantId = getCookie(TENANT_ID_KEY) || "";
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "x-fastn-space-id": FASTN_SPACE_ID,
+    stage: "DRAFT",
+  };
+
+  if (isCustomAuth && customAuthToken) {
+    headers["x-fastn-custom-auth"] = "true";
+    headers["authorization"] = customAuthToken; // raw JWT for custom auth
+    if (tenantId) headers["x-fastn-space-tenantid"] = tenantId;
+  } else {
+    headers["authorization"] = `Bearer ${authToken}`;
+  }
+
+  const res = await fetch(INSERT_TOPIC_TAGS_API_URL, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ input: payload }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`insertTopicTags failed: ${res.status} ${res.statusText} - ${text}`);
   }
 
   return res.json();
@@ -1014,7 +1288,9 @@ export const useApi = () => {
     rejectTopic: ApiService.rejectTopic,
     deleteTopic: ApiService.deleteTopic,
     createTopic: ApiService.createTopic,
+    insertTopicTags: ApiService.insertTopicTags,
     getAllTopicById: ApiService.getAllTopicById,
+    getTopicByUser: ApiService.getTopicByUser,
     createReply: ApiService.createReply,
     editReply: ApiService.editReply,
     deleteReply: ApiService.deleteReply,
@@ -1025,5 +1301,9 @@ export const useApi = () => {
     crudTags,
     // Topics API functions
     crudTopics,
+    // Separated topic endpoint functions
+    getTopicByUserApi: getTopicByUser,
+    insertTopicsApi: insertTopics,
+    insertTopicTagsApi: insertTopicTags,
   };
 };

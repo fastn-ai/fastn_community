@@ -26,6 +26,7 @@ import Leaderboard from "./pages/Leaderboard";
 import OpenQuestions from "./pages/OpenQuestions";
 import UnifiedForm from "./pages/UnifiedForm";
 import AdminDashboard from "./pages/AdminDashboard";
+import UserTopics from "./pages/UserTopics";
 import PerformanceDashboard from "./components/optimized/PerformanceDashboard";
 import { LoginPage } from "./routes/login/login.page";
 import { ConnectorActivateRedirectHandler } from "./routes/login/oauth";
@@ -57,6 +58,7 @@ const App = () => (
                 <Route path="/open-questions" element={<OpenQuestions />} />
                 <Route path="/create" element={<UnifiedForm />} />
                 <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/my-topics" element={<UserTopics />} />
                 {/* Auth routes */}
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/oauth" element={<ConnectorActivateRedirectHandler />} />

@@ -20,9 +20,14 @@ export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 // Shared API configuration for all endpoints
 export const FASTN_API_KEY = import.meta.env.VITE_FASTN_API_KEY || "";
 export const FASTN_SPACE_ID = import.meta.env.VITE_FASTN_SPACE_ID || "dce5d31a-5b34-437f-abcf-af40cb7fd6a9";
-
+export const API_URL = import.meta.env.VITE_API_URL|| "https://qa.fastn.ai/api/v1/"
 // API URLs
-export const INSERT_USER_API_URL = import.meta.env.VITE_INSERT_USER_API_URL || "https://qa.fastn.ai/api/v1/crudUser";
-export const CRUD_CATEGORIES_API_URL = import.meta.env.VITE_CRUD_CATEGORIES_API_URL || "https://qa.fastn.ai/api/v1/crudCategories";
-export const CRUD_TAGS_API_URL = import.meta.env.VITE_CRUD_TAGS_API_URL || "https://qa.fastn.ai/api/v1/crudTags";
-export const CRUD_TOPICS_API_URL = import.meta.env.VITE_CRUD_TOPICS_API_URL || "https://qa.fastn.ai/api/v1/crudTopics";
+export const INSERT_USER_API_URL = import.meta.env.VITE_INSERT_USER_API_URL || API_URL +"crudUser";
+export const CRUD_CATEGORIES_API_URL = import.meta.env.VITE_CRUD_CATEGORIES_API_URL || API_URL +"crudCategories";
+export const CRUD_TAGS_API_URL = import.meta.env.VITE_CRUD_TAGS_API_URL || API_URL +"crudTags";
+export const CRUD_TOPICS_API_URL = import.meta.env.VITE_CRUD_TOPICS_API_URL || API_URL +"crudTopics";
+
+// Separated topic endpoints
+export const GET_TOPIC_BY_USER_API_URL = import.meta.env.VITE_GET_TOPIC_BY_USER_API_URL || API_URL +"getTopicByUser";
+export const INSERT_TOPIC_TAGS_API_URL = import.meta.env.VITE_INSERT_TOPIC_TAGS_API_URL || API_URL +"insertTopicTags";
+export const INSERT_TOPICS_API_URL = import.meta.env.VITE_INSERT_TOPICS_API_URL || API_URL +"insertTopics";

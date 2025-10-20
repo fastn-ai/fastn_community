@@ -15,10 +15,11 @@ import { AuthGuard } from '@/components/auth/AuthGuard'
 interface CreateTopicModalProps {
   isOpen: boolean
   onClose: () => void
+  onSuccess?: () => void
   position?: 'top' | 'bottom'
 }
 
-const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicModalProps) => {
+const CreateTopicModal = ({ isOpen, onClose, onSuccess, position = 'bottom' }: CreateTopicModalProps) => {
   const navigate = useNavigate()
   const { createTopic, getAllCategories, getAllTags } = useApi()
   const modalRef = useRef<HTMLDivElement>(null)
@@ -367,6 +368,11 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
 
       const createdTopic = await createTopic(topicData)
       console.log('Topic created successfully:', createdTopic)
+      
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess()
+      }
       
       // Close modal and navigate to community
       onClose()

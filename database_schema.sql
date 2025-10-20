@@ -410,8 +410,8 @@ ON CONFLICT (name) DO NOTHING;
 ALTER TABLE topics DROP COLUMN IF EXISTS tag_id;
 
 CREATE TABLE IF NOT EXISTS topic_tags (
-    topic_id SERIAL NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
-    tag_id SERIAL NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+    topic_id INTEGER NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+    tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
     PRIMARY KEY (topic_id, tag_id)
 );
 
@@ -474,3 +474,18 @@ LEFT JOIN shares s ON t.id = s.topic_id
 GROUP BY t.id, t.title
 ORDER BY share_count DESC;
 
+ALTER TABLE tags
+    ALTER COLUMN created_at TYPE TEXT USING created_at::TEXT,
+    ALTER COLUMN updated_at TYPE TEXT USING updated_at::TEXT;
+
+-- For topics table
+ALTER TABLE topics
+    ALTER COLUMN created_at TYPE TEXT USING created_at::TEXT,
+    ALTER COLUMN updated_at TYPE TEXT USING updated_at::TEXT;
+
+
+CREATE TABLE IF NOT EXISTS topic_tags (
+    topic_id SERIAL NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+    tag_id SERIAL NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+    PRIMARY KEY (topic_id, tag_id)
+);

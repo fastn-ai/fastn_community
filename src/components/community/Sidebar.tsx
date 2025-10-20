@@ -17,7 +17,8 @@ import {
   Trophy,
   Search,
   UserPlus,
-  Loader2
+  Loader2,
+  User
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -156,6 +157,15 @@ const Sidebar = () => {
           >
             <Users className="w-4 h-4 mr-3" />
             Community
+          </Button>
+          
+          <Button 
+            variant={isActive("/my-topics") ? "default" : "ghost"} 
+            className="w-full justify-start hover:bg-accent hover:text-accent-foreground"
+            onClick={() => navigate("/my-topics")}
+          >
+            <User className="w-4 h-4 mr-3" />
+            My Topics
           </Button>
         </div>
 
