@@ -199,7 +199,7 @@ export interface InsertTopicTagsPayload {
   action: "insertTopic_tags";
   data?: {
     topic_id?: number;
-    tag_ids?: number[];
+    tag_id?: number;
   };
 }
 
@@ -810,29 +810,44 @@ export class ApiService {
           bookmark_count: 0,
           share_count: 0,
           tags: topicData.tags || [],
-         
+          created_at: new Date().toISOString(),
         };
 
         // Insert tags if they exist and we have a valid topic ID
         if (topicData.tags && topicData.tags.length > 0 && createdTopic.id && createdTopic.id !== '') {
           try {
+            console.log("createdTopic for tag insertion:", createdTopic);
+            console.log("topicData.tags:", topicData.tags);
+            
+            // Validate topic ID
+            const topicId = Number(createdTopic.id);
+            if (isNaN(topicId) || topicId <= 0) {
+              console.error(`Invalid topic ID: ${createdTopic.id}`);
+              return createdTopic;
+            }
+            
             // Get all available tags to convert names to IDs
             const allTags = await ApiService.getAllTags();
+            console.log("All available tags:", allTags);
             
             // Convert tag names to tag IDs
             const tagIds = topicData.tags
               .map(tagName => {
                 const tag = allTags.find(t => t.name === tagName);
+                console.log(`Looking for tag "${tagName}":`, tag);
                 return tag ? Number(tag.id) : null;
               })
               .filter(id => id !== null) as number[];
             
+            console.log("Converted tag IDs:", tagIds);
+            
             if (tagIds.length > 0) {
-                console.log("createdTopic",createdTopic)
-              await ApiService.insertTopicTags(Number(createdTopic.id), tagIds);
-
+              await ApiService.insertTopicTags(topicId, tagIds);
+            } else {
+              console.warn("No valid tag IDs found for tags:", topicData.tags);
             }
           } catch (tagError) {
+            console.error("Error inserting topic tags:", tagError);
             // Don't throw error here - topic creation succeeded, tag insertion failed
           }
         }
@@ -940,21 +955,29 @@ export class ApiService {
 
       console.log(`Inserting tags for topic ${topicId}:`, validTagIds);
 
-      // Insert all tags in a single request
-      const payload: InsertTopicTagsPayload = {
-        action: "insertTopic_tags",
-        data: {
-          topic_id: topicId,
-          tag_ids: validTagIds
+      // Insert each tag individually
+      for (const tagId of validTagIds) {
+        const payload: InsertTopicTagsPayload = {
+          action: "insertTopic_tags",
+          data: {
+            topic_id: topicId,
+            tag_id: tagId
+          }
+        };
+
+        console.log(`Inserting tag ${tagId} for topic ${topicId}:`, JSON.stringify(payload, null, 2));
+
+        try {
+          const response = await insertTopicTags(payload, authToken);
+          if (!response) {
+            console.error(`Failed to insert tag ${tagId} for topic ${topicId}`);
+          } else {
+            console.log(`Successfully inserted tag ${tagId} for topic ${topicId}`);
+          }
+        } catch (tagError) {
+          console.error(`Error inserting tag ${tagId} for topic ${topicId}:`, tagError);
+          // Continue with other tags even if one fails
         }
-      };
-
-      console.log("Payload being sent:", JSON.stringify(payload, null, 2));
-
-      const response = await insertTopicTags(payload, authToken);
-      
-      if (!response) {
-        throw new Error(`Failed to insert tags for topic ${topicId}`);
       }
     } catch (error) {
       console.error("Error in insertTopicTags:", error);
