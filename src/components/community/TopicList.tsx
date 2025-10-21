@@ -34,6 +34,18 @@ import {
   Megaphone,
   X,
   Settings,
+  Code,
+  BookOpen,
+  Lightbulb,
+  Rocket,
+  Shield,
+  Users,
+  FileText,
+  Sparkles,
+  Folder,
+  MessageCircle,
+  Wrench,
+  Cpu,
 } from "lucide-react";
 import { ApiService, Topic, Category } from "@/services/api";
 import { getTagColor } from "@/lib/utils";
@@ -88,8 +100,16 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
     const matchesSearch =
       topic.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       topic.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter =
-      selectedFilter === "all" || topic.category_name === selectedFilter;
+    
+    let matchesFilter = true;
+    if (selectedFilter === "all") {
+      matchesFilter = true;
+    } else if (selectedFilter === "top") {
+      // Filter for top topics (you can customize this logic)
+      matchesFilter = topic.is_hot || topic.is_featured || topic.like_count > 5;
+    } else {
+      matchesFilter = topic.category_name === selectedFilter;
+    }
     
     // Add tag filtering
     const matchesTag = !selectedTag || (topic.tags && Array.isArray(topic.tags) && topic.tags.includes(selectedTag));
@@ -260,20 +280,110 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
     return date.toLocaleDateString();
   };
 
+  const getCategoryIcon = (categoryName: string) => {
+    const category = categories.find(cat => cat.name === categoryName);
+    if (category?.icon) {
+      switch (category.icon) {
+     
+        case 'folder':
+          return <Folder className="h-4 w-4" />;
+       
+        
+        default:
+          return <MessageSquare className="h-4 w-4" />;
+      }
+    }
+    
+    // Fallback to name-based mapping with meaningful icons
+    switch (categoryName.toLowerCase()) {
+      case "questions":
+      case "question":
+        return <HelpCircle className="h-4 w-4" />;
+      case "best practices":
+        return <Star className="h-4 w-4" />;
+      case "announcements":
+        return <Megaphone className="h-4 w-4" />;
+      case "built with fastn":
+        return <Rocket className="h-4 w-4" />;
+      case "tutorials":
+        return <BookOpen className="h-4 w-4" />;
+      case "showcase":
+        return <Sparkles className="h-4 w-4" />;
+     
+      default:
+        return <Folder className="h-4 w-4" />;
+    }
+  };
+
+  const getCategoryIconColor = (categoryName: string) => {
+    const category = categories.find(cat => cat.name === categoryName);
+    if (category?.color) {
+      // Convert hex color to text color class with more comprehensive mapping
+      const colorMap: { [key: string]: string } = {
+        '#3B82F6': 'text-blue-600',
+        '#1D4ED8': 'text-blue-700',
+        '#EF4444': 'text-red-600',
+        '#DC2626': 'text-red-700',
+        '#10B981': 'text-emerald-600',
+        '#059669': 'text-emerald-700',
+        '#8B5CF6': 'text-purple-600',
+        '#7C3AED': 'text-purple-700',
+        '#F59E0B': 'text-amber-600',
+        '#D97706': 'text-amber-700',
+        '#F97316': 'text-orange-600',
+        '#EA580C': 'text-orange-700',
+        '#EC4899': 'text-pink-600',
+        '#DB2777': 'text-pink-700',
+        '#06B6D4': 'text-cyan-600',
+        '#0891B2': 'text-cyan-700',
+        '#84CC16': 'text-lime-600',
+        '#65A30D': 'text-lime-700',
+ 
+     
+      };
+      return colorMap[category.color] || 'text-gray-600';
+    }
+    
+    // Fallback to name-based mapping with vibrant colors
+    switch (categoryName.toLowerCase()) {
+      case "questions":
+      case "question":
+        return "text-blue-600"; // HelpCircle - blue for questions
+      case "best practices":
+        return "text-emerald-600"; // Star - emerald for excellence
+      case "announcements":
+        return "text-red-600"; // Megaphone - red for important
+      case "built with fastn":
+        return "text-purple-600"; // Rocket - purple for innovation
+      case "tutorials":
+        return "text-blue-600"; // BookOpen - blue for learning
+      case "showcase":
+        return "text-orange-600"; // Sparkles - orange for highlights
+      case "community":
+        return "text-cyan-600"; // Users - cyan for community
+      case "security":
+        return "text-green-600"; // Shield - green for safety
+      case "request feature":
+        return "text-indigo-600"; // MessageCircle - indigo for requests
+      case "feedback":
+      case "feadback":
+        return "text-pink-600"; // MessageSquare - pink for feedback
+      case "technology":
+        return "text-purple-600"; // Cpu - purple for technology
+    
+      default:
+        return "text-gray-600";
+    }
+  };
+
   const getFilterIcon = (filter: string) => {
     switch (filter) {
       case "all":
         return <MessageSquare className="h-4 w-4" />;
       case "top":
         return <Trophy className="h-4 w-4" />;
-      case "Questions":
-        return <HelpCircle className="h-4 w-4" />;
-      case "Best Practices":
-        return <Star className="h-4 w-4" />;
-      case "Announcements":
-        return <Megaphone className="h-4 w-4" />;
       default:
-        return <MessageSquare className="h-4 w-4" />;
+        return getCategoryIcon(filter);
     }
   };
 
@@ -283,14 +393,8 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
         return "text-blue-600";
       case "top":
         return "text-yellow-600";
-      case "Questions":
-        return "text-blue-600";
-      case "Best Practices":
-        return "text-green-600";
-      case "Announcements":
-        return "text-red-600";
       default:
-        return "text-gray-600";
+        return getCategoryIconColor(filter);
     }
   };
 
@@ -341,7 +445,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
               <h3 className="text-lg font-semibold mb-2">
                 Unable to Load Data
               </h3>
-              <p className="text-muted-foreground mb-6">{error}</p>
+              <p className="text-muted-foreground mb-6">{error?.toString() || 'An error occurred'}</p>
               <div className="flex gap-2 justify-center">
                 <Button
                   onClick={() => refetchTopics()}
@@ -394,7 +498,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
               <FolderOpen className="h-4 w-4 text-blue-600" />
               Categories
             </Button>
-            {isAuthenticated && (
+            {/*{isAuthenticated && (
               <Button
                 onClick={() => setIsCreateTopicModalOpen(true)}
                 className="hidden sm:flex items-center space-x-2"
@@ -402,7 +506,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                 <Plus className="w-4 h-4" />
                 <span>New Topic</span>
               </Button>
-            )}
+            )}*/}
             <Button
               onClick={() => navigate("/admin")}
               variant="outline"
@@ -441,6 +545,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
 
         {/* Filter Buttons */}
         <div className="flex gap-2 mb-6 overflow-x-auto">
+          {/* All Topics Button */}
           <Button
             variant={selectedFilter === "all" ? "default" : "outline"}
             onClick={() => setSelectedFilter("all")}
@@ -455,6 +560,8 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
             />
             All Topics
           </Button>
+          
+          {/* Top Button */}
           <Button
             variant={selectedFilter === "top" ? "default" : "outline"}
             onClick={() => setSelectedFilter("top")}
@@ -469,50 +576,25 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
             />
             Top
           </Button>
-          <Button
-            variant={selectedFilter === "Questions" ? "default" : "outline"}
-            onClick={() => setSelectedFilter("Questions")}
-            className="flex items-center gap-2"
-          >
-            <HelpCircle
-              className={`h-4 w-4 ${
-                selectedFilter === "Questions"
-                  ? "text-white"
-                  : getFilterIconColor("Questions")
-              }`}
-            />
-            Questions
-          </Button>
-          <Button
-            variant={
-              selectedFilter === "Best Practices" ? "default" : "outline"
-            }
-            onClick={() => setSelectedFilter("Best Practices")}
-            className="flex items-center gap-2"
-          >
-            <Star
-              className={`h-4 w-4 ${
-                selectedFilter === "Best Practices"
-                  ? "text-white"
-                  : getFilterIconColor("Best Practices")
-              }`}
-            />
-            Best Practices
-          </Button>
-          <Button
-            variant={selectedFilter === "Announcements" ? "default" : "outline"}
-            onClick={() => setSelectedFilter("Announcements")}
-            className="flex items-center gap-2"
-          >
-            <Megaphone
-              className={`h-4 w-4 ${
-                selectedFilter === "Announcements"
-                  ? "text-white"
-                  : getFilterIconColor("Announcements")
-              }`}
-            />
-            Announcements
-          </Button>
+          
+          {/* Dynamic Category Buttons */}
+          {categories.map((category) => (
+            <Button
+              key={category.id}
+              variant={selectedFilter === category.name ? "default" : "outline"}
+              onClick={() => setSelectedFilter(category.name)}
+              className="flex items-center gap-2"
+            >
+              {React.cloneElement(getCategoryIcon(category.name), {
+                className: `h-4 w-4 ${
+                  selectedFilter === category.name
+                    ? "text-white"
+                    : getCategoryIconColor(category.name)
+                }`
+              })}
+              {category.name}
+            </Button>
+          ))}
         </div>
 
         {/* Topics Table */}
@@ -554,16 +636,20 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                         {/* Topic Details */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center space-x-2 mb-1">
-                            <h3 className="font-semibold text-foreground truncate">
-                              {topic.title}
-                            </h3>
+                            <div className="flex items-center gap-2">
+                           
+                              <h3 className="font-semibold text-foreground truncate">
+                                {topic.title}
+                              </h3>
+                            </div>
                             {/* Category Badge */}
                             <Badge
                               className={`${getCategoryBadge(
                                 topic.category_name,
                                 topic.category_color
-                              )} text-xs`}
+                              )} text-xs flex items-center gap-1`}
                             >
+                              
                               {getCategoryDisplayName(topic.category_name)}
                             </Badge>
                             {/* Tags beside category */}
@@ -605,8 +691,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                             {/* Tags beside author */}
                             {topic.tags && (() => {
                               const tags = parseTags(topic.tags);
-                              console.log('Topic tags data:', topic.tags);
-                              console.log('Parsed tags:', tags);
+                             
                               return tags.slice(0, 3).map((tag, index) => (
                                 <span
                                   key={index}

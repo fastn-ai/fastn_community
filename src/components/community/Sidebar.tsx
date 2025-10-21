@@ -10,14 +10,6 @@ import {
   Users, 
   Tag,
   ChevronDown,
-  Star,
-  TrendingUp,
-  Zap,
-  ExternalLink,
-  Plus,
-  Trophy,
-  Search,
-  UserPlus,
   Loader2,
   User
 } from "lucide-react";
@@ -25,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "react-oidc-context";
 import { ApiService, Topic } from "@/services/api";
 import { queryKeys } from "@/services/queryClient";
 
@@ -32,6 +25,10 @@ const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const auth = useAuth();
+  
+  // Check if user is authenticated
+  const isAuthenticated = auth.isAuthenticated && auth.user;
 
   // Use React Query to fetch topics (shared with TopicList)
   const { data: topics = [], isLoading: topicsLoading, error: topicsError } = useQuery({
@@ -140,14 +137,17 @@ const Sidebar = () => {
             Community
           </Button>
           
-          <Button 
-            variant={isActive("/my-topics") ? "default" : "ghost"} 
-            className="w-full justify-start hover:bg-accent hover:text-accent-foreground"
-            onClick={() => navigate("/my-topics")}
-          >
-            <User className="w-4 h-4 mr-3" />
-            My Topics
-          </Button>
+          {/* Only show My Topics button when user is authenticated */}
+          {isAuthenticated && (
+            <Button 
+              variant={isActive("/my-topics") ? "default" : "ghost"} 
+              className="w-full justify-start hover:bg-accent hover:text-accent-foreground"
+              onClick={() => navigate("/my-topics")}
+            >
+              <User className="w-4 h-4 mr-3" />
+              My Topics
+            </Button>
+          )}
         </div>
 
         {/* Answer & Earn Section */}
@@ -175,13 +175,13 @@ const Sidebar = () => {
                   <category.icon className={`w-4 h-4 mr-3 ${category.color}`} />
                   <span>{category.name}</span>
                 </div>
-                <Badge variant="secondary" className="text-xs">
+                {/*<Badge variant="secondary" className="text-xs">
                   {loading ? (
                     <Loader2 className="w-3 h-3 animate-spin" />
                   ) : (
                     category.count
                   )}
-                </Badge>
+                </Badge>*/}
               </Button>
             ))}
           </CollapsibleContent>

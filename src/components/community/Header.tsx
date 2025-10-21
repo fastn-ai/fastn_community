@@ -160,7 +160,7 @@ const Header = () => {
         {/* Right side actions */}
         <div className="flex items-center space-x-4">
           {/* New Topic Button - Only show when authenticated and NOT on topic pages */}
-          {isAuthenticated && !isOnTopicPage && (
+          {/*{isAuthenticated && !isOnTopicPage && (
             <Button 
               onClick={() => setIsCreateTopicModalOpen(true)}
               className="hidden sm:flex items-center space-x-2"
@@ -168,7 +168,7 @@ const Header = () => {
               <Plus className="w-4 h-4" />
               <span>New Topic </span>
             </Button>
-          )}
+          )}*/}
 
           {/* Notifications */}
           <DropdownMenu>

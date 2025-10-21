@@ -153,7 +153,7 @@ export interface CrudTagsPayload {
 }
 
 export interface CrudTopicsPayload {
-  action: "getAllTopics" | "updateTopic";
+  action: "getAllTopics" | "updateTopic" | "deleteTopic";
   data?: {
     id?: string;
     author_id?: string;
@@ -875,14 +875,22 @@ export class ApiService {
 
       const response = await getTopicByUser(payload, authToken);
       
+      // Handle different response structures
+      let topics = [];
       if (response && response.result) {
-        const topics = Array.isArray(response.result) ? response.result : [];
-        return topics.map((topic: any) => ({
+        topics = Array.isArray(response.result) ? response.result : [];
+      } else if (response && Array.isArray(response)) {
+        topics = response;
+      } else if (response && response.data) {
+        topics = Array.isArray(response.data) ? response.data : [];
+      }
+      
+      return topics.map((topic: any) => ({
           id: topic.id?.toString() || '',
           title: topic.title || '',
           description: topic.description || '',
           content: topic.content || '',
-          author_username: topic.author_username || '',
+          author_username: topic.author_name || topic.author_username || 'Unknown User',
           author_avatar: topic.author_avatar || '',
           author_id: topic.author_id || '',
           category_name: topic.category_name || '',
@@ -901,7 +909,6 @@ export class ApiService {
           created_at: topic.created_at || new Date().toISOString(),
           updated_at: topic.updated_at || new Date().toISOString(),
         }));
-      }
       
       return [];
     } catch (error) {

@@ -498,15 +498,60 @@ const TopicDetail = () => {
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2 mt-4">
-                    {topic.tags &&
-                      topic.tags.map((tag) => (
+                    {topic.tags && (() => {
+                      const parseTags = (tags?: string[] | string | any): string[] => {
+                        if (!tags) return [];
+                        
+                        // If tags is already an array of objects with name property
+                        if (Array.isArray(tags)) {
+                          const result = tags.map((tag: any) => {
+                            if (typeof tag === 'object' && tag.name) {
+                              return tag.name;
+                            }
+                            return tag;
+                          }).filter((tag: string) => tag && tag.length > 0);
+                          return result;
+                        }
+                        
+                        // Handle the new API structure where tags is an object with value property
+                        if (tags && typeof tags === 'object' && tags.value) {
+                          try {
+                            const parsedTags = JSON.parse(tags.value);
+                            if (Array.isArray(parsedTags)) {
+                              const result = parsedTags.map((tag: any) => tag.name || tag).filter((tag: string) => tag && tag.length > 0);
+                              return result;
+                            }
+                          } catch (error) {
+                            return [];
+                          }
+                        }
+                        
+                        // If tags is a string, parse it
+                        if (typeof tags === 'string') {
+                          try {
+                            const cleanTags = tags.replace(/[{}]/g, "");
+                            return cleanTags
+                              .split(",")
+                              .map((tag) => tag.trim())
+                              .filter((tag) => tag.length > 0);
+                          } catch (error) {
+                            return [];
+                          }
+                        }
+                        
+                        return [];
+                      };
+                      
+                      const parsedTags = parseTags(topic.tags);
+                      return parsedTags.map((tag, index) => (
                         <span
-                          key={tag}
+                          key={index}
                           className={`inline-block px-2 py-1 text-xs rounded-full border ${getTagColor(tag)}`}
                         >
                           {tag}
                         </span>
-                      ))}
+                      ));
+                    })()}
                   </div>
                 </CardContent>
               </Card>
