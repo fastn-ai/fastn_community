@@ -196,12 +196,38 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
     return categoryName;
   };
 
-  const parseTags = (tags?: string[] | string): string[] => {
+  const parseTags = (tags?: string[] | string | any): string[] => {
+    console.log('parseTags input:', tags);
     if (!tags) return [];
     
-    // If tags is already an array, return it
+    // If tags is already an array of objects with name property
     if (Array.isArray(tags)) {
-      return tags.filter(tag => tag && tag.length > 0);
+      console.log('Processing array of tag objects');
+      const result = tags.map((tag: any) => {
+        if (typeof tag === 'object' && tag.name) {
+          return tag.name;
+        }
+        return tag;
+      }).filter((tag: string) => tag && tag.length > 0);
+      console.log('Final parsed tags from array:', result);
+      return result;
+    }
+    
+    // Handle the new API structure where tags is an object with value property
+    if (tags && typeof tags === 'object' && tags.value) {
+      console.log('Processing tags.value:', tags.value);
+      try {
+        const parsedTags = JSON.parse(tags.value);
+        console.log('Parsed JSON tags:', parsedTags);
+        if (Array.isArray(parsedTags)) {
+          const result = parsedTags.map((tag: any) => tag.name || tag).filter((tag: string) => tag && tag.length > 0);
+          console.log('Final parsed tags:', result);
+          return result;
+        }
+      } catch (error) {
+        console.error('Error parsing tags JSON:', error);
+        return [];
+      }
     }
     
     // If tags is a string, parse it
@@ -213,7 +239,6 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
           .map((tag) => tag.trim())
           .filter((tag) => tag.length > 0);
       } catch (error) {
-        console.error("Error parsing tags:", error);
         return [];
       }
     }
@@ -539,6 +564,17 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                             <h3 className="font-semibold text-foreground truncate">
                               {topic.title}
                             </h3>
+                            {/* Category Badge */}
+                            <Badge
+                              className={`${getCategoryBadge(
+                                topic.category_name,
+                                topic.category_color
+                              )} text-xs`}
+                            >
+                              {getCategoryDisplayName(topic.category_name)}
+                            </Badge>
+                            {/* Tags beside category */}
+                            
                             {topic.is_hot && (
                               <Badge
                                 variant="secondary"
@@ -573,21 +609,12 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                                 ? formatDate(topic.created_at)
                                 : "Unknown"}
                             </span>
-                            <Badge
-                              className={`${getCategoryBadge(
-                                topic.category_name,
-                                topic.category_color
-                              )} text-xs`}
-                            >
-                              {getCategoryDisplayName(topic.category_name)}
-                            </Badge>
-                          </div>
-
-                          {/* Tags */}
-                          <div className="flex gap-1 mt-2">
+                            {/* Tags beside author */}
                             {topic.tags && (() => {
                               const tags = parseTags(topic.tags);
-                              return tags.map((tag, index) => (
+                              console.log('Topic tags data:', topic.tags);
+                              console.log('Parsed tags:', tags);
+                              return tags.slice(0, 3).map((tag, index) => (
                                 <span
                                   key={index}
                                   className={`inline-block px-2 py-1 text-xs rounded-full border ${getTagColor(tag)}`}
@@ -597,6 +624,9 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                               ));
                             })()}
                           </div>
+
+                          {/* Tags */}
+                         
                         </div>
                       </div>
                     </div>
