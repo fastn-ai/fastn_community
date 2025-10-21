@@ -66,6 +66,9 @@ const TopicDetail = () => {
   );
   const [submittingEdit, setSubmittingEdit] = useState(false);
   const [deletingReplyId, setDeletingReplyId] = useState<string | null>(null);
+  const [replyingToId, setReplyingToId] = useState<string | null>(null);
+  const [subReplyContent, setSubReplyContent] = useState("");
+  const [submittingSubReply, setSubmittingSubReply] = useState(false);
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { getAllTopicById, createReply, editReply, deleteReply } = useApi();
@@ -73,13 +76,6 @@ const TopicDetail = () => {
   const user = getUser();
   const isAuthenticated = !!(user && user.access_token && user.profile);
   
-  // Debug authentication state
-  console.log("Authentication state:", {
-    hasUser: !!user,
-    hasAccessToken: !!(user?.access_token),
-    hasProfile: !!(user?.profile),
-    isAuthenticated
-  });
 
   // Function to refresh replies (for future use if needed)
   const refreshReplies = async () => {
@@ -88,8 +84,247 @@ const TopicDetail = () => {
       const topicReplies = await ApiService.getRepliesByTopicId(id || "");
       setReplies(topicReplies);
     } catch (error) {
-      console.warn("Failed to refresh replies:", error);
+      // Failed to refresh replies
     }
+  };
+
+  // Function to organize replies hierarchically
+  const organizeReplies = (replies: ReplyType[]) => {
+    const replyMap = new Map<string, ReplyType & { children: ReplyType[] }>();
+    const rootReplies: (ReplyType & { children: ReplyType[] })[] = [];
+
+    // First pass: create map with children arrays
+    replies.forEach(reply => {
+      replyMap.set(reply.id, { ...reply, children: [] });
+    });
+
+    // Second pass: organize hierarchy
+    replies.forEach(reply => {
+      const replyWithChildren = replyMap.get(reply.id)!;
+      if (reply.parent_reply_id && replyMap.has(reply.parent_reply_id)) {
+        replyMap.get(reply.parent_reply_id)!.children.push(replyWithChildren);
+      } else {
+        rootReplies.push(replyWithChildren);
+      }
+    });
+
+    return rootReplies;
+  };
+
+  // Recursive component to render replies with their children
+  const ReplyItem = ({ reply, depth = 0 }: { reply: ReplyType & { children: ReplyType[] }, depth?: number }) => {
+    const isSubReply = depth > 0;
+    
+    return (
+      <div className={isSubReply ? "ml-6 border-l-2 border-border pl-4" : ""}>
+        <Card
+          className={
+            reply.is_accepted
+              ? "border-green-500/50 bg-green-500/5"
+              : ""
+          }
+          style={{
+            opacity: deletingReplyId === reply.id ? 0.5 : 1,
+            pointerEvents:
+              deletingReplyId === reply.id ? "none" : "auto",
+          }}
+        >
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <Avatar>
+                  <AvatarFallback className="bg-gradient-primary text-white">
+                    {reply.author_username
+                      ?.charAt(0)
+                      ?.toUpperCase() || "U"}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <span className="font-semibold text-foreground">
+                      {reply.author_username} 
+                    </span>
+                    {reply.is_accepted && (
+                      <Badge
+                        variant="secondary"
+                        className="text-green-400 border-green-400"
+                      >
+                        ✓ Answer
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {new Date(reply.created_at).toLocaleDateString()}
+                  </div>
+                </div>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={deletingReplyId === reply.id}
+                  >
+                    <MoreVertical className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => handleEditReply(reply)}
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit
+                  </DropdownMenuItem>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <DropdownMenuItem
+                        className="text-red-600"
+                        onSelect={(e) => e.preventDefault()}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          Delete Reply
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete this reply?
+                          This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleDeleteReply(reply.id)}
+                          className="bg-red-600 hover:bg-red-700"
+                          disabled={deletingReplyId === reply.id}
+                        >
+                          {deletingReplyId === reply.id
+                            ? "Deleting..."
+                            : "Delete"}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {editingReplyId === reply.id ? (
+              <div className="space-y-4">
+                <Textarea
+                  value={editingContent}
+                  onChange={(e) => setEditingContent(e.target.value)}
+                  className="min-h-[100px]"
+                  placeholder="Edit your reply..."
+                />
+                <div className="flex space-x-2">
+                  <Button
+                    size="sm"
+                    onClick={handleSubmitEdit}
+                    disabled={
+                      submittingEdit || !editingContent.trim()
+                    }
+                    className="bg-gradient-primary"
+                  >
+                    {submittingEdit ? "Saving..." : "Save"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleCancelEdit}
+                    disabled={submittingEdit}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="text-foreground mb-4">
+                  {reply.content}
+                </p>
+                <div className="flex items-center space-x-4">
+                  <Button variant="ghost" size="sm">
+                    <ThumbsUp className="w-4 h-4 mr-2" />
+                    {reply.like_count}
+                  </Button>
+                  {isAuthenticated && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handleReplyToReply(reply.id)}
+                    >
+                      <Reply className="w-4 h-4 mr-2" />
+                      Reply 
+                    </Button>
+                  )}
+                </div>
+              </>
+            )}
+            
+            {/* Sub-reply form */}
+            {replyingToId === reply.id && (
+              <div className="mt-4 p-4 border border-border rounded-lg bg-muted/30">
+                <div className="flex items-center space-x-3 mb-3">
+                  <Avatar>
+                    <AvatarFallback className="bg-gradient-primary text-white">
+                      {(user?.profile?.preferred_username || user?.profile?.email?.split("@")[0] || "U").charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h4 className="text-sm font-semibold text-foreground">
+                      Reply to {reply.author_username}
+                    </h4>
+                    <p className="text-xs text-muted-foreground">
+                      Replying as {user?.profile?.preferred_username || user?.profile?.email?.split("@")[0] || "User"}
+                    </p>
+                  </div>
+                </div>
+                <Textarea
+                  placeholder="Write your reply here..."
+                  className="min-h-[80px] mb-3"
+                  value={subReplyContent}
+                  onChange={(e) => setSubReplyContent(e.target.value)}
+                  disabled={submittingSubReply}
+                />
+                <div className="flex space-x-2">
+                  <Button
+                    size="sm"
+                    className="bg-gradient-primary"
+                    onClick={handleSubmitSubReply}
+                    disabled={submittingSubReply || !subReplyContent.trim()}
+                  >
+                    {submittingSubReply ? "Posting..." : "Post Reply"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleCancelSubReply}
+                    disabled={submittingSubReply}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        
+        {/* Render children replies */}
+        {reply.children.length > 0 && (
+          <div className="mt-4 space-y-4">
+            {reply.children.map((child) => (
+              <ReplyItem key={child.id} reply={child as ReplyType & { children: ReplyType[] }} depth={depth + 1} />
+            ))}
+          </div>
+        )}
+      </div>
+    );
   };
 
   useEffect(() => {
@@ -108,13 +343,19 @@ const TopicDetail = () => {
         // Handle the response structure
         if (response) {
           setTopic(response);
-          // Start with empty replies array - replies will be loaded when user posts them
-          setReplies([]);
+          // Load replies for this topic
+          try {
+            const { ApiService } = await import("@/services/api");
+            const topicReplies = await ApiService.getRepliesByTopicId(id || "");
+            setReplies(topicReplies);
+          } catch (replyError) {
+            console.warn("Failed to load replies:", replyError);
+            setReplies([]);
+          }
         } else {
           throw new Error("Topic not found");
         }
       } catch (err) {
-        console.error("Error fetching topic:", err);
         setError("Failed to load topic");
       } finally {
         setLoading(false);
@@ -127,24 +368,19 @@ const TopicDetail = () => {
   const submitReply = async () => {
     // Prevent multiple submissions
     if (submittingReply) {
-      console.log("Submission already in progress");
       return;
     }
 
     // Set submitting state immediately to prevent multiple calls
     setSubmittingReply(true);
 
-    console.log("submitReply called with:", { replyContent, id, user }); // Debug log
-
     if (!replyContent.trim() || !id) {
-      console.log("Validation failed:", { replyContent: replyContent.trim(), id }); // Debug log
       setSubmittingReply(false);
       return;
     }
 
     // Check if user is authenticated
     if (!user || !user.access_token || !user.profile) {
-      console.log("No authenticated user found"); // Debug log
       setError("You must be logged in to create a reply");
       setSubmittingReply(false);
       return;
@@ -152,7 +388,6 @@ const TopicDetail = () => {
 
     try {
       setError(null); // Clear any previous errors
-      console.log("Submitting reply..."); // Debug log
       
       // Ensure user exists in database by calling insertUser first
       const { insertUser } = await import("@/services/api");
@@ -182,11 +417,9 @@ const TopicDetail = () => {
             },
           };
           
-          console.log("Ensuring user exists in database..."); // Debug log
           await insertUser(userPayload, authToken);
-          console.log("User ensured in database"); // Debug log
         } catch (userError) {
-          console.warn("User creation/update failed, continuing with reply:", userError);
+          // User creation/update failed, continuing with reply
         }
       }
       
@@ -196,18 +429,11 @@ const TopicDetail = () => {
         // Use the same ID format as insertUser function
         author_id: user?.profile?.sub || user?.profile?.sid || user?.profile?.email,
         author_username: user?.profile?.preferred_username || user?.profile?.email?.split("@")[0] || "anonymous",
-        tutorial_id: "",
-        is_accepted: false,
-        is_helpful: false,
         like_count: 0,
-        dislike_count: 0,
-        reply_count: 0,
       };
       
-      console.log("Calling createReply with data:", replyData); // Debug log
       const newReply = await createReply(replyData);
 
-      console.log("Reply submitted successfully"); // Debug log
       // Clear the form after successful submission
       setReplyContent("");
 
@@ -229,7 +455,6 @@ const TopicDetail = () => {
         }
       }
     } catch (error) {
-      console.error("Error submitting reply:", error);
       if (error instanceof Error) {
         setError(`Failed to submit reply: ${error.message}`);
       } else {
@@ -241,9 +466,117 @@ const TopicDetail = () => {
   };
 
   const handleSubmitReply = async () => {
-    console.log("handleSubmitReply called"); // Debug log
     // Prevent default form submission behavior
     await submitReply();
+  };
+
+  const handleReplyToReply = (replyId: string) => {
+    setReplyingToId(replyId);
+    setSubReplyContent("");
+  };
+
+  const handleCancelSubReply = () => {
+    setReplyingToId(null);
+    setSubReplyContent("");
+  };
+
+  const handleSubmitSubReply = async () => {
+    if (!replyingToId || !subReplyContent.trim() || !id) {
+      return;
+    }
+
+    // Prevent multiple submissions
+    if (submittingSubReply) {
+      return;
+    }
+
+    setSubmittingSubReply(true);
+
+    // Check if user is authenticated
+    if (!user || !user.access_token || !user.profile) {
+      setError("You must be logged in to create a reply");
+      setSubmittingSubReply(false);
+      return;
+    }
+
+    try {
+      setError(null);
+
+      // Ensure user exists in database by calling insertUser first
+      const { insertUser } = await import("@/services/api");
+      const authToken = user?.access_token || "";
+      
+      if (authToken) {
+        try {
+          const userPayload = {
+            action: "insertUser" as const,
+            data: {
+              id: user?.profile?.sub || user?.profile?.sid || user?.profile?.email,
+              username: user?.profile?.preferred_username || user?.profile?.email?.split("@")[0] || "user",
+              email: user?.profile?.email || "",
+              avatar: user?.profile?.picture || "",
+              bio: "",
+              location: user?.profile?.locale || "",
+              website: "",
+              twitter: "",
+              github: "",
+              linkedin: "",
+              role_id: 2,
+              is_verified: true,
+              is_active: true,
+              last_login: new Date().toISOString(),
+              created_at: undefined,
+              updated_at: new Date().toISOString(),
+            },
+          };
+          
+          await insertUser(userPayload, authToken);
+        } catch (userError) {
+          // User creation/update failed, continuing with reply
+        }
+      }
+      
+      const subReplyData = {
+        topic_id: id,
+        content: subReplyContent,
+        parent_reply_id: replyingToId,
+        author_id: user?.profile?.sub || user?.profile?.sid || user?.profile?.email,
+        author_username: user?.profile?.preferred_username || user?.profile?.email?.split("@")[0] || "anonymous",
+        like_count: 0,
+      };
+      
+      const newSubReply = await createReply(subReplyData);
+
+      // Clear the form after successful submission
+      setSubReplyContent("");
+      setReplyingToId(null);
+
+      // Add the new sub-reply to the local state
+      if (newSubReply && typeof newSubReply === "object") {
+        const replyData = newSubReply as ReplyType;
+        setReplies((prevReplies) => [...prevReplies, replyData]);
+
+        // Update topic reply count
+        if (topic) {
+          setTopic((prevTopic) =>
+            prevTopic
+              ? {
+                  ...prevTopic,
+                  reply_count: prevTopic.reply_count + 1,
+                }
+              : null
+          );
+        }
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        setError(`Failed to submit reply: ${error.message}`);
+      } else {
+        setError("Failed to submit reply");
+      }
+    } finally {
+      setSubmittingSubReply(false);
+    }
   };
 
   const handleEditReply = (reply: ReplyType) => {
@@ -277,8 +610,6 @@ const TopicDetail = () => {
         content: editingContent,
       });
 
-      console.log("Edit reply result:", result); // Debug log
-
       // Clear editing state
       setEditingReplyId(null);
       setEditingContent("");
@@ -296,7 +627,6 @@ const TopicDetail = () => {
       // Navigate to community page after successful edit
       navigate("/");
     } catch (error) {
-      console.error("Error editing reply:", error);
       if (error instanceof Error) {
         setError(`Failed to edit reply: ${error.message}`);
       } else {
@@ -333,7 +663,6 @@ const TopicDetail = () => {
         );
       }
     } catch (error) {
-      console.error("Error deleting reply:", error);
       if (error instanceof Error) {
         setError(`Failed to delete reply: ${error.message}`);
       } else {
@@ -600,155 +929,8 @@ const TopicDetail = () => {
                   {replies.length} Replies
                 </h2>
 
-                {replies.map((reply) => (
-                    <Card
-                      key={reply.id}
-                      className={
-                        reply.is_accepted
-                          ? "border-green-500/50 bg-green-500/5"
-                          : ""
-                      }
-                      style={{
-                        opacity: deletingReplyId === reply.id ? 0.5 : 1,
-                        pointerEvents:
-                          deletingReplyId === reply.id ? "none" : "auto",
-                      }}
-                    >
-                    <CardHeader className="pb-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <Avatar>
-                            <AvatarFallback className="bg-gradient-primary text-white">
-                              {reply.author_username
-                                ?.charAt(0)
-                                ?.toUpperCase() || "U"}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="flex items-center space-x-2">
-                              <span className="font-semibold text-foreground">
-                                {reply.author_username} 
-                              </span>
-                              {reply.is_accepted && (
-                                <Badge
-                                  variant="secondary"
-                                  className="text-green-400 border-green-400"
-                                >
-                                  ✓ Answer
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              {new Date(reply.created_at).toLocaleDateString()}
-                            </div>
-                          </div>
-                        </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              disabled={deletingReplyId === reply.id}
-                            >
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => handleEditReply(reply)}
-                            >
-                              <Edit className="w-4 h-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <DropdownMenuItem
-                                  className="text-red-600"
-                                  onSelect={(e) => e.preventDefault()}
-                                >
-                                  <Trash2 className="w-4 h-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>
-                                    Delete Reply
-                                  </AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Are you sure you want to delete this reply?
-                                    This action cannot be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => handleDeleteReply(reply.id)}
-                                    className="bg-red-600 hover:bg-red-700"
-                                    disabled={deletingReplyId === reply.id}
-                                  >
-                                    {deletingReplyId === reply.id
-                                      ? "Deleting..."
-                                      : "Delete"}
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      {editingReplyId === reply.id ? (
-                        <div className="space-y-4">
-                          <Textarea
-                            value={editingContent}
-                            onChange={(e) => setEditingContent(e.target.value)}
-                            className="min-h-[100px]"
-                            placeholder="Edit your reply..."
-                          />
-                          <div className="flex space-x-2">
-                            <Button
-                              size="sm"
-                              onClick={handleSubmitEdit}
-                              disabled={
-                                submittingEdit || !editingContent.trim()
-                              }
-                              className="bg-gradient-primary"
-                            >
-                              {submittingEdit ? "Saving..." : "Save"}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={handleCancelEdit}
-                              disabled={submittingEdit}
-                            >
-                              Cancel
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          <p className="text-foreground mb-4">
-                            {reply.content}
-                          </p>
-                          <div className="flex items-center space-x-4">
-                            <Button variant="ghost" size="sm">
-                              <ThumbsUp className="w-4 h-4 mr-2" />
-                              {reply.like_count}
-                            </Button>
-                            {isAuthenticated && (
-                              <Button variant="ghost" size="sm">
-                                <Reply className="w-4 h-4 mr-2" />
-                                Reply 
-                              </Button>
-                            )}
-                          </div>
-                        </>
-                      )}
-                    </CardContent>
-                  </Card>
+                {organizeReplies(replies).map((reply) => (
+                  <ReplyItem key={reply.id} reply={reply} />
                 ))}
               </div>
 
@@ -797,7 +979,6 @@ const TopicDetail = () => {
                           type="button"
                           className="bg-gradient-primary"
                           onClick={() => {
-                            console.log("Post Reply button clicked"); // Debug log
                             handleSubmitReply();
                           }}
                           disabled={submittingReply}
