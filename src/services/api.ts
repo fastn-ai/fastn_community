@@ -338,27 +338,17 @@ export class ApiService {
   // Get all categories
   static async getAllCategories(): Promise<Category[]> {
     try {
-      console.log('🔍 getAllCategories: Starting...')
       // Try to get auth token from user manager
       const { getUser } = await import("@/services/users/user-manager");
       const user = getUser();
       const authToken = user?.access_token || "";
       
-      console.log('🔍 getAllCategories: User and token check:', {
-        hasUser: !!user,
-        hasAuthToken: !!authToken,
-        userProfile: user?.profile,
-        tokenLength: authToken?.length
-      })
-      
       if (!authToken) {
-        console.warn("⚠️ No auth token available, using FASTN API key for public access");
         // Use FASTN API key for public access when user is not logged in
         try {
           const response = await crudCategories({ action: "getAllCategories" }, "", FASTN_API_KEY);
           return ApiService.processCategoriesResponse(response);
         } catch (error) {
-          console.warn("Failed to fetch categories with API key, falling back to mock data:", error);
           return new Promise((resolve) => {
             setTimeout(() => resolve([...mockCategories]), 100);
           });
@@ -368,16 +358,12 @@ export class ApiService {
       const payload: CrudCategoriesPayload = {
         action: "getAllCategories"
       };
-      console.log('🚀 getAllCategories: Making API call with payload:', payload)
       const response = await crudCategories(payload, authToken);
-      
-      console.log('📥 getAllCategories: API response:', response)
       
       // Transform API response to match Category interface
       // The API returns data in response.result, not response.data
       if (response && response.result) {
         const categories = Array.isArray(response.result) ? response.result : [];
-        console.log('✅ getAllCategories: Found categories:', categories.length)
         const transformedCategories = categories.map((cat: any, index: number) => ({
           id: cat.id?.toString() || '',
           name: cat.name || '',
@@ -392,14 +378,11 @@ export class ApiService {
           updated_at: cat.updated_at || new Date().toISOString(),
         }));
         
-        console.log('🔄 getAllCategories: Transformed categories:', transformedCategories)
         return transformedCategories;
       }
       
-      console.warn("⚠️ No data in API response, falling back to mock data");
       return [...mockCategories];
     } catch (error) {
-      console.error("Error fetching categories from API, falling back to mock data:", error);
       return new Promise((resolve) => {
         setTimeout(() => resolve([...mockCategories]), 100);
       });
@@ -453,7 +436,6 @@ export class ApiService {
       
       throw new Error("Failed to create category");
     } catch (error) {
-      console.error("Error creating category:", error);
       throw error;
     }
   }
@@ -503,7 +485,6 @@ export class ApiService {
       
       throw new Error("Failed to update category");
     } catch (error) {
-      console.error("Error updating category:", error);
       throw error;
     }
   }
@@ -529,7 +510,6 @@ export class ApiService {
       const response = await crudCategories(payload, authToken);
       return response && response.success !== false;
     } catch (error) {
-      console.error("Error deleting category:", error);
       throw error;
     }
   }
@@ -550,7 +530,6 @@ export class ApiService {
       const tokenToUse = (isCustomAuth && customAuthToken) ? customAuthToken : authToken;
       
       if (!tokenToUse) {
-        console.warn("No auth token available, using FASTN API key for public access");
         // Use FASTN API key for public access when user is not logged in
         const response = await getAllTopics(null, "", FASTN_API_KEY);
         return ApiService.processTopicsResponse(response);
@@ -559,7 +538,6 @@ export class ApiService {
       const response = await getAllTopics(null, tokenToUse);
       return ApiService.processTopicsResponse(response);
     } catch (error) {
-      console.error("Error fetching topics:", error);
       throw error;
     }
   }
@@ -664,7 +642,6 @@ export class ApiService {
       const tokenToUse = (isCustomAuth && customAuthToken) ? customAuthToken : authToken;
       
       if (!tokenToUse) {
-        console.warn("No auth token available for getTopicById, using FASTN API key for public access");
         // Use FASTN API key for public access when user is not logged in
         const response = await getAllTopics(null, "", FASTN_API_KEY);
         const topics = ApiService.processTopicsResponse(response);
@@ -686,7 +663,6 @@ export class ApiService {
       
       throw new Error("Topic not found");
     } catch (error) {
-      console.error("Error fetching topic by ID:", error);
       throw error;
     }
   }
@@ -714,13 +690,11 @@ export class ApiService {
       const authToken = user?.access_token || "";
       
       if (!authToken) {
-        console.warn("No auth token available, using FASTN API key for public access");
         // Use FASTN API key for public access when user is not logged in
         try {
           const response = await crudTags({ action: "getAllTags" }, "", FASTN_API_KEY);
           return ApiService.processTagsResponse(response);
         } catch (error) {
-          console.warn("Failed to fetch tags with API key, falling back to mock data:", error);
           return new Promise((resolve) => {
             setTimeout(() => resolve([...mockTags]), 100);
           });
@@ -752,10 +726,8 @@ export class ApiService {
         return transformedTags;
       }
       
-      console.warn("No data in API response, falling back to mock data");
       return [...mockTags];
     } catch (error) {
-      console.error("Error fetching tags from API, falling back to mock data:", error);
       return new Promise((resolve) => {
         setTimeout(() => resolve([...mockTags]), 100);
       });
@@ -811,7 +783,6 @@ export class ApiService {
         const topic = response.data;
         
         // WORKAROUND: If no ID is returned, use a fallback
-        console.log( "topic", topic)
         let topicId = topic.id || '';
         if (!topicId || topicId === '') {
           // Generate a fallback ID if none is returned
@@ -845,38 +816,30 @@ export class ApiService {
         // Insert tags if they exist and we have a valid topic ID
         if (topicData.tags && topicData.tags.length > 0 && createdTopic.id && createdTopic.id !== '') {
           try {
-            console.log("createdTopic for tag insertion:", createdTopic);
-            console.log("topicData.tags:", topicData.tags);
             
             // Validate topic ID
             const topicId = Number(createdTopic.id);
             if (isNaN(topicId) || topicId <= 0) {
-              console.error(`Invalid topic ID: ${createdTopic.id}`);
               return createdTopic;
             }
             
             // Get all available tags to convert names to IDs
             const allTags = await ApiService.getAllTags();
-            console.log("All available tags:", allTags);
             
             // Convert tag names to tag IDs
             const tagIds = topicData.tags
               .map(tagName => {
                 const tag = allTags.find(t => t.name === tagName);
-                console.log(`Looking for tag "${tagName}":`, tag);
                 return tag ? Number(tag.id) : null;
               })
               .filter(id => id !== null) as number[];
             
-            console.log("Converted tag IDs:", tagIds);
             
             if (tagIds.length > 0) {
               await ApiService.insertTopicTags(topicId, tagIds);
             } else {
-              console.warn("No valid tag IDs found for tags:", topicData.tags);
             }
           } catch (tagError) {
-            console.error("Error inserting topic tags:", tagError);
             // Don't throw error here - topic creation succeeded, tag insertion failed
           }
         }
@@ -942,7 +905,6 @@ export class ApiService {
       
       return [];
     } catch (error) {
-      console.error("Error fetching topics by user:", error);
       return [];
     }
   }
@@ -964,18 +926,15 @@ export class ApiService {
       }
       
       if (!tagIds || tagIds.length === 0) {
-        console.warn(`No tag IDs provided for topic ${topicId}`);
         return;
       }
 
       // Filter out any invalid tag IDs
       const validTagIds = tagIds.filter(id => id && id > 0);
       if (validTagIds.length === 0) {
-        console.warn(`No valid tag IDs provided for topic ${topicId}`);
         return;
       }
 
-      console.log(`Inserting tags for topic ${topicId}:`, validTagIds);
 
       // Insert each tag individually
       for (const tagId of validTagIds) {
@@ -987,22 +946,17 @@ export class ApiService {
           }
         };
 
-        console.log(`Inserting tag ${tagId} for topic ${topicId}:`, JSON.stringify(payload, null, 2));
 
         try {
           const response = await insertTopicTags(payload, authToken);
           if (!response) {
-            console.error(`Failed to insert tag ${tagId} for topic ${topicId}`);
           } else {
-            console.log(`Successfully inserted tag ${tagId} for topic ${topicId}`);
           }
         } catch (tagError) {
-          console.error(`Error inserting tag ${tagId} for topic ${topicId}:`, tagError);
           // Continue with other tags even if one fails
         }
       }
     } catch (error) {
-      console.error("Error in insertTopicTags:", error);
       throw error;
     }
   }
@@ -1104,7 +1058,6 @@ export class ApiService {
       
       return analytics;
     } catch (error) {
-      console.error("Error fetching analytics:", error);
       throw error;
     }
   }
