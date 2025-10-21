@@ -11,7 +11,8 @@ import {
   Tag,
   ChevronDown,
   Loader2,
-  User
+  User,
+  X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -29,6 +30,17 @@ const Sidebar = () => {
   
   // Check if user is authenticated
   const isAuthenticated = auth.isAuthenticated && auth.user;
+
+  // Read tag from URL parameters on component mount and when location changes
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const tagParam = urlParams.get('tag');
+    if (tagParam) {
+      setSelectedTag(decodeURIComponent(tagParam));
+    } else {
+      setSelectedTag(null);
+    }
+  }, [location.search]);
 
   // Use React Query to fetch topics (shared with TopicList)
   const { data: topics = [], isLoading: topicsLoading, error: topicsError } = useQuery({
@@ -98,15 +110,30 @@ const Sidebar = () => {
   };
 
   const popularTags = loading ? [] : getPopularTags();
+  
+  // Debug logging
+  useEffect(() => {
+    if (!loading && tags.length > 0) {
+      console.log('Sidebar - Available tags:', tags);
+      console.log('Sidebar - Popular tags:', popularTags);
+      console.log('Sidebar - Selected tag:', selectedTag);
+    }
+  }, [loading, tags, popularTags, selectedTag]);
 
   const isActive = (path: string) => {
     return location.pathname === path;
   };
 
   const handleTagClick = (tag: string) => {
-    setSelectedTag(selectedTag === tag ? null : tag);
-    // Navigate to topics page with tag filter
-    navigate(`/?tag=${encodeURIComponent(tag)}`);
+    if (selectedTag === tag) {
+      // If clicking the same tag, clear the filter
+      setSelectedTag(null);
+      navigate('/', { replace: true });
+    } else {
+      // Set new tag filter
+      setSelectedTag(tag);
+      navigate(`/?tag=${encodeURIComponent(tag)}`);
+    }
   };
 
   const handleCategoryClick = (path: string) => {
@@ -198,6 +225,29 @@ const Sidebar = () => {
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-1 mt-2">
+            {/* Active Tag Filter */}
+            {/*{selectedTag && (
+              <div className="mb-2 p-2 bg-primary/10 rounded-md border border-primary/20">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Tag className="w-3 h-3 text-primary" />
+                    <span className="text-xs font-medium text-primary">Filtered by: {selectedTag}</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 hover:bg-primary/20"
+                    onClick={() => {
+                      setSelectedTag(null);
+                      navigate('/', { replace: true });
+                    }}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+            )}*/}
+            
             {loading ? (
               <div className="flex items-center justify-center py-2">
                 <Loader2 className="w-4 h-4 animate-spin" />

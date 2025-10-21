@@ -95,6 +95,82 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
     }
   }, [location.search]);
 
+  // Parse tags from various formats
+  const parseTags = (tags?: string[] | string | any): string[] => {
+    if (!tags) return [];
+    
+    // If tags is already an array of strings
+    if (Array.isArray(tags)) {
+      return tags.filter((tag: any) => {
+        if (typeof tag === 'string' && tag.length > 0) {
+          return true;
+        }
+        if (typeof tag === 'object' && tag.name && typeof tag.name === 'string') {
+          return true;
+        }
+        return false;
+      }).map((tag: any) => {
+        if (typeof tag === 'string') {
+          return tag;
+        }
+        if (typeof tag === 'object' && tag.name) {
+          return tag.name;
+        }
+        return String(tag);
+      });
+    }
+    
+    // Handle the new API structure where tags is an object with value property
+    if (tags && typeof tags === 'object' && tags.value) {
+      try {
+        const parsedTags = JSON.parse(tags.value);
+        if (Array.isArray(parsedTags)) {
+          return parsedTags.map((tag: any) => {
+            if (typeof tag === 'string') {
+              return tag;
+            }
+            if (typeof tag === 'object' && tag.name) {
+              return tag.name;
+            }
+            return String(tag);
+          }).filter((tag: string) => tag && tag.length > 0);
+        }
+      } catch (error) {
+        console.warn('Failed to parse tags from value:', error);
+        return [];
+      }
+    }
+    
+    // If tags is a string, parse it
+    if (typeof tags === 'string') {
+      try {
+        // Handle JSON string format
+        if (tags.startsWith('[') || tags.startsWith('{')) {
+          const parsed = JSON.parse(tags);
+          if (Array.isArray(parsed)) {
+            return parsed.map((tag: any) => {
+              if (typeof tag === 'string') return tag;
+              if (typeof tag === 'object' && tag.name) return tag.name;
+              return String(tag);
+            }).filter((tag: string) => tag && tag.length > 0);
+          }
+        }
+        
+        // Handle comma-separated string format
+        const cleanTags = tags.replace(/[{}]/g, "");
+        return cleanTags
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter((tag) => tag.length > 0);
+      } catch (error) {
+        console.warn('Failed to parse tags string:', error);
+        return [];
+      }
+    }
+    
+    return [];
+  };
+
   // Filter topics based on search, filter, and tag
   const filteredTopics = topics.filter((topic) => {
     const matchesSearch =
@@ -112,7 +188,13 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
     }
     
     // Add tag filtering
-    const matchesTag = !selectedTag || (topic.tags && Array.isArray(topic.tags) && topic.tags.includes(selectedTag));
+    const parsedTopicTags = parseTags(topic.tags);
+    const matchesTag = !selectedTag || parsedTopicTags.includes(selectedTag);
+    
+    // Debug logging
+    if (selectedTag && topic.tags) {
+      console.log('Topic:', topic.title, 'Raw tags:', topic.tags, 'Parsed tags:', parsedTopicTags, 'Selected tag:', selectedTag, 'Matches:', matchesTag);
+    }
     
     return matchesSearch && matchesFilter && matchesTag;
   });
@@ -216,48 +298,6 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
     return categoryName;
   };
 
-  const parseTags = (tags?: string[] | string | any): string[] => {
-    if (!tags) return [];
-    
-    // If tags is already an array of objects with name property
-    if (Array.isArray(tags)) {
-      const result = tags.map((tag: any) => {
-        if (typeof tag === 'object' && tag.name) {
-          return tag.name;
-        }
-        return tag;
-      }).filter((tag: string) => tag && tag.length > 0);
-      return result;
-    }
-    
-    // Handle the new API structure where tags is an object with value property
-    if (tags && typeof tags === 'object' && tags.value) {
-      try {
-        const parsedTags = JSON.parse(tags.value);
-        if (Array.isArray(parsedTags)) {
-          const result = parsedTags.map((tag: any) => tag.name || tag).filter((tag: string) => tag && tag.length > 0);
-          return result;
-        }
-      } catch (error) {
-        return [];
-      }
-    }
-    
-    // If tags is a string, parse it
-    if (typeof tags === 'string') {
-      try {
-        const cleanTags = tags.replace(/[{}]/g, "");
-        return cleanTags
-          .split(",")
-          .map((tag) => tag.trim())
-          .filter((tag) => tag.length > 0);
-      } catch (error) {
-        return [];
-      }
-    }
-    
-    return [];
-  };
 
   const getInitials = (username: string) => {
     return username
