@@ -547,14 +547,26 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                 <span>New Topic</span>
               </Button>
             )}*/}
-            <Button
-              onClick={() => navigate("/admin")}
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              <Settings className="h-4 w-4" />
-              Admin
-            </Button>
+            {(() => {
+              const auth = useAuth();
+              const isAuthenticated = auth.isAuthenticated && auth.user;
+              const isAdmin = isAuthenticated && (
+                auth.user?.profile?.email?.includes('admin') ||
+                auth.user?.profile?.email?.includes('@fastn.ai') ||
+                auth.user?.profile?.roles?.includes('admin')
+              );
+              
+              return isAdmin ? (
+                <Button
+                  onClick={() => navigate("/admin")}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <Settings className="h-4 w-4" />
+                  Admin
+                </Button>
+              ) : null;
+            })()}
           </div>
         </div>
 
