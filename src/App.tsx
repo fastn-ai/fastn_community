@@ -27,7 +27,7 @@ import OpenQuestions from "./pages/OpenQuestions";
 import UnifiedForm from "./pages/UnifiedForm";
 import AdminDashboard from "./pages/AdminDashboard";
 import UserTopics from "./pages/UserTopics";
-import PerformanceDashboard from "./components/optimized/PerformanceDashboard";
+
 import { LoginPage } from "./routes/login/login.page";
 import { ConnectorActivateRedirectHandler } from "./routes/login/oauth";
 
@@ -66,7 +66,7 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
-            <PerformanceDashboard />
+     
           </TooltipProvider>
         </PermissionsProvider>
       </OAuthRedirectApiInfoProvider>

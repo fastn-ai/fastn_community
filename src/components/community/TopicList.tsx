@@ -197,35 +197,28 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
   };
 
   const parseTags = (tags?: string[] | string | any): string[] => {
-    console.log('parseTags input:', tags);
     if (!tags) return [];
     
     // If tags is already an array of objects with name property
     if (Array.isArray(tags)) {
-      console.log('Processing array of tag objects');
       const result = tags.map((tag: any) => {
         if (typeof tag === 'object' && tag.name) {
           return tag.name;
         }
         return tag;
       }).filter((tag: string) => tag && tag.length > 0);
-      console.log('Final parsed tags from array:', result);
       return result;
     }
     
     // Handle the new API structure where tags is an object with value property
     if (tags && typeof tags === 'object' && tags.value) {
-      console.log('Processing tags.value:', tags.value);
       try {
         const parsedTags = JSON.parse(tags.value);
-        console.log('Parsed JSON tags:', parsedTags);
         if (Array.isArray(parsedTags)) {
           const result = parsedTags.map((tag: any) => tag.name || tag).filter((tag: string) => tag && tag.length > 0);
-          console.log('Final parsed tags:', result);
           return result;
         }
       } catch (error) {
-        console.error('Error parsing tags JSON:', error);
         return [];
       }
     }
