@@ -1,7 +1,7 @@
 // Mock API Service for fastn community platform
 // This is a frontend-only implementation with mock data
 
-import { INSERT_USER_API_URL, FASTN_SPACE_ID, FASTN_API_KEY, CUSTOM_AUTH_KEY, CUSTOM_AUTH_TOKEN_KEY, TENANT_ID_KEY, CRUD_CATEGORIES_API_URL, CRUD_TAGS_API_URL, CRUD_TOPICS_API_URL, GET_TOPIC_BY_USER_API_URL, INSERT_TOPIC_TAGS_API_URL, INSERT_TOPICS_API_URL, GET_TOPICS_API_URL } from "@/constants";
+import { INSERT_USER_API_URL, FASTN_SPACE_ID, FASTN_API_KEY, CUSTOM_AUTH_KEY, CUSTOM_AUTH_TOKEN_KEY, TENANT_ID_KEY, CRUD_CATEGORIES_API_URL, CRUD_TAGS_API_URL, CRUD_TOPICS_API_URL, GET_TOPIC_BY_USER_API_URL, INSERT_TOPIC_TAGS_API_URL, INSERT_TOPICS_API_URL, GET_TOPICS_API_URL, CRUD_REPLIES_API_URL } from "@/constants";
 import { getCookie } from "@/routes/login/oauth";
 import { generateConsistentColor, PREDEFINED_COLORS } from "@/lib/utils";
 
@@ -12,6 +12,8 @@ export interface Topic {
   description: string;
   content?: string;
   author_username: string;
+  author_name?: string;
+  username?: string;
   author_avatar?: string;
   author_id?: string;
   category_name: string;
@@ -73,6 +75,8 @@ export interface Reply {
   topic_id: string;
   author_id?: string;
   author_username: string;
+  author_name?: string;
+  username?: string;
   author_avatar?: string;
   content: string;
   tutorial_id?: string;
@@ -200,6 +204,22 @@ export interface InsertTopicTagsPayload {
   data?: {
     topic_id?: number;
     tag_id?: number;
+  };
+}
+
+export interface CrudRepliesPayload {
+  action: "createReply" | "getAllReplies" | "updateReply" | "deleteReply";
+  data?: {
+    topic_id?: string | number;
+    author_id?: string;
+    parent_reply_id?: string | number;
+    content?: string;
+    tutorial_id?: string;
+    is_accepted?: boolean;
+    is_helpful?: boolean;
+    like_count?: number;
+    dislike_count?: number;
+    reply_count?: number;
   };
 }
 
@@ -676,9 +696,100 @@ export class ApiService {
 
   // Get all replies
   static async getAllReplies(): Promise<Reply[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => resolve([...mockReplies]), 100);
-    });
+    try {
+      // Try to get auth token from user manager
+      const { getUser } = await import("@/services/users/user-manager");
+      const user = getUser();
+      const authToken = user?.access_token || "";
+      
+      if (!authToken) {
+        // Use FASTN API key for public access when user is not logged in
+        try {
+          const payload: CrudRepliesPayload = {
+            action: "getAllReplies"
+          };
+          const response = await crudReplies(payload, "", FASTN_API_KEY);
+          
+          if (response && response.result) {
+            const replies = Array.isArray(response.result) ? response.result : [];
+            return replies.map((reply: any) => ({
+              id: reply.id?.toString() || '',
+              topic_id: reply.topic_id?.toString() || '',
+              author_id: reply.author_id?.toString() || '',
+              author_username: reply.author_username || 'anonymous',
+              author_avatar: reply.author_avatar || '',
+              content: reply.content || '',
+              tutorial_id: reply.tutorial_id || '',
+              parent_reply_id: reply.parent_reply_id?.toString() || '',
+              is_accepted: reply.is_accepted || false,
+              is_helpful: reply.is_helpful || false,
+              like_count: reply.like_count || 0,
+              dislike_count: reply.dislike_count || 0,
+              reply_count: reply.reply_count || 0,
+              created_at: reply.created_at || new Date().toISOString(),
+              updated_at: reply.updated_at || new Date().toISOString(),
+            }));
+          }
+        } catch (error) {
+          console.warn("Failed to fetch replies with API key:", error);
+        }
+        
+        // Fallback to mock data
+        return new Promise((resolve) => {
+          setTimeout(() => resolve([...mockReplies]), 100);
+        });
+      }
+
+      const payload: CrudRepliesPayload = {
+        action: "getAllReplies"
+      };
+      
+      const response = await crudReplies(payload, authToken);
+      
+      if (response && response.result) {
+        const replies = Array.isArray(response.result) ? response.result : [];
+        return replies.map((reply: any) => ({
+          id: reply.id?.toString() || '',
+          topic_id: reply.topic_id?.toString() || '',
+          author_id: reply.author_id?.toString() || '',
+          author_username: reply.author_username || 'anonymous',
+          author_avatar: reply.author_avatar || '',
+          content: reply.content || '',
+          tutorial_id: reply.tutorial_id || '',
+          parent_reply_id: reply.parent_reply_id?.toString() || '',
+          is_accepted: reply.is_accepted || false,
+          is_helpful: reply.is_helpful || false,
+          like_count: reply.like_count || 0,
+          dislike_count: reply.dislike_count || 0,
+          reply_count: reply.reply_count || 0,
+          created_at: reply.created_at || new Date().toISOString(),
+          updated_at: reply.updated_at || new Date().toISOString(),
+        }));
+      }
+      
+      // Fallback to mock data
+      return new Promise((resolve) => {
+        setTimeout(() => resolve([...mockReplies]), 100);
+      });
+    } catch (error) {
+      console.warn("Failed to fetch replies:", error);
+      // Fallback to mock data
+      return new Promise((resolve) => {
+        setTimeout(() => resolve([...mockReplies]), 100);
+      });
+    }
+  }
+
+  // Get replies for a specific topic
+  static async getRepliesByTopicId(topicId: string): Promise<Reply[]> {
+    try {
+      const allReplies = await ApiService.getAllReplies();
+      // Filter replies for the specific topic
+      return allReplies.filter(reply => reply.topic_id === topicId);
+    } catch (error) {
+      console.warn("Failed to fetch replies for topic:", error);
+      return [];
+    }
   }
 
   // Get all tags
@@ -970,28 +1081,111 @@ export class ApiService {
 
   // Create reply
   static async createReply(replyData: Partial<Reply>): Promise<Reply> {
-    return new Promise((resolve) => {
-      const newReply: Reply = {
-        id: `reply_${Date.now()}`,
-        topic_id: replyData.topic_id || '',
-        author_id: replyData.author_id || 'user_1',
-        author_username: replyData.author_name || replyData.author_username || replyData.username || 'admin',
-        author_avatar: replyData.author_avatar || '',
-        content: replyData.content || '',
-        tutorial_id: replyData.tutorial_id || '',
-        parent_reply_id: replyData.parent_reply_id || '',
-        is_accepted: false,
-        is_helpful: false,
-        like_count: 0,
-        dislike_count: 0,
-        reply_count: 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
+    console.log("ApiService.createReply called with:", replyData); // Debug log
+    try {
+      // Try to get auth token from user manager
+      const { getUser } = await import("@/services/users/user-manager");
+      const user = getUser();
+      const authToken = user?.access_token || "";
       
-      mockReplies.push(newReply);
-      setTimeout(() => resolve(newReply), 100);
-    });
+      console.log("Auth token available:", !!authToken); // Debug log
+      
+      const payload: CrudRepliesPayload = {
+        action: "createReply",
+        data: {
+          topic_id: replyData.topic_id,
+          author_id: replyData.author_id,
+          parent_reply_id: replyData.parent_reply_id,
+          content: replyData.content,
+          tutorial_id: replyData.tutorial_id,
+          is_accepted: false,
+          is_helpful: false,
+          like_count: 0,
+          dislike_count: 0,
+          reply_count: 0,
+        }
+      };
+
+      if (!authToken) {
+        console.log("No auth token, trying with API key"); // Debug log
+        // Try with API key instead of falling back to mock data
+        const response = await crudReplies(payload, "", FASTN_API_KEY);
+        
+        if (response && response.data) {
+          const reply = response.data;
+          return {
+            id: reply.id?.toString() || `reply_${Date.now()}`,
+            topic_id: reply.topic_id?.toString() || replyData.topic_id || '',
+            author_id: reply.author_id || replyData.author_id || '',
+            author_username: replyData.author_name || replyData.author_username || replyData.username || 'anonymous',
+            author_avatar: replyData.author_avatar || '',
+            content: reply.content || replyData.content || '',
+            tutorial_id: reply.tutorial_id || replyData.tutorial_id || '',
+            parent_reply_id: reply.parent_reply_id?.toString() || replyData.parent_reply_id || '',
+            is_accepted: reply.is_accepted || false,
+            is_helpful: reply.is_helpful || false,
+            like_count: reply.like_count || 0,
+            dislike_count: reply.dislike_count || 0,
+            reply_count: reply.reply_count || 0,
+            created_at: reply.created_at || new Date().toISOString(),
+            updated_at: reply.updated_at || new Date().toISOString(),
+          };
+        }
+        
+        console.log("API call with API key failed, falling back to mock data"); // Debug log
+        throw new Error("No auth token available");
+      }
+
+      const response = await crudReplies(payload, authToken);
+      
+      if (response && response.data) {
+        const reply = response.data;
+        return {
+          id: reply.id?.toString() || `reply_${Date.now()}`,
+          topic_id: reply.topic_id?.toString() || replyData.topic_id || '',
+          author_id: reply.author_id || replyData.author_id || '',
+          author_username: replyData.author_name || replyData.author_username || replyData.username || 'anonymous',
+          author_avatar: replyData.author_avatar || '',
+          content: reply.content || replyData.content || '',
+          tutorial_id: reply.tutorial_id || replyData.tutorial_id || '',
+          parent_reply_id: reply.parent_reply_id?.toString() || replyData.parent_reply_id || '',
+          is_accepted: reply.is_accepted || false,
+          is_helpful: reply.is_helpful || false,
+          like_count: reply.like_count || 0,
+          dislike_count: reply.dislike_count || 0,
+          reply_count: reply.reply_count || 0,
+          created_at: reply.created_at || new Date().toISOString(),
+          updated_at: reply.updated_at || new Date().toISOString(),
+        };
+      }
+      
+      throw new Error("Failed to create reply");
+    } catch (error) {
+      // Fallback to mock data if API fails
+      console.warn("API call failed, using mock data:", error);
+      return new Promise((resolve) => {
+        const newReply: Reply = {
+          id: `reply_${Date.now()}`,
+          topic_id: replyData.topic_id || '',
+          author_id: replyData.author_id || 'user_1',
+          author_username: replyData.author_name || replyData.author_username || replyData.username || 'admin',
+          author_avatar: replyData.author_avatar || '',
+          content: replyData.content || '',
+          tutorial_id: replyData.tutorial_id || '',
+          parent_reply_id: replyData.parent_reply_id || '',
+          is_accepted: false,
+          is_helpful: false,
+          like_count: 0,
+          dislike_count: 0,
+          reply_count: 0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        
+        mockReplies.push(newReply);
+        setTimeout(() => resolve(newReply), 100);
+      });
+    }
   }
 
   // Edit reply
@@ -1341,6 +1535,52 @@ export async function getAllTopics(payload: any, authToken: string, apiKey?: str
   return res.json();
 }
 
+export async function crudReplies(payload: CrudRepliesPayload, authToken: string, apiKey?: string) {
+  console.log("crudReplies function called with payload:", payload); // Debug log
+  
+  const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
+  const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
+  const tenantId = getCookie(TENANT_ID_KEY) || "";
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "x-fastn-space-id": FASTN_SPACE_ID,
+    stage: "DRAFT",
+  };
+
+  if (isCustomAuth && customAuthToken) {
+    headers["x-fastn-custom-auth"] = "true";
+    headers["authorization"] = customAuthToken; // raw JWT for custom auth
+    if (tenantId) headers["x-fastn-space-tenantid"] = tenantId;
+  } else if (apiKey) {
+    headers["x-fastn-api-key"] = apiKey;
+  } else {
+    headers["authorization"] = `Bearer ${authToken}`;
+  }
+
+  console.log("Making API call to:", CRUD_REPLIES_API_URL); // Debug log
+  console.log("With headers:", headers); // Debug log
+  console.log("With body:", JSON.stringify({ input: payload })); // Debug log
+
+  const res = await fetch(CRUD_REPLIES_API_URL, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ input: payload }),
+  });
+
+  console.log("API response status:", res.status); // Debug log
+
+  if (!res.ok) {
+    const text = await res.text();
+    console.error("API call failed:", res.status, res.statusText, text); // Debug log
+    throw new Error(`crudReplies failed: ${res.status} ${res.statusText} - ${text}`);
+  }
+
+  const result = await res.json();
+  console.log("API response data:", result); // Debug log
+  return result;
+}
+
 // Hook for using API in React components
 export const useApi = () => {
   return {
@@ -1352,6 +1592,7 @@ export const useApi = () => {
     getAllTopicById: ApiService.getAllTopicById,
     getAllUsers: ApiService.getAllUsers,
     getAllReplies: ApiService.getAllReplies,
+    getRepliesByTopicId: ApiService.getRepliesByTopicId,
     getAllTags: ApiService.getAllTags,
     createTopic: ApiService.createTopic,
     insertTopicTags: ApiService.insertTopicTags,
@@ -1371,5 +1612,7 @@ export const useApi = () => {
     insertTopicsApi: insertTopics,
     insertTopicTagsApi: insertTopicTags,
     getAllTopicsApi: getAllTopics,
+    // Replies API functions
+    crudReplies,
   };
 };

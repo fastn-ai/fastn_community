@@ -32,3 +32,4 @@ export const GET_TOPIC_BY_USER_API_URL = import.meta.env.VITE_GET_TOPIC_BY_USER_
 export const INSERT_TOPIC_TAGS_API_URL = import.meta.env.VITE_INSERT_TOPIC_TAGS_API_URL || API_URL +"insertTopicTags";
 export const INSERT_TOPICS_API_URL = import.meta.env.VITE_INSERT_TOPICS_API_URL || API_URL +"insertTopics";
 export const GET_TOPICS_API_URL = import.meta.env.VITE_GET_TOPICS_API_URL || API_URL +"getAllTopics";
+export const CRUD_REPLIES_API_URL = import.meta.env.VITE_CRUD_REPLIES_API_URL || API_URL +"crudReplies";

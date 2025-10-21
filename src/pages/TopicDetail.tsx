@@ -40,7 +40,7 @@ import {
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useApi } from "@/services/api";
-// Removed auth context import
+import { getUser } from "@/services/users/user-manager";
 import type { Topic, Reply as ReplyType } from "@/services/api";
 import { getTagColor } from "@/lib/utils";
 
@@ -69,9 +69,28 @@ const TopicDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { getAllTopicById, createReply, editReply, deleteReply } = useApi();
-  // Mock user data since we removed authentication
-  const user = { id: 'user_1', username: 'admin', email: 'admin@fastn.ai' };
-  const isAuthenticated = true;
+  // Get the actual authenticated user
+  const user = getUser();
+  const isAuthenticated = !!(user && user.access_token && user.profile);
+  
+  // Debug authentication state
+  console.log("Authentication state:", {
+    hasUser: !!user,
+    hasAccessToken: !!(user?.access_token),
+    hasProfile: !!(user?.profile),
+    isAuthenticated
+  });
+
+  // Function to refresh replies (for future use if needed)
+  const refreshReplies = async () => {
+    try {
+      const { ApiService } = await import("@/services/api");
+      const topicReplies = await ApiService.getRepliesByTopicId(id || "");
+      setReplies(topicReplies);
+    } catch (error) {
+      console.warn("Failed to refresh replies:", error);
+    }
+  };
 
   useEffect(() => {
     const fetchTopic = async () => {
@@ -89,44 +108,8 @@ const TopicDetail = () => {
         // Handle the response structure
         if (response) {
           setTopic(response);
-          // For now, use mock replies since we don't have a replies API
-          const mockReplies: ReplyType[] = [
-            {
-              id: "reply_1",
-              topic_id: id || "1",
-              author_id: "user_2",
-              author_username: "john_doe",
-              author_avatar: "",
-              content: "Thanks for the warm welcome! I'm excited to be part of this community and learn more about fastn.",
-              tutorial_id: "",
-              parent_reply_id: "",
-              is_accepted: false,
-              is_helpful: true,
-              like_count: 5,
-              dislike_count: 0,
-              reply_count: 0,
-              created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-              updated_at: new Date().toISOString(),
-            },
-            {
-              id: "reply_2",
-              topic_id: id || "1",
-              author_id: "user_1",
-              author_username: "admin",
-              author_avatar: "",
-              content: "You're very welcome! Feel free to explore the different categories and don't hesitate to ask if you have any questions.",
-              tutorial_id: "",
-              parent_reply_id: "",
-              is_accepted: true,
-              is_helpful: true,
-              like_count: 8,
-              dislike_count: 0,
-              reply_count: 0,
-              created_at: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-              updated_at: new Date().toISOString(),
-            },
-          ];
-          setReplies(mockReplies);
+          // Start with empty replies array - replies will be loaded when user posts them
+          setReplies([]);
         } else {
           throw new Error("Topic not found");
         }
@@ -151,7 +134,18 @@ const TopicDetail = () => {
     // Set submitting state immediately to prevent multiple calls
     setSubmittingReply(true);
 
+    console.log("submitReply called with:", { replyContent, id, user }); // Debug log
+
     if (!replyContent.trim() || !id) {
+      console.log("Validation failed:", { replyContent: replyContent.trim(), id }); // Debug log
+      setSubmittingReply(false);
+      return;
+    }
+
+    // Check if user is authenticated
+    if (!user || !user.access_token || !user.profile) {
+      console.log("No authenticated user found"); // Debug log
+      setError("You must be logged in to create a reply");
       setSubmittingReply(false);
       return;
     }
@@ -159,18 +153,59 @@ const TopicDetail = () => {
     try {
       setError(null); // Clear any previous errors
       console.log("Submitting reply..."); // Debug log
-      const newReply = await createReply({
+      
+      // Ensure user exists in database by calling insertUser first
+      const { insertUser } = await import("@/services/api");
+      const authToken = user?.access_token || "";
+      
+      if (authToken) {
+        try {
+          const userPayload = {
+            action: "insertUser" as const,
+            data: {
+              id: user?.profile?.sub || user?.profile?.sid || user?.profile?.email,
+              username: user?.profile?.preferred_username || user?.profile?.email?.split("@")[0] || "user",
+              email: user?.profile?.email || "",
+              avatar: user?.profile?.picture || "",
+              bio: "",
+              location: user?.profile?.locale || "",
+              website: "",
+              twitter: "",
+              github: "",
+              linkedin: "",
+              role_id: 2,
+              is_verified: true,
+              is_active: true,
+              last_login: new Date().toISOString(),
+              created_at: undefined,
+              updated_at: new Date().toISOString(),
+            },
+          };
+          
+          console.log("Ensuring user exists in database..."); // Debug log
+          await insertUser(userPayload, authToken);
+          console.log("User ensured in database"); // Debug log
+        } catch (userError) {
+          console.warn("User creation/update failed, continuing with reply:", userError);
+        }
+      }
+      
+      const replyData = {
         topic_id: id,
         content: replyContent,
-        author_id: user?.id || "id_1754164424_145800",
-        author_username: user?.username || "current_user",
+        // Use the same ID format as insertUser function
+        author_id: user?.profile?.sub || user?.profile?.sid || user?.profile?.email,
+        author_username: user?.profile?.preferred_username || user?.profile?.email?.split("@")[0] || "anonymous",
         tutorial_id: "",
         is_accepted: false,
         is_helpful: false,
         like_count: 0,
         dislike_count: 0,
         reply_count: 0,
-      });
+      };
+      
+      console.log("Calling createReply with data:", replyData); // Debug log
+      const newReply = await createReply(replyData);
 
       console.log("Reply submitted successfully"); // Debug log
       // Clear the form after successful submission
@@ -206,6 +241,7 @@ const TopicDetail = () => {
   };
 
   const handleSubmitReply = async () => {
+    console.log("handleSubmitReply called"); // Debug log
     // Prevent default form submission behavior
     await submitReply();
   };
@@ -728,13 +764,13 @@ const TopicDetail = () => {
               )}
 
               {/* Reply Form - Only show when authenticated */}
-              {isAuthenticated ? (
+              {isAuthenticated && user?.access_token && user?.profile ? (
                 <Card>
                   <CardHeader>
                     <div className="flex items-center space-x-3">
                       <Avatar>
                         <AvatarFallback className="bg-gradient-primary text-white">
-                          {user?.username?.charAt(0).toUpperCase() || "U"}
+                          {(user?.profile?.preferred_username || user?.profile?.email?.split("@")[0] || "U").charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div>
@@ -742,7 +778,7 @@ const TopicDetail = () => {
                           Add Your Reply
                         </h3>
                         <p className="text-sm text-muted-foreground">
-                          Replying as {user?.username || "User"}
+                          Replying as {user?.profile?.preferred_username || user?.profile?.email?.split("@")[0] || "User"}
                         </p>
                       </div>
                     </div>
@@ -760,7 +796,10 @@ const TopicDetail = () => {
                         <Button
                           type="button"
                           className="bg-gradient-primary"
-                          onClick={() => handleSubmitReply()}
+                          onClick={() => {
+                            console.log("Post Reply button clicked"); // Debug log
+                            handleSubmitReply();
+                          }}
                           disabled={submittingReply}
                         >
                           {submittingReply ? "Posting..." : "Post Reply"}

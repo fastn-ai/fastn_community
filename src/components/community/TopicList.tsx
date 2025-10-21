@@ -65,6 +65,13 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
   // Check if user is authenticated
   const isAuthenticated = auth.isAuthenticated && auth.user;
   
+  // Check if user is admin
+  const isAdmin = isAuthenticated && (
+    (typeof auth.user?.profile?.email === 'string' && auth.user.profile.email.includes('admin')) ||
+    (typeof auth.user?.profile?.email === 'string' && auth.user.profile.email.includes('@fastn.ai')) ||
+    (Array.isArray(auth.user?.profile?.roles) && auth.user.profile.roles.includes('admin'))
+  );
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
@@ -547,26 +554,16 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                 <span>New Topic</span>
               </Button>
             )}*/}
-            {(() => {
-              const auth = useAuth();
-              const isAuthenticated = auth.isAuthenticated && auth.user;
-              const isAdmin = isAuthenticated && (
-                auth.user?.profile?.email?.includes('admin') ||
-                auth.user?.profile?.email?.includes('@fastn.ai') ||
-                auth.user?.profile?.roles?.includes('admin')
-              );
-              
-              return isAdmin ? (
-                <Button
-                  onClick={() => navigate("/admin")}
-                  variant="outline"
-                  className="flex items-center gap-2"
-                >
-                  <Settings className="h-4 w-4" />
-                  Admin
-                </Button>
-              ) : null;
-            })()}
+            {isAdmin && (
+              <Button
+                onClick={() => navigate("/admin")}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <Settings className="h-4 w-4" />
+                Admin
+              </Button>
+            )}
           </div>
         </div>
 
