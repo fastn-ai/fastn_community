@@ -34,11 +34,19 @@ const Sidebar = () => {
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
   // Use React Query to fetch topics (shared with TopicList)
-  const { data: topics = [], isLoading: loading, error } = useQuery({
+  const { data: topics = [], isLoading: topicsLoading, error: topicsError } = useQuery({
     queryKey: queryKeys.topics,
     queryFn: ApiService.getAllTopics,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
+  });
+
+  // Fetch tags from API
+  const { data: tags = [], isLoading: tagsLoading, error: tagsError } = useQuery({
+    queryKey: queryKeys.tags,
+    queryFn: ApiService.getAllTags,
+    staleTime: 30 * 60 * 1000, // 30 minutes
+    gcTime: 60 * 60 * 1000, // 1 hour
   });
 
   // Calculate real counts for each category
@@ -46,68 +54,53 @@ const Sidebar = () => {
     return topics.filter(topic => topic.category_name === categoryName).length;
   };
 
+  const loading = topicsLoading || tagsLoading;
+
   const categories = [
     { 
       icon: Megaphone, 
       name: "Announcements", 
-      count: loading ? "..." : getCategoryCount("Announcements"), 
+      count: topicsLoading ? "..." : getCategoryCount("Announcements"), 
       color: "text-red-400", 
       path: "/announcements" 
     },
     { 
       icon: HelpCircle, 
       name: "Questions", 
-      count: loading ? "..." : getCategoryCount("Questions"), 
+      count: topicsLoading ? "..." : getCategoryCount("Questions"), 
       color: "text-blue-400", 
       path: "/questions" 
     },
     { 
       icon: Code, 
       name: "Built with fastn", 
-      count: loading ? "..." : getCategoryCount("Built with fastn"), 
+      count: topicsLoading ? "..." : getCategoryCount("Built with fastn"), 
       color: "text-purple-400", 
       path: "/built-with-fastn" 
     },
     
   ];
 
-  // Get popular tags from actual topics
+  // Get popular tags from API
   const getPopularTags = () => {
-    const allTags: string[] = [];
-    topics.forEach(topic => {
-      if (topic.tags && Array.isArray(topic.tags)) {
-        allTags.push(...topic.tags);
-      }
-    });
+    if (!tags || tags.length === 0) return [];
     
-    // Count tag occurrences
-    const tagCounts: { [key: string]: number } = {};
-    allTags.forEach(tag => {
-      tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-    });
+    // Sort tags by some criteria (you can modify this based on your API response)
+    // For now, we'll take the first 9 tags or sort by name
+    const sortedTags = [...tags]
+      .sort((a, b) => {
+        // You can sort by topics_count if available, or by name
+        if (a.topics_count && b.topics_count) {
+          return b.topics_count - a.topics_count;
+        }
+        return a.name.localeCompare(b.name);
+      })
+      .slice(0, 9);
     
-    // Add specific tags we want to always show
-    const specificTags = ["fastn", "best-practices", "deployment"];
-    specificTags.forEach(tag => {
-      if (!tagCounts[tag]) {
-        tagCounts[tag] = 0; // Add with 0 count if not in database
-      }
-    });
-    
-    // Return specific tags first, then top popular tags
-    const specificTagsList = specificTags.filter(tag => tagCounts[tag] !== undefined);
-    const popularTags = Object.entries(tagCounts)
-      .filter(([tag]) => !specificTags.includes(tag)) // Exclude specific tags from popular list
-      .sort(([,a], [,b]) => b - a)
-      .slice(0, 6)
-      .map(([tag]) => tag);
-    
-    // Combine specific tags with popular tags, ensuring no duplicates
-    const combinedTags = [...specificTagsList, ...popularTags];
-    return combinedTags.slice(0, 9); // Show up to 9 tags total
+    return sortedTags.map(tag => tag.name);
   };
 
-  const tags = loading ? [] : getPopularTags();
+  const popularTags = loading ? [] : getPopularTags();
 
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -209,9 +202,9 @@ const Sidebar = () => {
               <div className="flex items-center justify-center py-2">
                 <Loader2 className="w-4 h-4 animate-spin" />
               </div>
-            ) : tags.length > 0 ? (
+            ) : popularTags.length > 0 ? (
               <div className="flex flex-wrap gap-1">
-                {tags.map((tag) => (
+                {popularTags.map((tag) => (
                   <Badge
                     key={tag}
                     variant={selectedTag === tag ? "default" : "outline"}
