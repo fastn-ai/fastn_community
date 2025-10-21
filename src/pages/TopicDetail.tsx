@@ -83,21 +83,52 @@ const TopicDetail = () => {
 
       try {
         setLoading(true);
+        
         const response = await getAllTopicById(id);
 
-        // Handle the nested response structure
-        if (response && typeof response === "object" && "data" in response) {
-          const responseData = response as TopicDetailResponse;
-          if (responseData.data && responseData.data.data) {
-            setTopic(responseData.data.data);
-            setReplies(responseData.data.replies || []);
-          } else {
-            setTopic(responseData as unknown as Topic);
-            setReplies([]);
-          }
+        // Handle the response structure
+        if (response) {
+          setTopic(response);
+          // For now, use mock replies since we don't have a replies API
+          const mockReplies: ReplyType[] = [
+            {
+              id: "reply_1",
+              topic_id: id || "1",
+              author_id: "user_2",
+              author_username: "john_doe",
+              author_avatar: "",
+              content: "Thanks for the warm welcome! I'm excited to be part of this community and learn more about fastn.",
+              tutorial_id: "",
+              parent_reply_id: "",
+              is_accepted: false,
+              is_helpful: true,
+              like_count: 5,
+              dislike_count: 0,
+              reply_count: 0,
+              created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+              updated_at: new Date().toISOString(),
+            },
+            {
+              id: "reply_2",
+              topic_id: id || "1",
+              author_id: "user_1",
+              author_username: "admin",
+              author_avatar: "",
+              content: "You're very welcome! Feel free to explore the different categories and don't hesitate to ask if you have any questions.",
+              tutorial_id: "",
+              parent_reply_id: "",
+              is_accepted: true,
+              is_helpful: true,
+              like_count: 8,
+              dislike_count: 0,
+              reply_count: 0,
+              created_at: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+              updated_at: new Date().toISOString(),
+            },
+          ];
+          setReplies(mockReplies);
         } else {
-          setTopic(response as Topic);
-          setReplies([]);
+          throw new Error("Topic not found");
         }
       } catch (err) {
         console.error("Error fetching topic:", err);

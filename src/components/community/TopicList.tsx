@@ -1,17 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useAuth } from "react-oidc-context";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import {
   Pagination,
   PaginationContent,
@@ -44,6 +38,7 @@ import {
 import { ApiService, Topic, Category } from "@/services/api";
 import { getTagColor } from "@/lib/utils";
 import CreateTopicModal from "@/components/ui/create-topic-modal";
+import { queryKeys } from "@/services/queryClient";
 
 interface TopicListProps {
   sidebarOpen: boolean;
@@ -57,17 +52,27 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
   
   // Check if user is authenticated
   const isAuthenticated = auth.isAuthenticated && auth.user;
-  const [topics, setTopics] = useState<Topic[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [retrying, setRetrying] = useState(false);
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 10;
+
+  // Use React Query to fetch data (shared with Sidebar)
+  const { data: topics = [], isLoading: topicsLoading, error: topicsError, refetch: refetchTopics } = useQuery({
+    queryKey: queryKeys.topics,
+    queryFn: ApiService.getAllTopics,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+  });
+
+  const { data: categories = [], isLoading: categoriesLoading, error: categoriesError } = useQuery({
+    queryKey: queryKeys.categories,
+    queryFn: ApiService.getAllCategories,
+    staleTime: 30 * 60 * 1000, // 30 minutes
+    gcTime: 60 * 60 * 1000, // 1 hour
+  });
 
   // Read tag from URL parameters on component mount
   useEffect(() => {
@@ -77,83 +82,6 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
       setSelectedTag(decodeURIComponent(tagParam));
     }
   }, [location.search]);
-
-  // Fetch topics and categories from API
-  const fetchData = async (isRetry: boolean = false) => {
-    try {
-      if (isRetry) {
-        setRetrying(true);
-      } else {
-        setLoading(true);
-      }
-      setError(null);
-
-      console.log("Fetching data from API...");
-
-      // Fetch both topics and categories in parallel
-      const [fetchedTopics, fetchedCategories] = await Promise.all([
-        ApiService.getAllTopics(),
-        ApiService.getAllCategories(),
-      ]);
-
-      console.log("Data fetched successfully:", {
-        topics: fetchedTopics.length,
-        categories: fetchedCategories.length,
-      });
-
-      // Debug: Log sample data
-      if (fetchedTopics.length > 0) {
-        console.log("Sample topic:", {
-          id: fetchedTopics[0].id,
-          title: fetchedTopics[0].title,
-          category_name: fetchedTopics[0].category_name,
-          author_username: fetchedTopics[0].author_username,
-          tags: fetchedTopics[0].tags,
-        });
-      }
-
-      if (fetchedCategories.length > 0) {
-        console.log("Sample category:", {
-          id: fetchedCategories[0].id,
-          name: fetchedCategories[0].name,
-        });
-      }
-
-      setTopics(fetchedTopics);
-      setCategories(fetchedCategories);
-      setTotalPages(Math.ceil(fetchedTopics.length / itemsPerPage));
-    } catch (err) {
-      console.error("Error fetching data:", err);
-
-      let errorMessage = "Failed to load data. Please try again later.";
-
-      if (err instanceof Error) {
-        if (err.message.includes("429")) {
-          errorMessage =
-            "Too many requests. Please wait a moment and try again.";
-        } else if (err.message.includes("Network")) {
-          errorMessage =
-            "Network error. Please check your connection and try again.";
-        } else if (err.message.includes("401")) {
-          errorMessage =
-            "Authentication error. Please check your API credentials.";
-        } else if (err.message.includes("403")) {
-          errorMessage = "Access denied. Please check your permissions.";
-        } else if (err.message.includes("500")) {
-          errorMessage = "Server error. Please try again later.";
-        }
-      }
-
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-      setRetrying(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
 
   // Filter topics based on search, filter, and tag
   const filteredTopics = topics.filter((topic) => {
@@ -168,6 +96,9 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
     
     return matchesSearch && matchesFilter && matchesTag;
   });
+
+  // Calculate total pages for pagination
+  const totalPages = Math.ceil(filteredTopics.length / itemsPerPage);
 
   // Paginate topics
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -184,13 +115,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
   const handleLike = async (topicId: string) => {
     try {
       console.log("Liking topic:", topicId);
-      setTopics((prev) =>
-        prev.map((topic) =>
-          topic.id === topicId
-            ? { ...topic, like_count: (topic.like_count || 0) + 1 }
-            : topic
-        )
-      );
+      // TODO: Implement actual like functionality with API call
     } catch (error) {
       console.error("Error liking topic:", error);
     }
@@ -218,13 +143,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
   const handleBookmark = async (topicId: string) => {
     try {
       console.log("Bookmarking topic:", topicId);
-      setTopics((prev) =>
-        prev.map((topic) =>
-          topic.id === topicId
-            ? { ...topic, bookmark_count: (topic.bookmark_count || 0) + 1 }
-            : topic
-        )
-      );
+      // TODO: Implement actual bookmark functionality with API call
     } catch (error) {
       console.error("Error bookmarking topic:", error);
     }
@@ -374,6 +293,9 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
     }
   };
 
+  const loading = topicsLoading || categoriesLoading;
+  const error = topicsError || categoriesError;
+
   if (loading) {
     return (
       <div className="flex-1 ml-0 md:ml-64 transition-all duration-300">
@@ -404,11 +326,11 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
               <p className="text-muted-foreground mb-6">{error}</p>
               <div className="flex gap-2 justify-center">
                 <Button
-                  onClick={() => fetchData(true)}
-                  disabled={retrying}
+                  onClick={() => refetchTopics()}
+                  disabled={topicsLoading}
                   className="flex items-center gap-2"
                 >
-                  {retrying ? (
+                  {topicsLoading ? (
                     <>
                       <RefreshCw className="h-4 w-4 animate-spin" />
                       Retrying...
@@ -601,7 +523,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                   <div
                     key={topic.id}
                     className="grid grid-cols-12 gap-4 p-4 hover:bg-gray-50 cursor-pointer transition-colors"
-                    onClick={() => navigate(`/topic/${topic.id}`)}
+                    onClick={() => navigate(`/topic/${topic.id.toString()}`)}
                   >
                     {/* Topic Content */}
                     <div className="col-span-6">

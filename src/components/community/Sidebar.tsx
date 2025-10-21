@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { 
   Home, 
   MessageSquare, 
@@ -25,33 +26,20 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Badge } from "@/components/ui/badge";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ApiService, Topic } from "@/services/api";
+import { queryKeys } from "@/services/queryClient";
 
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [topics, setTopics] = useState<Topic[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
-  // Fetch topics to calculate real counts
-  useEffect(() => {
-    const fetchTopics = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const fetchedTopics = await ApiService.getAllTopics();
-        setTopics(fetchedTopics);
-      } catch (err) {
-        console.error("Error fetching topics for sidebar:", err);
-        setError("Failed to load category counts");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTopics();
-  }, []);
+  // Use React Query to fetch topics (shared with TopicList)
+  const { data: topics = [], isLoading: loading, error } = useQuery({
+    queryKey: queryKeys.topics,
+    queryFn: ApiService.getAllTopics,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+  });
 
   // Calculate real counts for each category
   const getCategoryCount = (categoryName: string) => {

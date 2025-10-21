@@ -140,7 +140,7 @@ const TopicItem = React.memo<{
   return (
     <div
       className="grid grid-cols-12 gap-4 p-4 hover:bg-gray-50 cursor-pointer transition-colors"
-      onClick={() => onNavigate(topic.id)}
+      onClick={() => onNavigate(topic.id.toString())}
     >
       {/* Topic Content */}
       <div className="col-span-6">

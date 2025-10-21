@@ -1,7 +1,7 @@
 // Mock API Service for fastn community platform
 // This is a frontend-only implementation with mock data
 
-import { INSERT_USER_API_URL, FASTN_SPACE_ID, CUSTOM_AUTH_KEY, CUSTOM_AUTH_TOKEN_KEY, TENANT_ID_KEY, CRUD_CATEGORIES_API_URL, CRUD_TAGS_API_URL, CRUD_TOPICS_API_URL, GET_TOPIC_BY_USER_API_URL, INSERT_TOPIC_TAGS_API_URL, INSERT_TOPICS_API_URL } from "@/constants";
+import { INSERT_USER_API_URL, FASTN_SPACE_ID, FASTN_API_KEY, CUSTOM_AUTH_KEY, CUSTOM_AUTH_TOKEN_KEY, TENANT_ID_KEY, CRUD_CATEGORIES_API_URL, CRUD_TAGS_API_URL, CRUD_TOPICS_API_URL, GET_TOPIC_BY_USER_API_URL, INSERT_TOPIC_TAGS_API_URL, INSERT_TOPICS_API_URL, GET_TOPICS_API_URL } from "@/constants";
 import { getCookie } from "@/routes/login/oauth";
 import { generateConsistentColor, PREDEFINED_COLORS } from "@/lib/utils";
 
@@ -153,7 +153,7 @@ export interface CrudTagsPayload {
 }
 
 export interface CrudTopicsPayload {
-  action: "getAllTopics" | "updateTopic" | "deleteTopic";
+  action: "getAllTopics" | "updateTopic";
   data?: {
     id?: string;
     author_id?: string;
@@ -162,7 +162,7 @@ export interface CrudTopicsPayload {
     title?: string;
     description?: string;
     content?: string;
-    status?: "pending" | "published" | "draft" | "rejected";
+    status?: "pending" | "published" | "draft" | "rejected" | "approved";
     view_count?: number;
     reply_count?: number;
     like_count?: number;
@@ -204,7 +204,6 @@ export interface InsertTopicTagsPayload {
 }
 
 // Mock data storage
-let mockTopics: Topic[] = [];
 let mockCategories: Category[] = [];
 let mockUsers: User[] = [];
 let mockReplies: Reply[] = [];
@@ -301,81 +300,6 @@ const initializeMockData = () => {
     },
   ];
 
-  // Mock Topics
-  mockTopics = [
-    {
-      id: 1,
-      title: 'Welcome to Fastn Community!',
-      description: 'This is our first community post. Welcome everyone!',
-      content: 'Welcome to the Fastn community platform. This is where developers can share knowledge, ask questions, and collaborate.',
-      author_username: 'admin',
-      author_avatar: '',
-      author_id: 'user_1',
-      category_name: 'Announcements',
-      category_color: '#EF4444',
-      category_id: 'cat_2',
-      status: 'approved',
-      is_featured: true,
-      is_hot: false,
-      is_new: true,
-      view_count: 150,
-      reply_count: 5,
-      like_count: 25,
-      bookmark_count: 10,
-      share_count: 3,
-      tags: ['welcome', 'community', 'fastn'],
-      created_at: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-      updated_at: new Date().toISOString(),
-    },
-    {
-      id: 2,
-      title: 'How to get started with Fastn?',
-      description: 'Looking for guidance on getting started with Fastn development.',
-      content: 'I am new to Fastn and would like to know the best way to get started. Any recommendations?',
-      author_username: 'john_doe',
-      author_avatar: '',
-      author_id: 'user_2',
-      category_name: 'Questions',
-      category_color: '#3B82F6',
-      category_id: 'cat_1',
-      status: 'approved',
-      is_featured: false,
-      is_hot: true,
-      is_new: false,
-      view_count: 75,
-      reply_count: 3,
-      like_count: 8,
-      bookmark_count: 5,
-      share_count: 1,
-      tags: ['getting-started', 'help', 'fastn'],
-      created_at: new Date(Date.now() - 43200000).toISOString(), // 12 hours ago
-      updated_at: new Date().toISOString(),
-    },
-    {
-      id: 3,
-      title: 'Best practices for Fastn development',
-      description: 'Share your best practices and tips for Fastn development.',
-      content: 'This is a pending post that needs admin approval.',
-      author_username: 'john_doe',
-      author_avatar: '',
-      author_id: 'user_2',
-      category_name: 'Best Practices',
-      category_color: '#10B981',
-      category_id: 'cat_3',
-      status: 'pending',
-      is_featured: false,
-      is_hot: false,
-      is_new: true,
-      view_count: 0,
-      reply_count: 0,
-      like_count: 0,
-      bookmark_count: 0,
-      share_count: 0,
-      tags: ['best-practices', 'development'],
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-  ];
 
   // Mock Tags
   mockTags = [
@@ -405,7 +329,7 @@ const initializeMockData = () => {
 };
 
 // Initialize mock data on first load
-if (mockTopics.length === 0) {
+if (mockCategories.length === 0) {
   initializeMockData();
 }
 
@@ -428,10 +352,17 @@ export class ApiService {
       })
       
       if (!authToken) {
-        console.warn("⚠️ No auth token available, falling back to mock data");
-        return new Promise((resolve) => {
-          setTimeout(() => resolve([...mockCategories]), 100);
-        });
+        console.warn("⚠️ No auth token available, using FASTN API key for public access");
+        // Use FASTN API key for public access when user is not logged in
+        try {
+          const response = await crudCategories({ action: "getAllCategories" }, "", FASTN_API_KEY);
+          return ApiService.processCategoriesResponse(response);
+        } catch (error) {
+          console.warn("Failed to fetch categories with API key, falling back to mock data:", error);
+          return new Promise((resolve) => {
+            setTimeout(() => resolve([...mockCategories]), 100);
+          });
+        }
       }
 
       const payload: CrudCategoriesPayload = {
@@ -605,17 +536,159 @@ export class ApiService {
 
   // Get all topics
   static async getAllTopics(): Promise<Topic[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => resolve([...mockTopics]), 100);
-    });
+    try {
+      // Try to get auth token from user manager
+      const { getUser } = await import("@/services/users/user-manager");
+      const user = getUser();
+      const authToken = user?.access_token || "";
+      
+      // Check if we have custom auth available
+      const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
+      const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
+      
+      // Use custom auth if available, otherwise use regular auth token
+      const tokenToUse = (isCustomAuth && customAuthToken) ? customAuthToken : authToken;
+      
+      if (!tokenToUse) {
+        console.warn("No auth token available, using FASTN API key for public access");
+        // Use FASTN API key for public access when user is not logged in
+        const response = await getAllTopics(null, "", FASTN_API_KEY);
+        return ApiService.processTopicsResponse(response);
+      }
+
+      const response = await getAllTopics(null, tokenToUse);
+      return ApiService.processTopicsResponse(response);
+    } catch (error) {
+      console.error("Error fetching topics:", error);
+      throw error;
+    }
   }
 
-  // Get topics by status (for admin)
-  static async getTopicsByStatus(status: 'pending' | 'approved' | 'rejected'): Promise<Topic[]> {
-    return new Promise((resolve) => {
-      const filteredTopics = mockTopics.filter(topic => topic.status === status);
-      setTimeout(() => resolve([...filteredTopics]), 100);
-    });
+  // Helper method to process topics response
+  private static processTopicsResponse(response: any): Topic[] {
+    // The API returns {data: Array} structure
+    if (response && response.data && Array.isArray(response.data)) {
+      const topics = response.data;
+      
+      const transformedTopics = topics.map((topic: any) => {
+        return {
+          id: topic.topic_id || topic.id || 0,
+          title: topic.title || '',
+          description: topic.description || '',
+          content: topic.content || '',
+          author_username: topic.author_name || topic.author_username || topic.username || 'anonymous',
+          author_avatar: topic.author_avatar || '',
+          author_id: topic.author_id || '',
+          category_name: topic.category_name || '',
+          category_color: topic.category_color || '#3B82F6',
+          category_id: topic.category_id?.toString() || '',
+          status: topic.status || 'approved',
+          is_featured: topic.is_featured || false,
+          is_hot: topic.is_hot || false,
+          is_new: topic.is_new || false,
+          view_count: topic.view_count || 0,
+          reply_count: topic.reply_count || 0,
+          like_count: topic.like_count || 0,
+          bookmark_count: topic.bookmark_count || 0,
+          share_count: topic.share_count || 0,
+          tags: topic.tags?.value ? JSON.parse(topic.tags.value) : (topic.tags || []),
+          created_at: topic.created_at || new Date().toISOString(),
+          updated_at: topic.updated_at || new Date().toISOString(),
+        };
+      });
+      
+      return transformedTopics;
+    }
+    
+    return [];
+  }
+
+  // Helper method to process categories response
+  private static processCategoriesResponse(response: any): Category[] {
+    // The API returns {result: Array} structure
+    if (response && response.result && Array.isArray(response.result)) {
+      const categories = response.result;
+      
+      const transformedCategories = categories.map((category: any) => {
+        return {
+          id: category.category_id || category.id || 0,
+          name: category.name || '',
+          description: category.description || '',
+          color: category.color || generateConsistentColor(category.name || ''),
+          created_at: category.created_at || new Date().toISOString(),
+          updated_at: category.updated_at || new Date().toISOString(),
+        };
+      });
+      
+      return transformedCategories;
+    }
+    
+    return [];
+  }
+
+  // Helper method to process tags response
+  private static processTagsResponse(response: any): Tag[] {
+    // The API returns {result: Array} structure
+    if (response && response.result && Array.isArray(response.result)) {
+      const tags = response.result;
+      
+      const transformedTags = tags.map((tag: any, index: number) => ({
+        id: tag.id?.toString() || '',
+        name: tag.name || '',
+        description: tag.description || '',
+        slug: tag.slug || '',
+        color: tag.color || generateConsistentColor(tag.name || `tag-${index}`),
+        created_at: tag.created_at || new Date().toISOString(),
+        updated_at: tag.updated_at || new Date().toISOString(),
+      }));
+      
+      return transformedTags;
+    }
+    
+    return [];
+  }
+
+  // Get topic by ID
+  static async getAllTopicById(topicId: string): Promise<Topic> {
+    try {
+      // Try to get auth token from user manager
+      const { getUser } = await import("@/services/users/user-manager");
+      const user = getUser();
+      const authToken = user?.access_token || "";
+      
+      // Check if we have custom auth available
+      const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
+      const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
+      
+      // Use custom auth if available, otherwise use regular auth token
+      const tokenToUse = (isCustomAuth && customAuthToken) ? customAuthToken : authToken;
+      
+      if (!tokenToUse) {
+        console.warn("No auth token available for getTopicById, using FASTN API key for public access");
+        // Use FASTN API key for public access when user is not logged in
+        const response = await getAllTopics(null, "", FASTN_API_KEY);
+        const topics = ApiService.processTopicsResponse(response);
+        const topic = topics.find((t: any) => (t.topic_id || t.id)?.toString() === topicId);
+        
+        if (topic) {
+          return topic;
+        }
+        throw new Error("Topic not found");
+      }
+
+      const response = await getAllTopics(null, tokenToUse);
+      const topics = ApiService.processTopicsResponse(response);
+      const topic = topics.find((t: any) => (t.topic_id || t.id)?.toString() === topicId);
+      
+      if (topic) {
+        return topic;
+      }
+      
+      throw new Error("Topic not found");
+    } catch (error) {
+      console.error("Error fetching topic by ID:", error);
+      throw error;
+    }
   }
 
   // Get all users
@@ -641,10 +714,17 @@ export class ApiService {
       const authToken = user?.access_token || "";
       
       if (!authToken) {
-        console.warn("No auth token available, falling back to mock data");
-        return new Promise((resolve) => {
-          setTimeout(() => resolve([...mockTags]), 100);
-        });
+        console.warn("No auth token available, using FASTN API key for public access");
+        // Use FASTN API key for public access when user is not logged in
+        try {
+          const response = await crudTags({ action: "getAllTags" }, "", FASTN_API_KEY);
+          return ApiService.processTagsResponse(response);
+        } catch (error) {
+          console.warn("Failed to fetch tags with API key, falling back to mock data:", error);
+          return new Promise((resolve) => {
+            setTimeout(() => resolve([...mockTags]), 100);
+          });
+        }
       }
 
       const payload: CrudTagsPayload = {
@@ -682,40 +762,8 @@ export class ApiService {
     }
   }
 
-  // Admin: Approve topic
-  static async approveTopic(topicId: string): Promise<Topic> {
-    return new Promise((resolve) => {
-      const topic = mockTopics.find(t => t.id.toString() === topicId);
-      if (topic) {
-        topic.status = 'approved';
-        topic.updated_at = new Date().toISOString();
-      }
-      setTimeout(() => resolve(topic!), 100);
-    });
-  }
 
-  // Admin: Reject topic
-  static async rejectTopic(topicId: string): Promise<Topic> {
-    return new Promise((resolve) => {
-      const topic = mockTopics.find(t => t.id.toString() === topicId);
-      if (topic) {
-        topic.status = 'rejected';
-        topic.updated_at = new Date().toISOString();
-      }
-      setTimeout(() => resolve(topic!), 100);
-    });
-  }
 
-  // Admin: Delete topic
-  static async deleteTopic(topicId: string): Promise<boolean> {
-    return new Promise((resolve) => {
-      const index = mockTopics.findIndex(t => t.id.toString() === topicId);
-      if (index !== -1) {
-        mockTopics.splice(index, 1);
-      }
-      setTimeout(() => resolve(true), 100);
-    });
-  }
 
   // Create new topic
   static async createTopic(topicData: Partial<Topic>): Promise<Topic> {
@@ -762,31 +810,12 @@ export class ApiService {
       if (response && response.data) {
         const topic = response.data;
         
-        // WORKAROUND: If no ID is returned, try to get the latest topic ID
+        // WORKAROUND: If no ID is returned, use a fallback
         console.log( "topic", topic)
         let topicId = topic.id || '';
         if (!topicId || topicId === '') {
-          try {
-            const allTopics = await ApiService.getAllTopics();
-            if (allTopics && allTopics.length > 0) {
-              // Find the topic that matches our created topic (by title and author)
-              const matchingTopic = allTopics.find(t => 
-                t.title === topicData.title && 
-                t.author_id === topicData.author_id
-              );
-              if (matchingTopic) {
-                topicId = matchingTopic.id.toString();
-              } else {
-                // Fallback: use the highest ID (most recent)
-                const latestTopic = allTopics.reduce((latest, current) => 
-                  current.id > latest.id ? current : latest
-                );
-                topicId = latestTopic.id.toString();
-              }
-            }
-          } catch (error) {
-            // Failed to get latest topic ID, continue without tag insertion
-          }
+          // Generate a fallback ID if none is returned
+          topicId = `topic_${Date.now()}`;
         }
         
         const createdTopic = {
@@ -794,7 +823,7 @@ export class ApiService {
           title: topic.title || '',
           description: topic.description || '',
           content: topic.content || '',
-          author_username: topicData.author_username || 'anonymous',
+          author_username: topicData.author_name || topicData.author_username || topicData.username || 'anonymous',
           author_avatar: topicData.author_avatar || '',
           author_id: topic.author_id || '',
           category_name: topicData.category_name || '',
@@ -861,13 +890,6 @@ export class ApiService {
     }
   }
 
-  // Get topic by ID
-  static async getAllTopicById(topicId: string): Promise<Topic> {
-    return new Promise((resolve) => {
-      const topic = mockTopics.find(t => t.id.toString() === topicId);
-      setTimeout(() => resolve(topic!), 100);
-    });
-  }
 
   // Get topics by user
   static async getTopicByUser(userId: string): Promise<Topic[]> {
@@ -992,7 +1014,7 @@ export class ApiService {
         id: `reply_${Date.now()}`,
         topic_id: replyData.topic_id || '',
         author_id: replyData.author_id || 'user_1',
-        author_username: replyData.author_username || 'admin',
+        author_username: replyData.author_name || replyData.author_username || replyData.username || 'admin',
         author_avatar: replyData.author_avatar || '',
         content: replyData.content || '',
         tutorial_id: replyData.tutorial_id || '',
@@ -1046,20 +1068,45 @@ export class ApiService {
     totalViews: number;
     totalLikes: number;
   }> {
-    return new Promise((resolve) => {
+    try {
+      // Try to get auth token from user manager
+      const { getUser } = await import("@/services/users/user-manager");
+      const user = getUser();
+      const authToken = user?.access_token || "";
+      
+      if (!authToken) {
+        throw new Error("No auth token available");
+      }
+
+      // Get all topics for analytics
+      const payload: CrudTopicsPayload = {
+        action: "getAllTopics"
+      };
+
+      const response = await crudTopics(payload, authToken);
+      
+      let topics: any[] = [];
+      if (response && response.result) {
+        topics = Array.isArray(response.result) ? response.result : [];
+      }
+
       const analytics = {
         totalUsers: mockUsers.length,
-        totalTopics: mockTopics.length,
+        totalTopics: topics.length,
         totalReplies: mockReplies.length,
-        pendingTopics: mockTopics.filter(t => t.status === 'pending').length,
-        approvedTopics: mockTopics.filter(t => t.status === 'approved').length,
-        rejectedTopics: mockTopics.filter(t => t.status === 'rejected').length,
+        pendingTopics: topics.filter(t => t.status === 'pending').length,
+        approvedTopics: topics.filter(t => t.status === 'approved').length,
+        rejectedTopics: topics.filter(t => t.status === 'rejected').length,
         activeUsers: mockUsers.filter(u => u.is_active).length,
-        totalViews: mockTopics.reduce((sum, t) => sum + t.view_count, 0),
-        totalLikes: mockTopics.reduce((sum, t) => sum + t.like_count, 0),
+        totalViews: topics.reduce((sum, t) => sum + (t.view_count || 0), 0),
+        totalLikes: topics.reduce((sum, t) => sum + (t.like_count || 0), 0),
       };
-      setTimeout(() => resolve(analytics), 100);
-    });
+      
+      return analytics;
+    } catch (error) {
+      console.error("Error fetching analytics:", error);
+      throw error;
+    }
   }
 }
 
@@ -1096,7 +1143,7 @@ export async function insertUser(payload: InsertUserPayload, authToken: string) 
   return res.json();
 }
 
-export async function crudCategories(payload: CrudCategoriesPayload, authToken: string) {
+export async function crudCategories(payload: CrudCategoriesPayload, authToken: string, apiKey?: string) {
   const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
   const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
   const tenantId = getCookie(TENANT_ID_KEY) || "";
@@ -1111,6 +1158,8 @@ export async function crudCategories(payload: CrudCategoriesPayload, authToken: 
     headers["x-fastn-custom-auth"] = "true";
     headers["authorization"] = customAuthToken; // raw JWT for custom auth
     if (tenantId) headers["x-fastn-space-tenantid"] = tenantId;
+  } else if (apiKey) {
+    headers["x-fastn-api-key"] = apiKey;
   } else {
     headers["authorization"] = `Bearer ${authToken}`;
   }
@@ -1129,7 +1178,7 @@ export async function crudCategories(payload: CrudCategoriesPayload, authToken: 
   return res.json();
 }
 
-export async function crudTags(payload: CrudTagsPayload, authToken: string) {
+export async function crudTags(payload: CrudTagsPayload, authToken: string, apiKey?: string) {
   const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
   const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
   const tenantId = getCookie(TENANT_ID_KEY) || "";
@@ -1144,6 +1193,8 @@ export async function crudTags(payload: CrudTagsPayload, authToken: string) {
     headers["x-fastn-custom-auth"] = "true";
     headers["authorization"] = customAuthToken; // raw JWT for custom auth
     if (tenantId) headers["x-fastn-space-tenantid"] = tenantId;
+  } else if (apiKey) {
+    headers["x-fastn-api-key"] = apiKey;
   } else {
     headers["authorization"] = `Bearer ${authToken}`;
   }
@@ -1295,6 +1346,41 @@ export async function insertTopicTags(payload: InsertTopicTagsPayload, authToken
   return res.json();
 }
 
+export async function getAllTopics(payload: any, authToken: string, apiKey?: string) {
+  const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
+  const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
+  const tenantId = getCookie(TENANT_ID_KEY) || "";
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "x-fastn-space-id": FASTN_SPACE_ID,
+    stage: "DRAFT",
+  };
+
+  if (isCustomAuth && customAuthToken) {
+    headers["x-fastn-custom-auth"] = "true";
+    headers["authorization"] = customAuthToken; // raw JWT for custom auth
+    if (tenantId) headers["x-fastn-space-tenantid"] = tenantId;
+  } else if (apiKey) {
+    headers["x-fastn-api-key"] = apiKey;
+  } else {
+    headers["authorization"] = `Bearer ${authToken}`;
+  }
+
+  const res = await fetch(GET_TOPICS_API_URL, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ input: {} }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`getAllTopics failed: ${res.status} ${res.statusText} - ${text}`);
+  }
+
+  return res.json();
+}
+
 // Hook for using API in React components
 export const useApi = () => {
   return {
@@ -1303,16 +1389,12 @@ export const useApi = () => {
     updateCategory: ApiService.updateCategory,
     deleteCategory: ApiService.deleteCategory,
     getAllTopics: ApiService.getAllTopics,
-    getTopicsByStatus: ApiService.getTopicsByStatus,
+    getAllTopicById: ApiService.getAllTopicById,
     getAllUsers: ApiService.getAllUsers,
     getAllReplies: ApiService.getAllReplies,
     getAllTags: ApiService.getAllTags,
-    approveTopic: ApiService.approveTopic,
-    rejectTopic: ApiService.rejectTopic,
-    deleteTopic: ApiService.deleteTopic,
     createTopic: ApiService.createTopic,
     insertTopicTags: ApiService.insertTopicTags,
-    getAllTopicById: ApiService.getAllTopicById,
     getTopicByUser: ApiService.getTopicByUser,
     createReply: ApiService.createReply,
     editReply: ApiService.editReply,
@@ -1328,5 +1410,6 @@ export const useApi = () => {
     getTopicByUserApi: getTopicByUser,
     insertTopicsApi: insertTopics,
     insertTopicTagsApi: insertTopicTags,
+    getAllTopicsApi: getAllTopics,
   };
 };

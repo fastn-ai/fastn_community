@@ -18,7 +18,7 @@ export const DEFAULT_PAGE_SIZE = 20;
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 // Shared API configuration for all endpoints
-export const FASTN_API_KEY = import.meta.env.VITE_FASTN_API_KEY || "";
+export const FASTN_API_KEY = import.meta.env.VITE_FASTN_API_KEY || "4f9ed28a-e9de-4096-a715-d09118ff4f63";
 export const FASTN_SPACE_ID = import.meta.env.VITE_FASTN_SPACE_ID || "dce5d31a-5b34-437f-abcf-af40cb7fd6a9";
 export const API_URL = import.meta.env.VITE_API_URL|| "https://qa.fastn.ai/api/v1/"
 // API URLs
@@ -31,3 +31,4 @@ export const CRUD_TOPICS_API_URL = import.meta.env.VITE_CRUD_TOPICS_API_URL || A
 export const GET_TOPIC_BY_USER_API_URL = import.meta.env.VITE_GET_TOPIC_BY_USER_API_URL || API_URL +"getTopicByUser";
 export const INSERT_TOPIC_TAGS_API_URL = import.meta.env.VITE_INSERT_TOPIC_TAGS_API_URL || API_URL +"insertTopicTags";
 export const INSERT_TOPICS_API_URL = import.meta.env.VITE_INSERT_TOPICS_API_URL || API_URL +"insertTopics";
+export const GET_TOPICS_API_URL = import.meta.env.VITE_GET_TOPICS_API_URL || API_URL +"getAllTopics";
