@@ -143,7 +143,6 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
           }).filter((tag: string) => tag && tag.length > 0);
         }
       } catch (error) {
-        console.warn('Failed to parse tags from value:', error);
         return [];
       }
     }
@@ -170,7 +169,6 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
           .map((tag) => tag.trim())
           .filter((tag) => tag.length > 0);
       } catch (error) {
-        console.warn('Failed to parse tags string:', error);
         return [];
       }
     }
@@ -200,7 +198,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
     
     // Debug logging
     if (selectedTag && topic.tags) {
-      console.log('Topic:', topic.title, 'Raw tags:', topic.tags, 'Parsed tags:', parsedTopicTags, 'Selected tag:', selectedTag, 'Matches:', matchesTag);
+      // Tag matching logic
     }
     
     return matchesSearch && matchesFilter && matchesTag;
@@ -223,10 +221,9 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
   // Handle topic interactions
   const handleLike = async (topicId: string) => {
     try {
-      console.log("Liking topic:", topicId);
       // TODO: Implement actual like functionality with API call
     } catch (error) {
-      console.error("Error liking topic:", error);
+      // Handle error silently
     }
   };
 
@@ -242,19 +239,17 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
         await navigator.clipboard.writeText(
           `${window.location.origin}/topic/${topic.id}`
         );
-        console.log("Link copied to clipboard");
       }
     } catch (error) {
-      console.error("Error sharing topic:", error);
+      // Handle error silently
     }
   };
 
   const handleBookmark = async (topicId: string) => {
     try {
-      console.log("Bookmarking topic:", topicId);
       // TODO: Implement actual bookmark functionality with API call
     } catch (error) {
-      console.error("Error bookmarking topic:", error);
+      // Handle error silently
     }
   };
 
@@ -297,11 +292,9 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
 
   const getCategoryDisplayName = (categoryName: string | undefined) => {
     if (!categoryName) {
-      console.log("Category name is undefined/null");
       return "Uncategorized";
     }
 
-    console.log(`Category name: ${categoryName}`);
     return categoryName;
   };
 

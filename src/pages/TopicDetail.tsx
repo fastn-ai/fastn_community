@@ -346,10 +346,11 @@ const TopicDetail = () => {
           // Load replies for this topic
           try {
             const { ApiService } = await import("@/services/api");
-            const topicReplies = await ApiService.getRepliesByTopicId(id || "");
+            // Convert topic ID to number if it's a string
+            const topicId = id ? (isNaN(Number(id)) ? id : Number(id)) : "";
+            const topicReplies = await ApiService.getRepliesByTopicId(topicId.toString());
             setReplies(topicReplies);
           } catch (replyError) {
-            console.warn("Failed to load replies:", replyError);
             setReplies([]);
           }
         } else {
@@ -623,9 +624,6 @@ const TopicDetail = () => {
             : reply
         )
       );
-
-      // Navigate to community page after successful edit
-      navigate("/");
     } catch (error) {
       if (error instanceof Error) {
         setError(`Failed to edit reply: ${error.message}`);

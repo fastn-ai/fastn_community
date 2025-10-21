@@ -1,7 +1,7 @@
 // Mock API Service for fastn community platform
 // This is a frontend-only implementation with mock data
 
-import { INSERT_USER_API_URL, FASTN_SPACE_ID, FASTN_API_KEY, CUSTOM_AUTH_KEY, CUSTOM_AUTH_TOKEN_KEY, TENANT_ID_KEY, CRUD_CATEGORIES_API_URL, CRUD_TAGS_API_URL, CRUD_TOPICS_API_URL, GET_TOPIC_BY_USER_API_URL, INSERT_TOPIC_TAGS_API_URL, INSERT_TOPICS_API_URL, GET_TOPICS_API_URL, CRUD_REPLIES_API_URL } from "@/constants";
+import { INSERT_USER_API_URL, FASTN_SPACE_ID, FASTN_API_KEY, CUSTOM_AUTH_KEY, CUSTOM_AUTH_TOKEN_KEY, TENANT_ID_KEY, CRUD_CATEGORIES_API_URL, CRUD_TAGS_API_URL, CRUD_TOPICS_API_URL, GET_TOPIC_BY_USER_API_URL, INSERT_TOPIC_TAGS_API_URL, INSERT_TOPICS_API_URL, GET_TOPICS_API_URL, CRUD_REPLIES_API_URL, UPDATE_REPLY_API_URL } from "@/constants";
 import { getCookie } from "@/routes/login/oauth";
 import { generateConsistentColor, PREDEFINED_COLORS } from "@/lib/utils";
 
@@ -210,6 +210,7 @@ export interface InsertTopicTagsPayload {
 export interface CrudRepliesPayload {
   action: "createReply" | "getAllReplies" | "getReplies" | "updateReply" | "deleteReply";
   data?: {
+    id?: string | number;
     topic_id?: string | number;
     author_id?: string;
     parent_reply_id?: string | number;
@@ -221,7 +222,25 @@ export interface CrudRepliesPayload {
 // Mock data storage
 let mockCategories: Category[] = [];
 let mockUsers: User[] = [];
-let mockReplies: Reply[] = [];
+let mockReplies: Reply[] = [
+  {
+    id: 'reply_1',
+    topic_id: '1',
+    author_id: 'user_1',
+    author_username: 'automation@fastn.ai',
+    author_avatar: '',
+    content: 'hj',
+    tutorial_id: '',
+    parent_reply_id: '',
+    is_accepted: false,
+    is_helpful: false,
+    like_count: 0,
+    dislike_count: 0,
+    reply_count: 0,
+    created_at: '2025-10-21T00:00:00Z',
+    updated_at: '2025-10-21T00:00:00Z',
+  }
+];
 let mockTags: Tag[] = [];
 
 // Initialize mock data
@@ -775,13 +794,23 @@ export class ApiService {
     }
   }
 
+  // Helper function to resolve author names from author_ids
+  private static async resolveAuthorNames(replies: any[], authToken: string): Promise<any[]> {
+    // Since the API now provides author_name directly, we don't need to make additional API calls
+    // Just return the replies as they are since author_username is already set from author_name
+    return replies;
+  }
+
   // Get replies for a specific topic
   static async getRepliesByTopicId(topicId: string): Promise<Reply[]> {
     try {
+      console.log("getRepliesByTopicId called with topicId:", topicId);
       // Try to get auth token from user manager
       const { getUser } = await import("@/services/users/user-manager");
       const user = getUser();
       const authToken = user?.access_token || "";
+      
+      console.log("Auth token available:", !!authToken);
       
       const payload: CrudRepliesPayload = {
         action: "getReplies",
@@ -789,18 +818,25 @@ export class ApiService {
           topic_id: topicId,
         }
       };
+      
+      console.log("Payload:", payload);
 
       if (!authToken) {
         // Try with API key instead of falling back to mock data
         try {
           const response = await crudReplies(payload, "", FASTN_API_KEY);
+          console.log("API response:", response);
           
-          if (response && response.data && Array.isArray(response.data)) {
-            return response.data.map((reply: any) => ({
+          // Check if response is an array directly
+          if (response && Array.isArray(response)) {
+            console.log("Processing API response as array:", response);
+            console.log("First reply fields:", response[0] ? Object.keys(response[0]) : 'No replies');
+            
+            const processedReplies = response.map((reply: any) => ({
               id: reply.id?.toString() || `reply_${Date.now()}`,
               topic_id: reply.topic_id?.toString() || topicId,
               author_id: reply.author_id || '',
-              author_username: reply.author_username || 'anonymous',
+              author_username: reply.author_name || reply.author_username || reply.author_id?.split('-')[0] || 'anonymous',
               author_avatar: reply.author_avatar || '',
               content: reply.content || '',
               tutorial_id: reply.tutorial_id || '',
@@ -813,25 +849,63 @@ export class ApiService {
               created_at: reply.created_at || new Date().toISOString(),
               updated_at: reply.updated_at || new Date().toISOString(),
             }));
+            
+            // Resolve author names
+            return await this.resolveAuthorNames(processedReplies, "");
+          }
+          
+          // Check if response has data property
+          if (response && response.data && Array.isArray(response.data)) {
+            console.log("Processing API response data:", response.data);
+            
+            const processedReplies = response.data.map((reply: any) => ({
+              id: reply.id?.toString() || `reply_${Date.now()}`,
+              topic_id: reply.topic_id?.toString() || topicId,
+              author_id: reply.author_id || '',
+              author_username: reply.author_name || reply.author_username || reply.author_id?.split('-')[0] || 'anonymous',
+              author_avatar: reply.author_avatar || '',
+              content: reply.content || '',
+              tutorial_id: reply.tutorial_id || '',
+              parent_reply_id: reply.parent_reply_id?.toString() || '',
+              is_accepted: reply.is_accepted || false,
+              is_helpful: reply.is_helpful || false,
+              like_count: reply.like_count || 0,
+              dislike_count: reply.dislike_count || 0,
+              reply_count: reply.reply_count || 0,
+              created_at: reply.created_at || new Date().toISOString(),
+              updated_at: reply.updated_at || new Date().toISOString(),
+            }));
+            
+            // Resolve author names
+            return await this.resolveAuthorNames(processedReplies, "");
           }
         } catch (error) {
           console.warn("Failed to fetch replies with API key:", error);
         }
         
         // Fallback to mock data
+        console.log("Falling back to mock data for topicId:", topicId);
+        console.log("Available mock replies:", mockReplies);
+        const filteredReplies = [...mockReplies].filter(reply => reply.topic_id === topicId);
+        console.log("Filtered mock replies:", filteredReplies);
         return new Promise((resolve) => { 
-          setTimeout(() => resolve([...mockReplies].filter(reply => reply.topic_id === topicId)), 100); 
+          setTimeout(() => resolve(filteredReplies), 100); 
         });
       }
 
       const response = await crudReplies(payload, authToken);
+      console.log("Authenticated API response:", response);
       
-      if (response && response.data && Array.isArray(response.data)) {
-        return response.data.map((reply: any) => ({
+      // Check if response is an array directly
+      if (response && Array.isArray(response)) {
+        console.log("Processing authenticated API response as array:", response);
+        console.log("First reply fields:", response[0] ? Object.keys(response[0]) : 'No replies');
+        
+        const processedReplies = response.map((reply: any) => ({
           id: reply.id?.toString() || `reply_${Date.now()}`,
           topic_id: reply.topic_id?.toString() || topicId,
           author_id: reply.author_id || '',
-          author_username: reply.author_username || 'anonymous',
+          author_username: reply.author_name || reply.author_username || reply.author_id?.split('-')[0] || 'anonymous',
           author_avatar: reply.author_avatar || '',
           content: reply.content || '',
           tutorial_id: reply.tutorial_id || '',
@@ -844,16 +918,55 @@ export class ApiService {
           created_at: reply.created_at || new Date().toISOString(),
           updated_at: reply.updated_at || new Date().toISOString(),
         }));
+        
+        // Resolve author names
+        return await this.resolveAuthorNames(processedReplies, authToken);
       }
       
+      // Check if response has data property
+      if (response && response.data && Array.isArray(response.data)) {
+        console.log("Processing authenticated API response data:", response.data);
+        
+        const processedReplies = response.data.map((reply: any) => ({
+          id: reply.id?.toString() || `reply_${Date.now()}`,
+          topic_id: reply.topic_id?.toString() || topicId,
+          author_id: reply.author_id || '',
+          author_username: reply.author_name || reply.author_username || reply.author_id?.split('-')[0] || 'anonymous',
+          author_avatar: reply.author_avatar || '',
+          content: reply.content || '',
+          tutorial_id: reply.tutorial_id || '',
+          parent_reply_id: reply.parent_reply_id?.toString() || '',
+          is_accepted: reply.is_accepted || false,
+          is_helpful: reply.is_helpful || false,
+          like_count: reply.like_count || 0,
+          dislike_count: reply.dislike_count || 0,
+          reply_count: reply.reply_count || 0,
+          created_at: reply.created_at || new Date().toISOString(),
+          updated_at: reply.updated_at || new Date().toISOString(),
+        }));
+        
+        // Resolve author names
+        return await this.resolveAuthorNames(processedReplies, authToken);
+      }
+      
+      console.log("API response structure not recognized:", response);
+      
       // Fallback to mock data
+      console.log("Falling back to mock data (authenticated) for topicId:", topicId);
+      console.log("Available mock replies:", mockReplies);
+      const filteredReplies = [...mockReplies].filter(reply => reply.topic_id === topicId);
+      console.log("Filtered mock replies:", filteredReplies);
       return new Promise((resolve) => { 
-        setTimeout(() => resolve([...mockReplies].filter(reply => reply.topic_id === topicId)), 100); 
+        setTimeout(() => resolve(filteredReplies), 100); 
       });
     } catch (error) {
       console.warn("Failed to fetch replies for topic:", error);
+      console.log("Falling back to mock data (error) for topicId:", topicId);
+      console.log("Available mock replies:", mockReplies);
+      const filteredReplies = [...mockReplies].filter(reply => reply.topic_id === topicId);
+      console.log("Filtered mock replies:", filteredReplies);
       return new Promise((resolve) => { 
-        setTimeout(() => resolve([...mockReplies].filter(reply => reply.topic_id === topicId)), 100); 
+        setTimeout(() => resolve(filteredReplies), 100); 
       });
     }
   }
@@ -1251,14 +1364,110 @@ export class ApiService {
 
   // Edit reply
   static async editReply(replyData: { id: string; content: string }): Promise<Reply> {
-    return new Promise((resolve) => {
-      const reply = mockReplies.find(r => r.id === replyData.id);
-      if (reply) {
-        reply.content = replyData.content;
-        reply.updated_at = new Date().toISOString();
+    console.log("ApiService.editReply called with:", replyData); // Debug log
+    try {
+      // Try to get auth token from user manager
+      const { getUser } = await import("@/services/users/user-manager");
+      const user = getUser();
+      const authToken = user?.access_token || "";
+      
+      console.log("Auth token available:", !!authToken); // Debug log
+      
+      const payload: CrudRepliesPayload = {
+        action: "updateReply",
+        data: {
+          id: replyData.id,
+          content: replyData.content,
+        }
+      };
+
+      if (!authToken) {
+        console.log("No auth token, trying with API key"); // Debug log
+        // Try with API key instead of falling back to mock data
+        const response = await updateReply(payload, "", FASTN_API_KEY);
+        
+        if (response && response.data) {
+          const reply = response.data;
+          return {
+            id: reply.id?.toString() || replyData.id,
+            topic_id: reply.topic_id?.toString() || '',
+            author_id: reply.author_id || '',
+            author_username: reply.author_username || 'anonymous',
+            author_avatar: reply.author_avatar || '',
+            content: reply.content || replyData.content,
+            tutorial_id: reply.tutorial_id || '',
+            parent_reply_id: reply.parent_reply_id?.toString() || '',
+            is_accepted: reply.is_accepted || false,
+            is_helpful: reply.is_helpful || false,
+            like_count: reply.like_count || 0,
+            dislike_count: reply.dislike_count || 0,
+            reply_count: reply.reply_count || 0,
+            created_at: reply.created_at || new Date().toISOString(),
+            updated_at: reply.updated_at || new Date().toISOString(),
+          };
+        }
+        
+        // Fallback to mock data
+        return new Promise((resolve) => { 
+          setTimeout(() => {
+            const reply = mockReplies.find(r => r.id === replyData.id);
+            if (reply) {
+              reply.content = replyData.content;
+              reply.updated_at = new Date().toISOString();
+            }
+            resolve(reply!);
+          }, 100); 
+        });
       }
-      setTimeout(() => resolve(reply!), 100);
-    });
+
+      const response = await updateReply(payload, authToken);
+      
+      if (response && response.data) {
+        const reply = response.data;
+        return {
+          id: reply.id?.toString() || replyData.id,
+          topic_id: reply.topic_id?.toString() || '',
+          author_id: reply.author_id || '',
+          author_username: reply.author_username || 'anonymous',
+          author_avatar: reply.author_avatar || '',
+          content: reply.content || replyData.content,
+          tutorial_id: reply.tutorial_id || '',
+          parent_reply_id: reply.parent_reply_id?.toString() || '',
+          is_accepted: reply.is_accepted || false,
+          is_helpful: reply.is_helpful || false,
+          like_count: reply.like_count || 0,
+          dislike_count: reply.dislike_count || 0,
+          reply_count: reply.reply_count || 0,
+          created_at: reply.created_at || new Date().toISOString(),
+          updated_at: reply.updated_at || new Date().toISOString(),
+        };
+      }
+      
+      // Fallback to mock data
+      return new Promise((resolve) => { 
+        setTimeout(() => {
+          const reply = mockReplies.find(r => r.id === replyData.id);
+          if (reply) {
+            reply.content = replyData.content;
+            reply.updated_at = new Date().toISOString();
+          }
+          resolve(reply!);
+        }, 100); 
+      });
+    } catch (error) {
+      console.warn("Failed to edit reply:", error);
+      // Fallback to mock data
+      return new Promise((resolve) => { 
+        setTimeout(() => {
+          const reply = mockReplies.find(r => r.id === replyData.id);
+          if (reply) {
+            reply.content = replyData.content;
+            reply.updated_at = new Date().toISOString();
+          }
+          resolve(reply!);
+        }, 100); 
+      });
+    }
   }
 
   // Delete reply
@@ -1323,6 +1532,46 @@ export class ApiService {
       throw error;
     }
   }
+}
+
+export async function getUserById(userId: string, authToken: string) {
+  const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
+  const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
+  const tenantId = getCookie(TENANT_ID_KEY) || "";
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "x-fastn-space-id": FASTN_SPACE_ID,
+    stage: "DRAFT",
+  };
+
+  if (isCustomAuth && customAuthToken) {
+    headers["x-fastn-custom-auth"] = "true";
+    headers["authorization"] = customAuthToken; // raw JWT for custom auth
+    if (tenantId) headers["x-fastn-space-tenantid"] = tenantId;
+  } else {
+    headers["authorization"] = `Bearer ${authToken}`;
+  }
+
+  const payload = {
+    action: "getUserById",
+    data: {
+      id: userId
+    }
+  };
+
+  const res = await fetch(INSERT_USER_API_URL, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ input: payload }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`getUserById failed: ${res.status} ${res.statusText} - ${text}`);
+  }
+
+  return res.json();
 }
 
 export async function insertUser(payload: InsertUserPayload, authToken: string) {
@@ -1643,6 +1892,53 @@ export async function crudReplies(payload: CrudRepliesPayload, authToken: string
   return result;
 }
 
+export async function updateReply(payload: CrudRepliesPayload, authToken: string, apiKey?: string) {
+  console.log("updateReply function called with payload:", payload); // Debug log
+  
+  const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
+  const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
+  const tenantId = getCookie(TENANT_ID_KEY) || "";
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "x-fastn-space-id": FASTN_SPACE_ID,
+    stage: "DRAFT",
+  };
+
+  if (isCustomAuth && customAuthToken) {
+    headers["x-fastn-custom-auth"] = "true";
+    headers["authorization"] = customAuthToken; // raw JWT for custom auth
+    if (tenantId) headers["x-fastn-space-tenantid"] = tenantId;
+  } else if (apiKey) {
+    headers["x-fastn-api-key"] = apiKey;
+    headers["authorization"] = authToken; // Include auth token even with API key
+  } else {
+    headers["authorization"] = `Bearer ${authToken}`;
+  }
+
+  console.log("Making API call to:", UPDATE_REPLY_API_URL); // Debug log
+  console.log("With headers:", headers); // Debug log
+  console.log("With body:", JSON.stringify({ input: payload })); // Debug log
+
+  const res = await fetch(UPDATE_REPLY_API_URL, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ input: payload }),
+  });
+
+  console.log("API response status:", res.status); // Debug log
+
+  if (!res.ok) {
+    const text = await res.text();
+    console.error("API call failed:", res.status, res.statusText, text); // Debug log
+    throw new Error(`updateReply failed: ${res.status} ${res.statusText} - ${text}`);
+  }
+
+  const result = await res.json();
+  console.log("API response data:", result); // Debug log
+  return result;
+}
+
 // Hook for using API in React components
 export const useApi = () => {
   return {
@@ -1676,5 +1972,6 @@ export const useApi = () => {
     getAllTopicsApi: getAllTopics,
     // Replies API functions
     crudReplies,
+    updateReply,
   };
 };
