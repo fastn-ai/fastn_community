@@ -40,11 +40,13 @@ import Header from "@/components/community/Header";
 import Sidebar from "@/components/community/Sidebar";
 import { useApi, type Category } from "@/services/api";
 // Removed auth context import
+import { useToast } from "@/hooks/use-toast";
 
 const UnifiedForm = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { createTopic, getAllCategories } = useApi();
+  const { toast } = useToast();
   // Mock user data since we removed authentication
   const user = { id: 'user_1', username: 'admin', email: 'admin@fastn.ai' };
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -55,6 +57,15 @@ const UnifiedForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const hasSubmitted = useRef(false);
+  
+  // Validation state
+  const [validationErrors, setValidationErrors] = useState<{
+    title?: string
+    description?: string
+    category?: string
+    content?: string
+    tags?: string
+  }>({})
   
   // Categories state
   const [categories, setCategories] = useState<Category[]>([]);
@@ -142,6 +153,49 @@ const UnifiedForm = () => {
     "best-practices",
   ];
 
+  // Validation functions
+  const validateField = (field: string, value: string): string | undefined => {
+    switch (field) {
+      case 'title':
+        if (!value.trim()) return 'Title is required'
+        if (value.trim().length < 5) return 'Title must be at least 5 characters'
+        if (value.trim().length > 200) return 'Title must be less than 200 characters'
+        return undefined
+      case 'description':
+        if (!value.trim()) return 'Description is required'
+        if (value.trim().length < 10) return 'Description must be at least 10 characters'
+        if (value.trim().length > 500) return 'Description must be less than 500 characters'
+        return undefined
+      case 'category':
+        if (!value.trim()) return 'Category is required'
+        return undefined
+      case 'content':
+        if (!value.trim()) return 'Content is required'
+        if (value.trim().length < 10) return 'Content must be at least 10 characters'
+        if (value.trim().length > 10000) return 'Content must be less than 10,000 characters'
+        return undefined
+      case 'tags':
+        if (tags.length === 0) return 'At least one tag is required'
+        if (tags.length > 3) return 'Maximum 3 tags allowed'
+        return undefined
+      default:
+        return undefined
+    }
+  }
+
+  const validateForm = (): boolean => {
+    const errors: typeof validationErrors = {}
+    
+    errors.title = validateField('title', formData.title)
+    errors.description = validateField('description', formData.description)
+    errors.category = validateField('category', formData.category)
+    errors.content = validateField('content', formData.content)
+    errors.tags = validateField('tags', '') // Pass empty string since we check tags array
+    
+    setValidationErrors(errors)
+    return !Object.values(errors).some(error => error !== undefined)
+  }
+
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
     // Reset form data when category changes
@@ -189,6 +243,10 @@ const UnifiedForm = () => {
         tags: [...prev.tags, newTag],
       }));
       setCustomTag("");
+      // Clear validation error when tags change
+      if (validationErrors.tags) {
+        setValidationErrors(prev => ({ ...prev, tags: undefined }))
+      }
     }
   };
 
@@ -198,6 +256,10 @@ const UnifiedForm = () => {
       ...prev,
       tags: prev.tags.filter((tag) => tag !== tagToRemove),
     }));
+    // Clear validation error when tags change
+    if (validationErrors.tags) {
+      setValidationErrors(prev => ({ ...prev, tags: undefined }))
+    }
   };
 
   const addPredefinedTag = (tag: string) => {
@@ -207,6 +269,10 @@ const UnifiedForm = () => {
         ...prev,
         tags: [...prev.tags, tag],
       }));
+      // Clear validation error when tags change
+      if (validationErrors.tags) {
+        setValidationErrors(prev => ({ ...prev, tags: undefined }))
+      }
     }
   };
 
@@ -219,6 +285,12 @@ const UnifiedForm = () => {
         "Form submission already in progress, ignoring duplicate submission"
       );
       return;
+    }
+
+    // Validate form before submission
+    if (!validateForm()) {
+      setError('Please fix the validation errors below')
+      return
     }
 
     hasSubmitted.current = true;
@@ -258,6 +330,13 @@ const UnifiedForm = () => {
         console.log("Tags being sent:", formData.tags);
         const createdTopic = await createTopic(topicData);
         console.log("Topic created successfully:", createdTopic);
+
+        // Inform user topic is under review
+        toast({
+          title: "Topic submitted",
+          description: "Got it! Our team is reviewing your topic before it goes live",
+          variant: "success",
+        });
 
         // Navigate to the community page after successful creation
         navigate("/");
@@ -404,14 +483,28 @@ const UnifiedForm = () => {
                                 : "Enter tutorial title..."
                             }
                             value={formData.title}
-                            onChange={(e) =>
+                            onChange={(e) => {
                               setFormData((prev) => ({
                                 ...prev,
                                 title: e.target.value,
                               }))
-                            }
+                              // Clear validation error on change
+                              if (validationErrors.title) {
+                                setValidationErrors(prev => ({ ...prev, title: undefined }))
+                              }
+                            }}
+                            onBlur={() => {
+                              const error = validateField('title', formData.title)
+                              setValidationErrors(prev => ({ ...prev, title: error }))
+                            }}
+                            className={`border-border focus:border-primary ${
+                              validationErrors.title ? 'border-red-500 focus:border-red-500' : ''
+                            }`}
                             required
                           />
+                          {validationErrors.title && (
+                            <p className="text-sm text-red-600 dark:text-red-400 mt-1">{validationErrors.title}</p>
+                          )}
                         </div>
 
                         <div>
@@ -424,29 +517,49 @@ const UnifiedForm = () => {
                                 : "Brief description of your tutorial..."
                             }
                             value={formData.description}
-                            onChange={(e) =>
+                            onChange={(e) => {
                               setFormData((prev) => ({
                                 ...prev,
                                 description: e.target.value,
                               }))
-                            }
+                              // Clear validation error on change
+                              if (validationErrors.description) {
+                                setValidationErrors(prev => ({ ...prev, description: undefined }))
+                              }
+                            }}
+                            onBlur={() => {
+                              const error = validateField('description', formData.description)
+                              setValidationErrors(prev => ({ ...prev, description: error }))
+                            }}
                             rows={3}
+                            className={`border-border focus:border-primary ${
+                              validationErrors.description ? 'border-red-500 focus:border-red-500' : ''
+                            }`}
                             required
                           />
+                          {validationErrors.description && (
+                            <p className="text-sm text-red-600 dark:text-red-400 mt-1">{validationErrors.description}</p>
+                          )}
                         </div>
 
                         <div>
                           <Label htmlFor="category">Category *</Label>
                           <Select
                             value={formData.category}
-                            onValueChange={(value) =>
+                            onValueChange={(value) => {
                               setFormData((prev) => ({
                                 ...prev,
                                 category: value,
                               }))
-                            }
+                              // Clear validation error on change
+                              if (validationErrors.category) {
+                                setValidationErrors(prev => ({ ...prev, category: undefined }))
+                              }
+                            }}
                           >
-                            <SelectTrigger>
+                            <SelectTrigger className={`border-border focus:border-primary ${
+                              validationErrors.category ? 'border-red-500 focus:border-red-500' : ''
+                            }`}>
                               <SelectValue placeholder="Select category" />
                             </SelectTrigger>
                             <SelectContent>
@@ -469,6 +582,9 @@ const UnifiedForm = () => {
                               )}
                             </SelectContent>
                           </Select>
+                          {validationErrors.category && (
+                            <p className="text-sm text-red-600 dark:text-red-400 mt-1">{validationErrors.category}</p>
+                          )}
                         </div>
 
                         {isTutorial && (
@@ -570,15 +686,29 @@ const UnifiedForm = () => {
                                 : "Write your tutorial content here..."
                             }
                             value={formData.content}
-                            onChange={(e) =>
+                            onChange={(e) => {
                               setFormData((prev) => ({
                                 ...prev,
                                 content: e.target.value,
                               }))
-                            }
+                              // Clear validation error on change
+                              if (validationErrors.content) {
+                                setValidationErrors(prev => ({ ...prev, content: undefined }))
+                              }
+                            }}
+                            onBlur={() => {
+                              const error = validateField('content', formData.content)
+                              setValidationErrors(prev => ({ ...prev, content: error }))
+                            }}
                             rows={12}
+                            className={`border-border focus:border-primary ${
+                              validationErrors.content ? 'border-red-500 focus:border-red-500' : ''
+                            }`}
                             required
                           />
+                          {validationErrors.content && (
+                            <p className="text-sm text-red-600 dark:text-red-400 mt-1">{validationErrors.content}</p>
+                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -700,11 +830,9 @@ const UnifiedForm = () => {
                           </div>
                         </div>
 
-                        {tags.length > 0 && (
-                          <div className="space-y-2">
-                            <h4 className="text-sm font-medium">
-                              Selected Tags:
-                            </h4>
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-medium">Selected Tags: *</h4>
+                          {tags.length > 0 ? (
                             <div className="flex flex-wrap gap-1">
                               {tags.map((tag) => (
                                 <Badge
@@ -717,8 +845,13 @@ const UnifiedForm = () => {
                                 </Badge>
                               ))}
                             </div>
-                          </div>
-                        )}
+                          ) : (
+                            <p className="text-sm text-muted-foreground">Select at least one tag</p>
+                          )}
+                          {validationErrors.tags && (
+                            <p className="text-sm text-red-600 dark:text-red-400">{validationErrors.tags}</p>
+                          )}
+                        </div>
                       </CardContent>
                     </Card>
 
@@ -777,7 +910,7 @@ const UnifiedForm = () => {
                           type="submit"
                           className="w-full"
                           size="lg"
-                          disabled={isSubmitting}
+                          disabled={isSubmitting || Object.values(validationErrors).some(error => error !== undefined)}
                         >
                           {isSubmitting
                             ? "Creating..."

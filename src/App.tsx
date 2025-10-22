@@ -12,7 +12,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Categories from "./pages/Categories";
 import Top from "./pages/Top";
-import NewTopic from "./pages/NewTopic";
+
 import TopicDetail from "./pages/TopicDetail";
 import Tutorials from "./pages/Tutorials";
 import Announcements from "./pages/Announcements";
@@ -44,7 +44,7 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/categories" element={<Categories />} />
                 <Route path="/top" element={<Top />} />
-                <Route path="/new-topic" element={<NewTopic />} />
+      
                 <Route path="/topic/:id" element={<TopicDetail />} />
                 <Route path="/tutorials" element={<Tutorials />} />
                 <Route path="/announcements" element={<Announcements />} />

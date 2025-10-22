@@ -472,7 +472,7 @@ const UserTopics = () => {
                                   </div>
                                 </TableCell>
                                 <TableCell>
-                                  <Badge variant="outline">{topic.category_name}</Badge>
+                                  <Badge variant="outline">{topic.category_name} </Badge>
                                 </TableCell>
                                 <TableCell>{getStatusBadge(topic.status || 'pending')}</TableCell>
                                 <TableCell>{topic.view_count}</TableCell>
