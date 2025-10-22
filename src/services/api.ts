@@ -20,7 +20,7 @@ export interface Topic {
   category_color?: string;
   category_id?: string;
   tag_id?: string;
-  status?: 'pending' | 'approved' | 'rejected';
+  status?: 'pending' | 'approved' | 'rejected' | 'published';
   is_featured?: boolean;
   is_hot?: boolean;
   is_new?: boolean;
@@ -1059,7 +1059,7 @@ export class ApiService {
           title: topicData.title,
           description: topicData.description,
           content: topicData.content,
-          status: "published",
+          status: "pending",
           view_count: 0,
           reply_count: 0,
           like_count: 0,
@@ -1090,7 +1090,7 @@ export class ApiService {
           category_name: topicData.category_name || '',
           category_color: topicData.category_color || '#3B82F6',
           category_id: topic.category_id?.toString() || '',
-          status: topic.status || 'published',
+          status: topic.status || 'pending',
           is_featured: false,
           is_hot: false,
           is_new: true,

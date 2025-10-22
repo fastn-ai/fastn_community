@@ -201,7 +201,10 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
       // Tag matching logic
     }
     
-    return matchesSearch && matchesFilter && matchesTag;
+    // Only show published topics
+    const isPublished = topic.status === 'published' || !topic.status;
+    
+    return matchesSearch && matchesFilter && matchesTag && isPublished;
   });
 
   // Calculate total pages for pagination
