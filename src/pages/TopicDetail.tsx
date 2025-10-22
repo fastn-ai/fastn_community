@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Menu, MoreVertical, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/community/Header";
@@ -51,6 +51,323 @@ interface TopicDetailResponse {
   };
 }
 
+// Reply Item Component - Extracted outside to prevent re-creation on every render
+interface ReplyItemProps {
+  reply: ReplyType & { children: ReplyType[] };
+  depth?: number;
+  user: any;
+  isAuthenticated: boolean;
+  editingReplyId: string | null;
+  editingContent: string;
+  setEditingContent: (content: string) => void;
+  submittingEdit: boolean;
+  deletingReplyId: string | null;
+  replyingToId: string | null;
+  subReplyContent: string;
+  setSubReplyContent: (content: string) => void;
+  submittingSubReply: boolean;
+  handleEditReply: (reply: ReplyType) => void;
+  handleSubmitEdit: () => void;
+  handleCancelEdit: () => void;
+  handleDeleteReply: (replyId: string) => void;
+  handleReplyToReply: (replyId: string) => void;
+  handleSubmitSubReply: () => void;
+  handleCancelSubReply: () => void;
+}
+
+// Forward declare the comparison function
+const arePropsEqual = (prevProps: ReplyItemProps, nextProps: ReplyItemProps) => {
+  // Always re-render if the reply itself changed
+  if (prevProps.reply.id !== nextProps.reply.id) return false;
+  if (prevProps.reply.content !== nextProps.reply.content) return false;
+  if (prevProps.reply.like_count !== nextProps.reply.like_count) return false;
+  
+  // Re-render if this reply is being edited
+  if (prevProps.editingReplyId === prevProps.reply.id || nextProps.editingReplyId === nextProps.reply.id) {
+    if (prevProps.editingReplyId !== nextProps.editingReplyId) return false;
+    if (prevProps.editingContent !== nextProps.editingContent) return false;
+  }
+  
+  // Re-render if this reply is being deleted
+  if (prevProps.deletingReplyId === prevProps.reply.id || nextProps.deletingReplyId === nextProps.reply.id) {
+    if (prevProps.deletingReplyId !== nextProps.deletingReplyId) return false;
+  }
+  
+  // Re-render if someone is replying to this reply
+  if (prevProps.replyingToId === prevProps.reply.id || nextProps.replyingToId === nextProps.reply.id) {
+    if (prevProps.replyingToId !== nextProps.replyingToId) return false;
+    if (prevProps.subReplyContent !== nextProps.subReplyContent) return false;
+    if (prevProps.submittingSubReply !== nextProps.submittingSubReply) return false;
+  }
+  
+  // Re-render if children changed
+  if (prevProps.reply.children.length !== nextProps.reply.children.length) return false;
+  
+  // Don't re-render otherwise
+  return true;
+};
+
+const ReplyItem = React.memo(({ 
+  reply, 
+  depth = 0,
+  user,
+  isAuthenticated,
+  editingReplyId,
+  editingContent,
+  setEditingContent,
+  submittingEdit,
+  deletingReplyId,
+  replyingToId,
+  subReplyContent,
+  setSubReplyContent,
+  submittingSubReply,
+  handleEditReply,
+  handleSubmitEdit,
+  handleCancelEdit,
+  handleDeleteReply,
+  handleReplyToReply,
+  handleSubmitSubReply,
+  handleCancelSubReply,
+}: ReplyItemProps) => {
+  const isSubReply = depth > 0;
+  
+  return (
+    <div className={isSubReply ? "ml-6 border-l-2 border-border pl-4" : ""}>
+      <Card
+        className={
+          reply.is_accepted
+            ? "border-green-500/50 bg-green-500/5"
+            : ""
+        }
+        style={{
+          opacity: deletingReplyId === reply.id ? 0.5 : 1,
+          pointerEvents:
+            deletingReplyId === reply.id ? "none" : "auto",
+        }}
+      >
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Avatar>
+                <AvatarFallback className="bg-gradient-primary text-white">
+                  {reply.author_username
+                    ?.charAt(0)
+                    ?.toUpperCase() || "U"}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <div className="flex items-center space-x-2">
+                  <span className="font-semibold text-foreground">
+                    {reply.author_username} 
+                  </span>
+                  {reply.is_accepted && (
+                    <Badge
+                      variant="secondary"
+                      className="text-green-400 border-green-400"
+                    >
+                      ✓ Answer
+                    </Badge>
+                  )}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {new Date(reply.created_at).toLocaleDateString()}
+                </div>
+              </div>
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={deletingReplyId === reply.id}
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => handleEditReply(reply)}
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit
+                </DropdownMenuItem>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <DropdownMenuItem
+                      className="text-red-600"
+                      onSelect={(e) => e.preventDefault()}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        Delete Reply
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to delete this reply?
+                        This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => handleDeleteReply(reply.id)}
+                        className="bg-red-600 hover:bg-red-700"
+                        disabled={deletingReplyId === reply.id}
+                      >
+                        {deletingReplyId === reply.id
+                          ? "Deleting..."
+                          : "Delete"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {editingReplyId === reply.id ? (
+            <div className="space-y-4">
+              <Textarea
+                value={editingContent}
+                onChange={(e) => setEditingContent(e.target.value)}
+                className="min-h-[100px]"
+                placeholder="Edit your reply..."
+              />
+              <div className="flex space-x-2">
+                <Button
+                  size="sm"
+                  onClick={handleSubmitEdit}
+                  disabled={
+                    submittingEdit || !editingContent.trim()
+                  }
+                  className="bg-gradient-primary"
+                >
+                  {submittingEdit ? "Saving..." : "Save"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleCancelEdit}
+                  disabled={submittingEdit}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <p className="text-foreground mb-4">
+                {reply.content}
+              </p>
+              <div className="flex items-center space-x-4">
+                <Button variant="ghost" size="sm">
+                  <ThumbsUp className="w-4 h-4 mr-2" />
+                  {reply.like_count}
+                </Button>
+                {isAuthenticated && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => handleReplyToReply(reply.id)}
+                  >
+                    <Reply className="w-4 h-4 mr-2" />
+                    Reply 
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
+          
+          {/* Sub-reply form */}
+          {replyingToId === reply.id && (
+            <div className="mt-4 p-4 border border-border rounded-lg bg-muted/30">
+              <div className="flex items-center space-x-3 mb-3">
+                <Avatar>
+                  <AvatarFallback className="bg-gradient-primary text-white">
+                    {(user?.profile?.preferred_username || user?.profile?.email?.split("@")[0] || "U").charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground">
+                    Reply to {reply.author_username}
+                  </h4>
+                  <p className="text-xs text-muted-foreground">
+                    Replying as {user?.profile?.preferred_username || user?.profile?.email?.split("@")[0] || "User"}
+                  </p>
+                </div>
+              </div>
+              <Textarea
+                placeholder="Write your reply here..."
+                className="min-h-[80px] mb-3"
+                value={subReplyContent}
+                onChange={(e) => setSubReplyContent(e.target.value)}
+                disabled={submittingSubReply}
+                autoFocus
+              />
+              <div className="flex space-x-2">
+                <Button
+                  size="sm"
+                  className="bg-gradient-primary"
+                  onClick={handleSubmitSubReply}
+                  disabled={submittingSubReply || !subReplyContent.trim()}
+                >
+                  {submittingSubReply ? "Posting..." : "Post Reply"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleCancelSubReply}
+                  disabled={submittingSubReply}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
+      {/* Render children replies */}
+      {reply.children.length > 0 && (
+        <div className="mt-4 space-y-4">
+          {reply.children.map((child) => (
+            <ReplyItem 
+              key={child.id} 
+              reply={child as ReplyType & { children: ReplyType[] }} 
+              depth={depth + 1}
+              user={user}
+              isAuthenticated={isAuthenticated}
+              editingReplyId={editingReplyId}
+              editingContent={editingContent}
+              setEditingContent={setEditingContent}
+              submittingEdit={submittingEdit}
+              deletingReplyId={deletingReplyId}
+              replyingToId={replyingToId}
+              subReplyContent={subReplyContent}
+              setSubReplyContent={setSubReplyContent}
+              submittingSubReply={submittingSubReply}
+              handleEditReply={handleEditReply}
+              handleSubmitEdit={handleSubmitEdit}
+              handleCancelEdit={handleCancelEdit}
+              handleDeleteReply={handleDeleteReply}
+              handleReplyToReply={handleReplyToReply}
+              handleSubmitSubReply={handleSubmitSubReply}
+              handleCancelSubReply={handleCancelSubReply}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}, arePropsEqual);
+
+ReplyItem.displayName = 'ReplyItem';
+
 const TopicDetail = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [topic, setTopic] = useState<Topic | null>(null);
@@ -89,7 +406,7 @@ const TopicDetail = () => {
   };
 
   // Function to organize replies hierarchically
-  const organizeReplies = (replies: ReplyType[]) => {
+  const organizeReplies = useMemo(() => (replies: ReplyType[]) => {
     const replyMap = new Map<string, ReplyType & { children: ReplyType[] }>();
     const rootReplies: (ReplyType & { children: ReplyType[] })[] = [];
 
@@ -109,223 +426,7 @@ const TopicDetail = () => {
     });
 
     return rootReplies;
-  };
-
-  // Recursive component to render replies with their children
-  const ReplyItem = ({ reply, depth = 0 }: { reply: ReplyType & { children: ReplyType[] }, depth?: number }) => {
-    const isSubReply = depth > 0;
-    
-    return (
-      <div className={isSubReply ? "ml-6 border-l-2 border-border pl-4" : ""}>
-        <Card
-          className={
-            reply.is_accepted
-              ? "border-green-500/50 bg-green-500/5"
-              : ""
-          }
-          style={{
-            opacity: deletingReplyId === reply.id ? 0.5 : 1,
-            pointerEvents:
-              deletingReplyId === reply.id ? "none" : "auto",
-          }}
-        >
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <Avatar>
-                  <AvatarFallback className="bg-gradient-primary text-white">
-                    {reply.author_username
-                      ?.charAt(0)
-                      ?.toUpperCase() || "U"}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <div className="flex items-center space-x-2">
-                    <span className="font-semibold text-foreground">
-                      {reply.author_username} 
-                    </span>
-                    {reply.is_accepted && (
-                      <Badge
-                        variant="secondary"
-                        className="text-green-400 border-green-400"
-                      >
-                        ✓ Answer
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {new Date(reply.created_at).toLocaleDateString()}
-                  </div>
-                </div>
-              </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={deletingReplyId === reply.id}
-                  >
-                    <MoreVertical className="w-4 h-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onClick={() => handleEditReply(reply)}
-                  >
-                    <Edit className="w-4 h-4 mr-2" />
-                    Edit
-                  </DropdownMenuItem>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <DropdownMenuItem
-                        className="text-red-600"
-                        onSelect={(e) => e.preventDefault()}
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>
-                          Delete Reply
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Are you sure you want to delete this reply?
-                          This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => handleDeleteReply(reply.id)}
-                          className="bg-red-600 hover:bg-red-700"
-                          disabled={deletingReplyId === reply.id}
-                        >
-                          {deletingReplyId === reply.id
-                            ? "Deleting..."
-                            : "Delete"}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {editingReplyId === reply.id ? (
-              <div className="space-y-4">
-                <Textarea
-                  value={editingContent}
-                  onChange={(e) => setEditingContent(e.target.value)}
-                  className="min-h-[100px]"
-                  placeholder="Edit your reply..."
-                />
-                <div className="flex space-x-2">
-                  <Button
-                    size="sm"
-                    onClick={handleSubmitEdit}
-                    disabled={
-                      submittingEdit || !editingContent.trim()
-                    }
-                    className="bg-gradient-primary"
-                  >
-                    {submittingEdit ? "Saving..." : "Save"}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleCancelEdit}
-                    disabled={submittingEdit}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <>
-                <p className="text-foreground mb-4">
-                  {reply.content}
-                </p>
-                <div className="flex items-center space-x-4">
-                  <Button variant="ghost" size="sm">
-                    <ThumbsUp className="w-4 h-4 mr-2" />
-                    {reply.like_count}
-                  </Button>
-                  {isAuthenticated && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => handleReplyToReply(reply.id)}
-                    >
-                      <Reply className="w-4 h-4 mr-2" />
-                      Reply 
-                    </Button>
-                  )}
-                </div>
-              </>
-            )}
-            
-            {/* Sub-reply form */}
-            {replyingToId === reply.id && (
-              <div className="mt-4 p-4 border border-border rounded-lg bg-muted/30">
-                <div className="flex items-center space-x-3 mb-3">
-                  <Avatar>
-                    <AvatarFallback className="bg-gradient-primary text-white">
-                      {(user?.profile?.preferred_username || user?.profile?.email?.split("@")[0] || "U").charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h4 className="text-sm font-semibold text-foreground">
-                      Reply to {reply.author_username}
-                    </h4>
-                    <p className="text-xs text-muted-foreground">
-                      Replying as {user?.profile?.preferred_username || user?.profile?.email?.split("@")[0] || "User"}
-                    </p>
-                  </div>
-                </div>
-                <Textarea
-                  placeholder="Write your reply here..."
-                  className="min-h-[80px] mb-3"
-                  value={subReplyContent}
-                  onChange={(e) => setSubReplyContent(e.target.value)}
-                  disabled={submittingSubReply}
-                />
-                <div className="flex space-x-2">
-                  <Button
-                    size="sm"
-                    className="bg-gradient-primary"
-                    onClick={handleSubmitSubReply}
-                    disabled={submittingSubReply || !subReplyContent.trim()}
-                  >
-                    {submittingSubReply ? "Posting..." : "Post Reply"}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleCancelSubReply}
-                    disabled={submittingSubReply}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-        
-        {/* Render children replies */}
-        {reply.children.length > 0 && (
-          <div className="mt-4 space-y-4">
-            {reply.children.map((child) => (
-              <ReplyItem key={child.id} reply={child as ReplyType & { children: ReplyType[] }} depth={depth + 1} />
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  };
+  }, []);
 
   useEffect(() => {
     const fetchTopic = async () => {
@@ -471,15 +572,15 @@ const TopicDetail = () => {
     await submitReply();
   };
 
-  const handleReplyToReply = (replyId: string) => {
+  const handleReplyToReply = useCallback((replyId: string) => {
     setReplyingToId(replyId);
     setSubReplyContent("");
-  };
+  }, []);
 
-  const handleCancelSubReply = () => {
+  const handleCancelSubReply = useCallback(() => {
     setReplyingToId(null);
     setSubReplyContent("");
-  };
+  }, []);
 
   const handleSubmitSubReply = async () => {
     if (!replyingToId || !subReplyContent.trim() || !id) {
@@ -580,18 +681,18 @@ const TopicDetail = () => {
     }
   };
 
-  const handleEditReply = (reply: ReplyType) => {
+  const handleEditReply = useCallback((reply: ReplyType) => {
     setEditingReplyId(reply.id);
     setEditingContent(reply.content);
     // Store the reply data for editing
     setEditingReplyData(reply);
-  };
+  }, []);
 
-  const handleCancelEdit = () => {
+  const handleCancelEdit = useCallback(() => {
     setEditingReplyId(null);
     setEditingContent("");
     setEditingReplyData(null);
-  };
+  }, []);
 
   const handleSubmitEdit = async () => {
     if (!editingReplyId || !editingContent.trim() || !id) {
@@ -928,7 +1029,28 @@ const TopicDetail = () => {
                 </h2>
 
                 {organizeReplies(replies).map((reply) => (
-                  <ReplyItem key={reply.id} reply={reply} />
+                  <ReplyItem 
+                    key={reply.id} 
+                    reply={reply}
+                    user={user}
+                    isAuthenticated={isAuthenticated}
+                    editingReplyId={editingReplyId}
+                    editingContent={editingContent}
+                    setEditingContent={setEditingContent}
+                    submittingEdit={submittingEdit}
+                    deletingReplyId={deletingReplyId}
+                    replyingToId={replyingToId}
+                    subReplyContent={subReplyContent}
+                    setSubReplyContent={setSubReplyContent}
+                    submittingSubReply={submittingSubReply}
+                    handleEditReply={handleEditReply}
+                    handleSubmitEdit={handleSubmitEdit}
+                    handleCancelEdit={handleCancelEdit}
+                    handleDeleteReply={handleDeleteReply}
+                    handleReplyToReply={handleReplyToReply}
+                    handleSubmitSubReply={handleSubmitSubReply}
+                    handleCancelSubReply={handleCancelSubReply}
+                  />
                 ))}
               </div>
 

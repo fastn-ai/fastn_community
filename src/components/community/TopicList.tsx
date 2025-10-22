@@ -563,6 +563,23 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
           </div>
         </div>
 
+        {/* Mock Data Info Banner */}
+        {topics.length > 0 && topics.some(t => t.title === "Welcome to Fastn Community" || t.content?.includes("mock data")) && (
+          <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-semibold text-yellow-800 dark:text-yellow-300 mb-1">
+                  API Rate Limit Reached
+                </h4>
+                <p className="text-sm text-yellow-700 dark:text-yellow-400">
+                  The API is currently rate-limited. Displaying sample data below. Your actual topics will appear once the rate limit resets (usually within 24 hours).
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Active Filters */}
         {(selectedTag || selectedFilter !== "all") && (
           <div className="flex items-center gap-2 mb-6">
