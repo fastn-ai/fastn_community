@@ -1,7 +1,7 @@
 // Mock API Service for fastn community platform
 // This is a frontend-only implementation with mock data
 
-import { INSERT_USER_API_URL, FASTN_SPACE_ID, FASTN_API_KEY, CUSTOM_AUTH_KEY, CUSTOM_AUTH_TOKEN_KEY, TENANT_ID_KEY, CRUD_CATEGORIES_API_URL, CRUD_TAGS_API_URL, CRUD_TOPICS_API_URL, GET_TOPIC_BY_USER_API_URL, INSERT_TOPIC_TAGS_API_URL, INSERT_TOPICS_API_URL, GET_TOPICS_API_URL, CREATE_REPLY_API_URL, GET_REPLIES_API_URL, UPDATE_REPLY_API_URL, DELETE_REPLY_API_URL } from "@/constants";
+import { INSERT_USER_API_URL, FASTN_SPACE_ID, FASTN_API_KEY, CUSTOM_AUTH_KEY, CUSTOM_AUTH_TOKEN_KEY, TENANT_ID_KEY, CRUD_CATEGORIES_API_URL, CRUD_TAGS_API_URL, CRUD_TOPICS_API_URL, GET_TOPIC_BY_USER_API_URL, INSERT_TOPIC_TAGS_API_URL, INSERT_TOPICS_API_URL, GET_TOPICS_API_URL, CREATE_REPLY_API_URL, GET_REPLIES_API_URL, UPDATE_REPLY_API_URL, DELETE_REPLY_API_URL, GET_USER_BY_ROLE_ID_API_URL } from "@/constants";
 import { getCookie } from "@/routes/login/oauth";
 import { generateConsistentColor, PREDEFINED_COLORS } from "@/lib/utils";
 
@@ -1691,6 +1691,106 @@ export class ApiService {
       return analytics;
     } catch (error) {
       throw error;
+    }
+  }
+
+  // Check if current user has a specific role_id
+  static async checkUserRole(roleId: number): Promise<boolean> {
+    try {
+      const { getUser } = await import("@/services/users/user-manager");
+      const user = getUser();
+      const authToken = user?.access_token || "";
+      
+      if (!authToken) {
+        return false;
+      }
+
+      // Get the current user's ID from the token
+      const userId = user?.profile?.sub;
+      console.log("Checking role for user ID:", userId);
+      console.log("User profile:", user?.profile);
+      
+      if (!userId) {
+        console.error("No user ID found in token");
+        return false;
+      }
+
+      const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
+      const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
+      const tenantId = getCookie(TENANT_ID_KEY) || "";
+
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        "x-fastn-space-id": FASTN_SPACE_ID,
+        stage: "DRAFT",
+      };
+
+      if (isCustomAuth && customAuthToken) {
+        headers["x-fastn-custom-auth"] = "true";
+        headers["authorization"] = customAuthToken;
+        if (tenantId) headers["x-fastn-space-tenantid"] = tenantId;
+      } else {
+        headers["x-fastn-api-key"] = FASTN_API_KEY;
+        headers["authorization"] = authToken;
+      }
+
+      const requestBody = { 
+        input: {
+          data: {
+            id: userId
+          }
+        }
+      };
+      
+     
+      
+      const res = await fetch(GET_USER_BY_ROLE_ID_API_URL, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error(`checkUserRole failed: ${res.status} ${res.statusText}`, errorText);
+        return false;
+      }
+
+      const result = await res.json();
+      
+      
+      // Handle different response formats
+      let rolesArray = null;
+      
+      // Check if response is directly an array: [{ "role_id": 3 }]
+      if (Array.isArray(result)) {
+        rolesArray = result;
+      }
+      // Check if response has a result property: { result: [{ "role_id": 3 }] }
+      else if (result && result.result && Array.isArray(result.result)) {
+        rolesArray = result.result;
+      }
+      // Check if response has data property: { data: [{ "role_id": 3 }] }
+      else if (result && result.data && Array.isArray(result.data)) {
+        rolesArray = result.data;
+      }
+      
+      if (rolesArray) {
+        console.log("Roles array:", rolesArray);
+        const hasRole = rolesArray.some((roleData: any) => {
+          console.log("Checking role:", roleData.role_id, "against expected:", roleId);
+          return roleData.role_id === roleId;
+        });
+        
+       
+        return hasRole;
+      }
+      
+
+      return false;
+    } catch (error) {
+
+      return false;
     }
   }
 }

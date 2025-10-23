@@ -36,3 +36,4 @@ export const CREATE_REPLY_API_URL = import.meta.env.VITE_CREATE_REPLY_API_URL ||
 export const GET_REPLIES_API_URL = import.meta.env.VITE_GET_REPLIES_API_URL || API_URL +"getReplies";
 export const UPDATE_REPLY_API_URL = import.meta.env.VITE_UPDATE_REPLY_API_URL || API_URL +"updateReply";
 export const DELETE_REPLY_API_URL = import.meta.env.VITE_DELETE_REPLY_API_URL || API_URL +"deleteReply";
+export const GET_USER_BY_ROLE_ID_API_URL = import.meta.env.VITE_GET_USER_BY_ROLE_ID_API_URL || API_URL +"getUserbyrole_Id";

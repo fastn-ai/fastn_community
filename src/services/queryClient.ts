@@ -45,11 +45,14 @@ export const queryKeys = {
   topics: ['topics'] as const,
   topic: (id: string) => ['topics', id] as const,
   topicsByCategory: (categoryId: string) => ['topics', 'category', categoryId] as const,
+  topicsByUser: (username: string) => ['topics', 'user', username] as const,
   replies: (topicId: string) => ['replies', topicId] as const,
   users: ['users'] as const,
   user: (id: string) => ['users', id] as const,
+  userRole: (userId: string, roleId: number) => ['userRole', userId, roleId] as const,
   tags: ['tags'] as const,
   tagsByTopic: (topicId: string) => ['tags', 'topic', topicId] as const,
+  analytics: ['analytics'] as const,
 } as const;
 
 // Performance monitoring

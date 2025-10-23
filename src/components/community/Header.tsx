@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Search, Bell, User, Menu, Plus, Settings, MessageSquare, LogOut, LogIn } from "lucide-react";
+import { Search, Bell, User, Menu, Plus, Settings, MessageSquare, LogOut, LogIn, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -16,6 +16,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import CreateTopicModal from "@/components/ui/create-topic-modal";
 import { useAuth } from "react-oidc-context";
 import { signOut } from "@/services/users/user-manager";
+import { useIsAdmin } from "@/hooks/useUserRole";
 
 const Header = () => {
   const navigate = useNavigate();
@@ -23,6 +24,9 @@ const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateTopicModalOpen, setIsCreateTopicModalOpen] = useState(false);
   const auth = useAuth();
+  
+  // Use the cached hook for admin role check
+  const { isAdmin } = useIsAdmin();
   
   // Check if user is on topic pages
   const isOnTopicPage = location.pathname === '/' || location.pathname === '/top';
@@ -262,13 +266,22 @@ const Header = () => {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate("/admin")}>
-                  <Settings className="w-4 h-4 mr-2" />
-                  Admin Dashboard
-                </DropdownMenuItem>
-                <DropdownMenuItem>
+                {isAdmin && (
+                  <>
+                    <DropdownMenuItem onClick={() => navigate("/admin")}>
+                      <Shield className="w-4 h-4 mr-2" />
+                      Admin Dashboard
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                <DropdownMenuItem onClick={() => navigate("/my-topics")}>
                   <MessageSquare className="w-4 h-4 mr-2" />
                   My Topics
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Settings className="w-4 h-4 mr-2" />
+                  Settings
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={logout}>

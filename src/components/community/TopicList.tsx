@@ -66,12 +66,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
   const isAuthenticated = auth.isAuthenticated && auth.user;
   
   // Check if user is admin
-  const isAdmin = isAuthenticated && (
-    (typeof auth.user?.profile?.email === 'string' && auth.user.profile.email.includes('admin')) ||
-    (typeof auth.user?.profile?.email === 'string' && auth.user.profile.email.includes('@fastn.ai')) ||
-    (Array.isArray(auth.user?.profile?.roles) && auth.user.profile.roles.includes('admin'))
-  );
-  
+ 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
@@ -550,16 +545,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                 <span>New Topic</span>
               </Button>
             )}*/}
-            {isAdmin && (
-              <Button
-                onClick={() => navigate("/admin")}
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                <Settings className="h-4 w-4" />
-                Admin
-              </Button>
-            )}
+           
           </div>
         </div>
 
