@@ -25,7 +25,6 @@ export const API_URL = import.meta.env.VITE_API_URL|| "https://qa.fastn.ai/api/v
 export const INSERT_USER_API_URL = import.meta.env.VITE_INSERT_USER_API_URL || API_URL +"crudUser";
 export const CRUD_CATEGORIES_API_URL = import.meta.env.VITE_CRUD_CATEGORIES_API_URL || API_URL +"crudCategories";
 export const CRUD_TAGS_API_URL = import.meta.env.VITE_CRUD_TAGS_API_URL || API_URL +"crudTags";
-export const CRUD_TOPICS_API_URL = import.meta.env.VITE_CRUD_TOPICS_API_URL || API_URL +"crudTopics";
 
 // Separated topic endpoints
 export const GET_TOPIC_BY_USER_API_URL = import.meta.env.VITE_GET_TOPIC_BY_USER_API_URL || API_URL +"getTopicByUser";
@@ -37,3 +36,4 @@ export const GET_REPLIES_API_URL = import.meta.env.VITE_GET_REPLIES_API_URL || A
 export const UPDATE_REPLY_API_URL = import.meta.env.VITE_UPDATE_REPLY_API_URL || API_URL +"updateReply";
 export const DELETE_REPLY_API_URL = import.meta.env.VITE_DELETE_REPLY_API_URL || API_URL +"deleteReply";
 export const GET_USER_BY_ROLE_ID_API_URL = import.meta.env.VITE_GET_USER_BY_ROLE_ID_API_URL || API_URL +"getUserbyrole_Id";
+export const UPDATE_TOPIC_STATUS_API_URL = import.meta.env.VITE_UPDATE_TOPIC_STATUS_API_URL || API_URL +"getTopicbystatus";

@@ -68,7 +68,7 @@ const UserTopics = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedTab, setSelectedTab] = useState('my-topics');
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'pending' | 'draft' | 'rejected'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'approved' | 'pending' | 'rejected'>('all');
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCreateTopicModalOpen, setIsCreateTopicModalOpen] = useState(false);
   const [editingTopic, setEditingTopic] = useState<Topic | null>(null);
@@ -76,18 +76,21 @@ const UserTopics = () => {
     title: '',
     description: '',
     content: '',
-    status: 'published' as 'published' | 'pending' | 'draft' | 'rejected',
+    status: 'approved' as 'approved' | 'pending' | 'rejected',
   });
 
   // Get current user
   const currentUser = getUser();
   const userId = currentUser?.profile?.sub || '';
 
-  // Fetch user's topics
+  // Fetch user's topics with optimized caching
   const { data: userTopics, isLoading: topicsLoading, error: topicsError, refetch: refetchTopics } = useQuery({
     queryKey: ['userTopics', userId],
     queryFn: () => ApiService.getTopicByUser(userId),
     enabled: !!userId,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: true, // Refresh when user returns to tab
   });
 
   // Fetch categories for edit form
@@ -99,25 +102,7 @@ const UserTopics = () => {
   // Update topic mutation
   const updateTopicMutation = useMutation({
     mutationFn: async ({ topicId, data }: { topicId: string; data: any }) => {
-      // Use the crudTopics API for updates
-      const { getUser } = await import("@/services/users/user-manager");
-      const user = getUser();
-      const authToken = user?.access_token || "";
-      
-      if (!authToken) {
-        throw new Error("No auth token available");
-      }
-
-      const { crudTopics } = await import("@/services/api");
-      const payload = {
-        action: "updateTopic" as const,
-        data: {
-          id: topicId,
-          ...data
-        }
-      };
-
-      return crudTopics(payload, authToken);
+      return ApiService.updateTopic(topicId, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['userTopics', userId] });
@@ -140,23 +125,7 @@ const UserTopics = () => {
   // Delete topic mutation
   const deleteTopicMutation = useMutation({
     mutationFn: async (topicId: string) => {
-      const { getUser } = await import("@/services/users/user-manager");
-      const user = getUser();
-      const authToken = user?.access_token || "";
-      
-      if (!authToken) {
-        throw new Error("No auth token available");
-      }
-
-      const { crudTopics } = await import("@/services/api");
-      const payload = {
-        action: "deleteTopic" as const,
-        data: {
-          id: topicId
-        }
-      };
-
-      return crudTopics(payload, authToken);
+      return ApiService.deleteTopic(topicId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['userTopics', userId] });
@@ -189,7 +158,7 @@ const UserTopics = () => {
       title: topic.title,
       description: topic.description,
       content: topic.content || '',
-      status: topic.status as 'published' | 'pending' | 'draft' | 'rejected',
+      status: (topic.status || 'pending') as 'approved' | 'pending' | 'rejected',
     });
     setIsEditDialogOpen(true);
   };
@@ -212,16 +181,14 @@ const UserTopics = () => {
   // Get status badge
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'published':
-        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />Published</Badge>;
+      case 'approved':
+        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />Approved</Badge>;
       case 'pending':
         return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
-      case 'draft':
-        return <Badge className="bg-gray-100 text-gray-800"><AlertCircle className="w-3 h-3 mr-1" />Draft</Badge>;
       case 'rejected':
         return <Badge className="bg-red-100 text-red-800"><XCircle className="w-3 h-3 mr-1" />Rejected</Badge>;
       default:
-        return <Badge variant="secondary">{status}</Badge>;
+        return <Badge variant="secondary">{status || 'pending'}</Badge>;
     }
   };
 
@@ -346,15 +313,15 @@ const UserTopics = () => {
 
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Published</CardTitle>
+                    <CardTitle className="text-sm font-medium">Approved</CardTitle>
                     <CheckCircle className="h-4 w-4 text-green-600" />
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">
-                      {userTopics?.filter(t => t.status === 'published').length || 0}
+                      {userTopics?.filter(t => t.status === 'approved').length || 0}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Live topics
+                      Approved topics
                     </p>
                   </CardContent>
                 </Card>
@@ -417,9 +384,8 @@ const UserTopics = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="published">Published</SelectItem>
+                        <SelectItem value="approved">Approved</SelectItem>
                         <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="draft">Draft</SelectItem>
                         <SelectItem value="rejected">Rejected</SelectItem>
                       </SelectContent>
                     </Select>
@@ -537,9 +503,9 @@ const UserTopics = () => {
                             <span className="font-medium">{userTopics?.length || 0}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span>Published Topics</span>
+                            <span>Approved Topics</span>
                             <span className="font-medium">
-                              {userTopics?.filter(t => t.status === 'published').length || 0}
+                              {userTopics?.filter(t => t.status === 'approved').length || 0}
                             </span>
                           </div>
                           <div className="flex justify-between">
@@ -549,9 +515,9 @@ const UserTopics = () => {
                             </span>
                           </div>
                           <div className="flex justify-between">
-                            <span>Draft Topics</span>
+                            <span>Rejected Topics</span>
                             <span className="font-medium">
-                              {userTopics?.filter(t => t.status === 'draft').length || 0}
+                              {userTopics?.filter(t => t.status === 'rejected').length || 0}
                             </span>
                           </div>
                         </div>
@@ -644,9 +610,8 @@ const UserTopics = () => {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="published">Published</SelectItem>
+                          <SelectItem value="approved">Approved</SelectItem>
                           <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="draft">Draft</SelectItem>
                           <SelectItem value="rejected">Rejected</SelectItem>
                         </SelectContent>
                       </Select>

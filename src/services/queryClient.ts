@@ -43,6 +43,8 @@ export const queryClient = new QueryClient({
 export const queryKeys = {
   categories: ['categories'] as const,
   topics: ['topics'] as const,
+  topicsPublic: ['topics', 'public'] as const, // For public view (approved only)
+  topicsAdmin: ['topics', 'admin'] as const, // For admin view (all statuses)
   topic: (id: string) => ['topics', id] as const,
   topicsByCategory: (categoryId: string) => ['topics', 'category', categoryId] as const,
   topicsByUser: (username: string) => ['topics', 'user', username] as const,

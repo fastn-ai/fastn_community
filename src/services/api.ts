@@ -1,7 +1,7 @@
 // Mock API Service for fastn community platform
 // This is a frontend-only implementation with mock data
 
-import { INSERT_USER_API_URL, FASTN_SPACE_ID, FASTN_API_KEY, CUSTOM_AUTH_KEY, CUSTOM_AUTH_TOKEN_KEY, TENANT_ID_KEY, CRUD_CATEGORIES_API_URL, CRUD_TAGS_API_URL, CRUD_TOPICS_API_URL, GET_TOPIC_BY_USER_API_URL, INSERT_TOPIC_TAGS_API_URL, INSERT_TOPICS_API_URL, GET_TOPICS_API_URL, CREATE_REPLY_API_URL, GET_REPLIES_API_URL, UPDATE_REPLY_API_URL, DELETE_REPLY_API_URL, GET_USER_BY_ROLE_ID_API_URL } from "@/constants";
+import { INSERT_USER_API_URL, FASTN_SPACE_ID, FASTN_API_KEY, CUSTOM_AUTH_KEY, CUSTOM_AUTH_TOKEN_KEY, TENANT_ID_KEY, CRUD_CATEGORIES_API_URL, CRUD_TAGS_API_URL, GET_TOPIC_BY_USER_API_URL, INSERT_TOPIC_TAGS_API_URL, INSERT_TOPICS_API_URL, GET_TOPICS_API_URL, CREATE_REPLY_API_URL, GET_REPLIES_API_URL, UPDATE_REPLY_API_URL, DELETE_REPLY_API_URL, GET_USER_BY_ROLE_ID_API_URL, UPDATE_TOPIC_STATUS_API_URL } from "@/constants";
 import { getCookie } from "@/routes/login/oauth";
 import { generateConsistentColor, PREDEFINED_COLORS } from "@/lib/utils";
 
@@ -20,7 +20,7 @@ export interface Topic {
   category_color?: string;
   category_id?: string;
   tag_id?: string;
-  status?: 'pending' | 'approved' | 'rejected' | 'published';
+  status?: 'pending' | 'approved' | 'rejected';
   is_featured?: boolean;
   is_hot?: boolean;
   is_new?: boolean;
@@ -156,24 +156,6 @@ export interface CrudTagsPayload {
   };
 }
 
-export interface CrudTopicsPayload {
-  action: "getAllTopics" | "updateTopic" | "deleteTopic";
-  data?: {
-    id?: string;
-    author_id?: string;
-    category_id?: number | null;
-    tag_id?: number | null;
-    title?: string;
-    description?: string;
-    content?: string;
-    status?: "pending" | "published" | "draft" | "rejected" | "approved";
-    view_count?: number;
-    reply_count?: number;
-    like_count?: number;
-    created_at?: string;
-    updated_at?: string;
-  };
-}
 
 // Separate payload interfaces for the extracted endpoints
 export interface GetTopicByUserPayload {
@@ -192,7 +174,7 @@ export interface InsertTopicsPayload {
     title?: string;
     description?: string;
     content?: string;
-    status?: "pending" | "published" | "draft" | "rejected";
+    status?: "pending" | "approved" | "rejected";
     view_count?: number;
     reply_count?: number;
     like_count?: number;
@@ -550,8 +532,8 @@ export class ApiService {
     }
   }
 
-  // Get all topics
-  static async getAllTopics(): Promise<Topic[]> {
+  // Get all topics with cache busting
+  static async getAllTopics(forceRefresh: boolean = false): Promise<Topic[]> {
     try {
       // Try to get auth token from user manager
       const { getUser } = await import("@/services/users/user-manager");
@@ -568,7 +550,7 @@ export class ApiService {
       if (!tokenToUse) {
         // Use FASTN API key for public access when user is not logged in
         try {
-          const response = await getAllTopics(null, "", FASTN_API_KEY);
+          const response = await getAllTopics(null, "", FASTN_API_KEY, forceRefresh);
           return ApiService.processTopicsResponse(response);
         } catch (apiError) {
           console.warn("API call failed with API key, falling back to mock data:", apiError);
@@ -577,7 +559,7 @@ export class ApiService {
       }
 
       try {
-        const response = await getAllTopics(null, tokenToUse);
+        const response = await getAllTopics(null, tokenToUse, undefined, forceRefresh);
         return ApiService.processTopicsResponse(response);
       } catch (apiError) {
         console.warn("API call failed with auth token, falling back to mock data:", apiError);
@@ -589,6 +571,56 @@ export class ApiService {
     }
   }
 
+  // Optimized method to get topics with better caching
+  static async getTopicsOptimized(options: {
+    forceRefresh?: boolean;
+    includePending?: boolean;
+    categoryId?: string;
+    userId?: string;
+  } = {}): Promise<Topic[]> {
+    const { forceRefresh = false, includePending = true, categoryId, userId } = options;
+    
+    try {
+      const { getUser } = await import("@/services/users/user-manager");
+      const user = getUser();
+      const authToken = user?.access_token || "";
+      
+      const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
+      const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
+      const tokenToUse = (isCustomAuth && customAuthToken) ? customAuthToken : authToken;
+      
+      if (!tokenToUse) {
+        try {
+          const response = await getAllTopics(null, "", FASTN_API_KEY, forceRefresh);
+          return ApiService.processTopicsResponse(response);
+        } catch (apiError) {
+          return ApiService.getMockTopics();
+        }
+      }
+
+      const response = await getAllTopics(null, tokenToUse, undefined, forceRefresh);
+      let topics = ApiService.processTopicsResponse(response);
+      
+      // Apply filters
+      if (!includePending) {
+        topics = topics.filter(topic => topic.status === 'approved');
+      }
+      
+      if (categoryId) {
+        topics = topics.filter(topic => topic.category_id === categoryId);
+      }
+      
+      if (userId) {
+        topics = topics.filter(topic => topic.author_id === userId);
+      }
+      
+      return topics;
+    } catch (error) {
+      console.warn("getTopicsOptimized failed, falling back to mock data:", error);
+      return ApiService.getMockTopics();
+    }
+  }
+
   // Helper method to get mock topics
   private static getMockTopics(): Topic[] {
     // If we have cached mock topics, return them
@@ -596,7 +628,7 @@ export class ApiService {
       return mockTopics;
     }
 
-    // Create some default mock topics
+    // Create some default mock topics with different statuses
     mockTopics = [
       {
         id: 1,
@@ -1642,7 +1674,202 @@ export class ApiService {
     }
   }
 
-  // Get analytics data
+  // Update topic status with proper cache invalidation
+  static async updateTopicStatus(topicId: string | number, status: 'pending' | 'approved' | 'rejected'): Promise<Topic> {
+    try {
+      const { getUser } = await import("@/services/users/user-manager");
+      const user = getUser();
+      const authToken = user?.access_token || "";
+      
+      if (!authToken) {
+        throw new Error("No auth token available");
+      }
+
+      const payload = {
+        action: "getTopicbystatus",
+        data: {
+          status: status,
+          id: topicId.toString()
+        }
+      };
+
+      console.log("Updating topic status:", { topicId, status, payload });
+      const response = await updateTopicStatusApi(payload, authToken);
+      console.log("API response:", response);
+      
+      // Handle different response formats
+      if (response && Array.isArray(response) && response.length > 0) {
+        // The API returns an array with the updated topic
+        const updatedTopic = response[0];
+        console.log("Updated topic from API:", updatedTopic);
+        
+        const result = {
+          id: updatedTopic.id || (typeof topicId === 'string' ? parseInt(topicId) : topicId),
+          title: updatedTopic.title || 'Updated Topic',
+          description: updatedTopic.description || '',
+          content: updatedTopic.content || '',
+          author_username: updatedTopic.author_name || 'System',
+          author_avatar: '',
+          author_id: updatedTopic.author_id || '',
+          category_name: updatedTopic.category_name || '',
+          category_color: '#3B82F6',
+          category_id: updatedTopic.category_id?.toString() || '',
+          status: updatedTopic.status || status, // Use the actual status from API response
+          is_featured: false,
+          is_hot: false,
+          is_new: false,
+          view_count: updatedTopic.view_count || 0,
+          reply_count: updatedTopic.reply_count || 0,
+          like_count: updatedTopic.like_count || 0,
+          bookmark_count: 0,
+          share_count: 0,
+          tags: [],
+          created_at: updatedTopic.created_at || new Date().toISOString(),
+          updated_at: updatedTopic.updated_at || new Date().toISOString(),
+        };
+
+        // Clear cache after successful update
+        ApiService.clearTopicCache();
+        
+        return result;
+      }
+      
+      // Fallback if response format is different
+      if (response) {
+        const result = {
+          id: typeof topicId === 'string' ? parseInt(topicId) : topicId,
+          title: 'Updated Topic',
+          description: 'Status updated successfully',
+          content: '',
+          author_username: 'System',
+          author_avatar: '',
+          author_id: '',
+          category_name: '',
+          category_color: '#3B82F6',
+          category_id: '',
+          status: status,
+          is_featured: false,
+          is_hot: false,
+          is_new: false,
+          view_count: 0,
+          reply_count: 0,
+          like_count: 0,
+          bookmark_count: 0,
+          share_count: 0,
+          tags: [],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
+        // Clear cache after successful update
+        ApiService.clearTopicCache();
+        
+        return result;
+      }
+      
+      throw new Error("No response received from API");
+    } catch (error) {
+      console.error("Error updating topic status:", error);
+      throw error;
+    }
+  }
+
+  // Clear topic-related cache
+  static clearTopicCache(): void {
+    try {
+      // Clear React Query cache for topics
+      const { queryClient } = require('@/services/queryClient');
+      queryClient.removeQueries({ queryKey: ['topics'] });
+      queryClient.removeQueries({ queryKey: ['topics', 'public'] });
+      queryClient.removeQueries({ queryKey: ['topics', 'admin'] });
+      queryClient.removeQueries({ queryKey: ['analytics'] });
+      
+      // Clear custom cache service
+      const { cacheService } = require('@/services/cache');
+      cacheService.invalidate('topics');
+      cacheService.invalidate('analytics');
+      
+      console.log("Topic cache cleared successfully");
+    } catch (error) {
+      console.warn("Failed to clear topic cache:", error);
+    }
+  }
+
+  // Update topic using insertTopics API (since we don't have a dedicated update endpoint)
+  static async updateTopic(topicId: string, topicData: Partial<Topic>): Promise<Topic> {
+    try {
+      const { getUser } = await import("@/services/users/user-manager");
+      const user = getUser();
+      const authToken = user?.access_token || "";
+      
+      if (!authToken) {
+        throw new Error("No auth token available");
+      }
+
+      // For now, we'll use a mock implementation since we don't have a dedicated update endpoint
+      // In a real implementation, you would call the appropriate API endpoint
+      console.log("Updating topic:", { topicId, topicData });
+      
+      // Clear cache after update
+      ApiService.clearTopicCache();
+      
+      // Return the updated topic data
+      return {
+        id: parseInt(topicId),
+        title: topicData.title || 'Updated Topic',
+        description: topicData.description || '',
+        content: topicData.content || '',
+        author_username: topicData.author_username || 'User',
+        author_avatar: topicData.author_avatar || '',
+        author_id: topicData.author_id || '',
+        category_name: topicData.category_name || '',
+        category_color: topicData.category_color || '#3B82F6',
+        category_id: topicData.category_id || '',
+        status: topicData.status || 'approved',
+        is_featured: topicData.is_featured || false,
+        is_hot: topicData.is_hot || false,
+        is_new: topicData.is_new || false,
+        view_count: topicData.view_count || 0,
+        reply_count: topicData.reply_count || 0,
+        like_count: topicData.like_count || 0,
+        bookmark_count: topicData.bookmark_count || 0,
+        share_count: topicData.share_count || 0,
+        tags: topicData.tags || [],
+        created_at: topicData.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+    } catch (error) {
+      console.error("Error updating topic:", error);
+      throw error;
+    }
+  }
+
+  // Delete topic (mock implementation since we don't have a dedicated delete endpoint)
+  static async deleteTopic(topicId: string): Promise<boolean> {
+    try {
+      const { getUser } = await import("@/services/users/user-manager");
+      const user = getUser();
+      const authToken = user?.access_token || "";
+      
+      if (!authToken) {
+        throw new Error("No auth token available");
+      }
+
+      // For now, we'll use a mock implementation since we don't have a dedicated delete endpoint
+      // In a real implementation, you would call the appropriate API endpoint
+      console.log("Deleting topic:", topicId);
+      
+      // Clear cache after deletion
+      ApiService.clearTopicCache();
+      
+      return true;
+    } catch (error) {
+      console.error("Error deleting topic:", error);
+      throw error;
+    }
+  }
+
+  // Get analytics data using optimized topics method
   static async getAnalytics(): Promise<{
     totalUsers: number;
     totalTopics: number;
@@ -1655,27 +1882,23 @@ export class ApiService {
     totalLikes: number;
   }> {
     try {
-      // Try to get auth token from user manager
-      const { getUser } = await import("@/services/users/user-manager");
-      const user = getUser();
-      const authToken = user?.access_token || "";
+      // Use the admin topics query to get all topics including pending
+      const { queryClient } = await import('@/services/queryClient');
       
-      if (!authToken) {
-        throw new Error("No auth token available");
-      }
-
-      // Get all topics for analytics
-      const payload: CrudTopicsPayload = {
-        action: "getAllTopics"
-      };
-
-      const response = await crudTopics(payload, authToken);
+      // Try to get cached admin topics first
+      const cachedTopics = queryClient.getQueryData(['topics', 'admin']);
       
-      let topics: any[] = [];
-      if (response && response.result) {
-        topics = Array.isArray(response.result) ? response.result : [];
+      let topics: Topic[];
+      if (cachedTopics) {
+        topics = cachedTopics as Topic[];
+      } else {
+        // Fallback to direct call if not cached
+        topics = await ApiService.getTopicsOptimized({ 
+          forceRefresh: false, 
+          includePending: true 
+        });
       }
-
+      
       const analytics = {
         totalUsers: mockUsers.length,
         totalTopics: topics.length,
@@ -1947,38 +2170,6 @@ export async function crudTags(payload: CrudTagsPayload, authToken: string, apiK
   return res.json();
 }
 
-export async function crudTopics(payload: CrudTopicsPayload, authToken: string) {
-  const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
-  const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
-  const tenantId = getCookie(TENANT_ID_KEY) || "";
-
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "x-fastn-space-id": FASTN_SPACE_ID,
-    stage: "DRAFT",
-  };
-
-  if (isCustomAuth && customAuthToken) {
-    headers["x-fastn-custom-auth"] = "true";
-    headers["authorization"] = customAuthToken; // raw JWT for custom auth
-    if (tenantId) headers["x-fastn-space-tenantid"] = tenantId;
-  } else {
-    headers["authorization"] = `Bearer ${authToken}`;
-  }
-
-  const res = await fetch(CRUD_TOPICS_API_URL, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ input: payload }),
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`crudTopics failed: ${res.status} ${res.statusText} - ${text}`);
-  }
-
-  return res.json();
-}
 
 // Separate API functions for the extracted endpoints
 export async function getTopicByUser(payload: GetTopicByUserPayload, authToken: string) {
@@ -2080,7 +2271,7 @@ export async function insertTopicTags(payload: InsertTopicTagsPayload, authToken
   return res.json();
 }
 
-export async function getAllTopics(payload: any, authToken: string, apiKey?: string) {
+export async function getAllTopics(payload: any, authToken: string, apiKey?: string, forceRefresh: boolean = false) {
   const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
   const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
   const tenantId = getCookie(TENANT_ID_KEY) || "";
@@ -2090,6 +2281,14 @@ export async function getAllTopics(payload: any, authToken: string, apiKey?: str
     "x-fastn-space-id": FASTN_SPACE_ID,
     stage: "DRAFT",
   };
+
+  // Add cache busting headers
+  if (forceRefresh) {
+    headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+    headers["Pragma"] = "no-cache";
+    headers["Expires"] = "0";
+    headers["X-Cache-Bust"] = Date.now().toString();
+  }
 
   if (isCustomAuth && customAuthToken) {
     headers["x-fastn-custom-auth"] = "true";
@@ -2101,10 +2300,19 @@ export async function getAllTopics(payload: any, authToken: string, apiKey?: str
     headers["authorization"] = `Bearer ${authToken}`;
   }
 
+  console.log("getAllTopics API call:", { 
+    forceRefresh, 
+    headers: Object.keys(headers), 
+    url: GET_TOPICS_API_URL 
+  });
+
   const res = await fetch(GET_TOPICS_API_URL, {
     method: "POST",
     headers,
-    body: JSON.stringify({ input: {} }),
+    body: JSON.stringify({ 
+      input: forceRefresh ? { cacheBust: Date.now() } : {} 
+    }),
+    cache: forceRefresh ? 'no-store' : 'default'
   });
 
   if (!res.ok) {
@@ -2112,7 +2320,9 @@ export async function getAllTopics(payload: any, authToken: string, apiKey?: str
     throw new Error(`getAllTopics failed: ${res.status} ${res.statusText} - ${text}`);
   }
 
-  return res.json();
+  const result = await res.json();
+  console.log("getAllTopics API response:", { forceRefresh, resultLength: result?.length });
+  return result;
 }
 
 export async function createReplyApi(payload: CrudRepliesPayload, authToken: string, apiKey?: string) {
@@ -2292,6 +2502,51 @@ export async function deleteReply(payload: CrudRepliesPayload, authToken: string
   return res.json();
 }
 
+export async function updateTopicStatusApi(payload: any, authToken: string) {
+  console.log("updateTopicStatusApi called with:", { payload, authToken: authToken ? "present" : "missing" });
+  
+  const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
+  const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
+  const tenantId = getCookie(TENANT_ID_KEY) || "";
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "x-fastn-space-id": FASTN_SPACE_ID,
+    stage: "DRAFT",
+  };
+
+  if (isCustomAuth && customAuthToken) {
+    headers["x-fastn-custom-auth"] = "true";
+    headers["authorization"] = customAuthToken; // raw JWT for custom auth
+    if (tenantId) headers["x-fastn-space-tenantid"] = tenantId;
+  } else {
+    headers["authorization"] = `Bearer ${authToken}`;
+  }
+
+  console.log("Making request to:", UPDATE_TOPIC_STATUS_API_URL);
+  console.log("With headers:", headers);
+  console.log("With body:", JSON.stringify({ input: payload }));
+
+  const res = await fetch(UPDATE_TOPIC_STATUS_API_URL, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ input: payload }),
+  });
+
+  console.log("Response status:", res.status);
+  console.log("Response ok:", res.ok);
+
+  if (!res.ok) {
+    const text = await res.text();
+    console.error("API Error:", { status: res.status, statusText: res.statusText, text });
+    throw new Error(`updateTopicStatus failed: ${res.status} ${res.statusText} - ${text}`);
+  }
+
+  const result = await res.json();
+  console.log("API Response:", result);
+  return result;
+}
+
 // Hook for using API in React components
 export const useApi = () => {
   return {
@@ -2300,12 +2555,17 @@ export const useApi = () => {
     updateCategory: ApiService.updateCategory,
     deleteCategory: ApiService.deleteCategory,
     getAllTopics: ApiService.getAllTopics,
+    getTopicsOptimized: ApiService.getTopicsOptimized,
     getAllTopicById: ApiService.getAllTopicById,
     getAllUsers: ApiService.getAllUsers,
     getAllReplies: ApiService.getAllReplies,
     getRepliesByTopicId: ApiService.getRepliesByTopicId,
     getAllTags: ApiService.getAllTags,
     createTopic: ApiService.createTopic,
+    updateTopic: ApiService.updateTopic,
+    deleteTopic: ApiService.deleteTopic,
+    updateTopicStatus: ApiService.updateTopicStatus,
+    clearTopicCache: ApiService.clearTopicCache,
     insertTopicTags: ApiService.insertTopicTags,
     getTopicByUser: ApiService.getTopicByUser,
     createReply: ApiService.createReply,
@@ -2316,13 +2576,12 @@ export const useApi = () => {
     crudCategories,
     // Tags API functions
     crudTags,
-    // Topics API functions
-    crudTopics,
     // Separated topic endpoint functions
     getTopicByUserApi: getTopicByUser,
     insertTopicsApi: insertTopics,
     insertTopicTagsApi: insertTopicTags,
     getAllTopicsApi: getAllTopics,
+    updateTopicStatusApi,
     // Replies API functions
     createReplyApi,
     getRepliesApi,

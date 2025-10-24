@@ -73,12 +73,16 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // Use React Query to fetch data (shared with Sidebar)
+  // Use React Query to fetch data with optimized caching
   const { data: topics = [], isLoading: topicsLoading, error: topicsError, refetch: refetchTopics } = useQuery({
-    queryKey: queryKeys.topics,
-    queryFn: ApiService.getAllTopics,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    queryKey: queryKeys.topicsPublic,
+    queryFn: () => ApiService.getTopicsOptimized({ 
+      forceRefresh: false, 
+      includePending: false // Only show approved topics in public view
+    }),
+    staleTime: 3 * 60 * 1000, // 3 minutes - shorter for public view
     gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false, // Don't refetch on focus for public view
   });
 
   const { data: categories = [], isLoading: categoriesLoading, error: categoriesError } = useQuery({
@@ -196,10 +200,10 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
       // Tag matching logic
     }
     
-    // Only show published topics
-    const isPublished = topic.status === 'published' || !topic.status;
+    // Only show approved topics
+    const isApproved = topic.status === 'approved' || !topic.status;
     
-    return matchesSearch && matchesFilter && matchesTag && isPublished;
+    return matchesSearch && matchesFilter && matchesTag && isApproved;
   });
 
   // Calculate total pages for pagination

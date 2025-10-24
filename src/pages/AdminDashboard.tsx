@@ -61,8 +61,10 @@ import {
   Edit,
   Trash2,
   MoreHorizontal,
+  RefreshCw,
 } from 'lucide-react';
 import { ApiService, Topic, User, Category } from '@/services/api';
+import { queryKeys } from '@/services/queryClient';
 import { toast } from '@/hooks/use-toast';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 
@@ -82,69 +84,163 @@ const AdminDashboard = () => {
     tags: [] as string[],
   });
 
-  // Fetch data
+  // Fetch data with optimized caching
   const { data: analytics, isLoading: analyticsLoading } = useQuery({
-    queryKey: ['analytics'],
+    queryKey: queryKeys.analytics,
     queryFn: ApiService.getAnalytics,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  const { data: topics, isLoading: topicsLoading } = useQuery({
-    queryKey: ['topics'],
-    queryFn: ApiService.getAllTopics,
+  const { data: topics, isLoading: topicsLoading, refetch: refetchTopics } = useQuery({
+    queryKey: queryKeys.topicsAdmin,
+    queryFn: () => ApiService.getTopicsOptimized({ 
+      forceRefresh: false, 
+      includePending: true 
+    }),
+    staleTime: 1 * 60 * 1000, // 1 minute - shorter for admin dashboard
+    gcTime: 3 * 60 * 1000, // 3 minutes
+    refetchOnWindowFocus: false, // Disable to prevent duplicate calls
   });
 
   const { data: users, isLoading: usersLoading } = useQuery({
     queryKey: ['users'],
     queryFn: ApiService.getAllUsers,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
   const { data: categories, isLoading: categoriesLoading } = useQuery({
     queryKey: ['categories'],
     queryFn: ApiService.getAllCategories,
+    staleTime: 30 * 60 * 1000, // 30 minutes - categories don't change often
+    gcTime: 60 * 60 * 1000, // 1 hour
   });
 
-  // Mutations - using mock implementations since admin methods were removed
+  // Mutations for topic management with optimistic updates
   const approveTopicMutation = useMutation({
     mutationFn: async (topicId: string) => {
-      console.log("Mock: Approving topic", topicId);
-      return { id: topicId, status: "approved" };
+      console.log("Starting approve mutation for topic:", topicId);
+      const result = await ApiService.updateTopicStatus(topicId, 'approved');
+      console.log("Approve mutation result:", result);
+      return result;
+    },
+    onMutate: async (topicId: string) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: queryKeys.topicsAdmin });
+      
+      // Snapshot previous value
+      const previousTopics = queryClient.getQueryData(['topics']);
+      
+      // Optimistically update the cache
+      queryClient.setQueryData(['topics'], (old: any) => {
+        if (!old) return old;
+        return old.map((topic: Topic) => 
+          topic.id.toString() === topicId 
+            ? { ...topic, status: 'approved' as const }
+            : topic
+        );
+      });
+      
+      return { previousTopics };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['topics'] });
-      queryClient.invalidateQueries({ queryKey: ['analytics'] });
       toast({
         title: 'Success',
         description: 'Topic approved successfully',
       });
     },
+    onError: (error, topicId, context) => {
+      // Revert optimistic update on error
+      if (context?.previousTopics) {
+        queryClient.setQueryData(['topics'], context.previousTopics);
+      }
+      
+      console.error("Approve mutation error:", error);
+      toast({
+        title: 'Error',
+        description: `Failed to approve topic: ${error.message}`,
+        variant: 'destructive',
+      });
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure consistency
+      queryClient.invalidateQueries({ queryKey: queryKeys.topicsAdmin });
+      queryClient.invalidateQueries({ queryKey: queryKeys.analytics });
+    },
   });
 
   const rejectTopicMutation = useMutation({
     mutationFn: async (topicId: string) => {
-      console.log("Mock: Rejecting topic", topicId);
-      return { id: topicId, status: "rejected" };
+      console.log("Starting reject mutation for topic:", topicId);
+      const result = await ApiService.updateTopicStatus(topicId, 'rejected');
+      console.log("Reject mutation result:", result);
+      return result;
+    },
+    onMutate: async (topicId: string) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: queryKeys.topicsAdmin });
+      
+      // Snapshot previous value
+      const previousTopics = queryClient.getQueryData(['topics']);
+      
+      // Optimistically update the cache
+      queryClient.setQueryData(['topics'], (old: any) => {
+        if (!old) return old;
+        return old.map((topic: Topic) => 
+          topic.id.toString() === topicId 
+            ? { ...topic, status: 'rejected' as const }
+            : topic
+        );
+      });
+      
+      return { previousTopics };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['topics'] });
-      queryClient.invalidateQueries({ queryKey: ['analytics'] });
       toast({
         title: 'Success',
         description: 'Topic rejected successfully',
       });
     },
+    onError: (error, topicId, context) => {
+      // Revert optimistic update on error
+      if (context?.previousTopics) {
+        queryClient.setQueryData(['topics'], context.previousTopics);
+      }
+      
+      console.error("Reject mutation error:", error);
+      toast({
+        title: 'Error',
+        description: `Failed to reject topic: ${error.message}`,
+        variant: 'destructive',
+      });
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure consistency
+      queryClient.invalidateQueries({ queryKey: queryKeys.topicsAdmin });
+      queryClient.invalidateQueries({ queryKey: queryKeys.analytics });
+    },
   });
 
   const deleteTopicMutation = useMutation({
     mutationFn: async (topicId: string) => {
-      console.log("Mock: Deleting topic", topicId);
-      return { id: topicId, deleted: true };
+      // Note: Implement deleteTopicApi method in ApiService if needed
+      console.log("Deleting topic", topicId);
+      throw new Error("Delete functionality not yet implemented in API");
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['topics'] });
-      queryClient.invalidateQueries({ queryKey: ['analytics'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.topicsAdmin });
+      queryClient.invalidateQueries({ queryKey: queryKeys.analytics });
       toast({
         title: 'Success',
         description: 'Topic deleted successfully',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: `Failed to delete topic: ${error.message}`,
+        variant: 'destructive',
       });
     },
   });
@@ -152,8 +248,8 @@ const AdminDashboard = () => {
   const createTopicMutation = useMutation({
     mutationFn: ApiService.createTopic,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['topics'] });
-      queryClient.invalidateQueries({ queryKey: ['analytics'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.topicsAdmin });
+      queryClient.invalidateQueries({ queryKey: queryKeys.analytics });
       setIsCreateDialogOpen(false);
       setNewTopic({
         title: '',
@@ -179,12 +275,22 @@ const AdminDashboard = () => {
     return matchesSearch && matchesStatus;
   }) || [];
 
-  // Handle actions
+  // Handle actions with debouncing to prevent double requests
   const handleApprove = (topicId: string) => {
+    if (approveTopicMutation.isPending) {
+      console.log("Approve request already in progress, skipping");
+      return;
+    }
+    console.log("Approving topic:", topicId);
     approveTopicMutation.mutate(topicId);
   };
 
   const handleReject = (topicId: string) => {
+    if (rejectTopicMutation.isPending) {
+      console.log("Reject request already in progress, skipping");
+      return;
+    }
+    console.log("Rejecting topic:", topicId);
     rejectTopicMutation.mutate(topicId);
   };
 
@@ -455,6 +561,24 @@ const AdminDashboard = () => {
                   <SelectItem value="rejected">Rejected</SelectItem>
                 </SelectContent>
               </Select>
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  console.log("Manual refresh clicked");
+                  // Invalidate and refetch with force refresh
+                  await queryClient.invalidateQueries({ queryKey: queryKeys.topicsAdmin });
+                  await queryClient.refetchQueries({ 
+                    queryKey: queryKeys.topicsAdmin,
+                    type: 'active'
+                  });
+                  
+                  console.log("Manual refresh completed");
+                }}
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Refresh
+              </Button>
             </div>
 
             {/* Topics Table */}
@@ -493,6 +617,7 @@ const AdminDashboard = () => {
                             {topic.status === 'pending' && (
                               <>
                                 <Button
+                                  key={`approve-${topic.id}`}
                                   size="sm"
                                   variant="outline"
                                   onClick={() => handleApprove(topic.id.toString())}
@@ -501,6 +626,7 @@ const AdminDashboard = () => {
                                   <CheckCircle className="w-3 h-3" />
                                 </Button>
                                 <Button
+                                  key={`reject-${topic.id}`}
                                   size="sm"
                                   variant="outline"
                                   onClick={() => handleReject(topic.id.toString())}
@@ -509,6 +635,28 @@ const AdminDashboard = () => {
                                   <XCircle className="w-3 h-3" />
                                 </Button>
                               </>
+                            )}
+                            {topic.status === 'approved' && (
+                              <Button
+                                key={`reject-${topic.id}`}
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleReject(topic.id.toString())}
+                                disabled={rejectTopicMutation.isPending}
+                              >
+                                <XCircle className="w-3 h-3" />
+                              </Button>
+                            )}
+                            {topic.status === 'rejected' && (
+                              <Button
+                                key={`approve-${topic.id}`}
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleApprove(topic.id.toString())}
+                                disabled={approveTopicMutation.isPending}
+                              >
+                                <CheckCircle className="w-3 h-3" />
+                              </Button>
                             )}
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
