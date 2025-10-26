@@ -74,16 +74,19 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
   const itemsPerPage = 10;
 
   // Use React Query to fetch data with optimized caching
-  const { data: topics = [], isLoading: topicsLoading, error: topicsError, refetch: refetchTopics } = useQuery({
-    queryKey: queryKeys.topicsPublic,
+  const { data: allTopics = [], isLoading: topicsLoading, error: topicsError, refetch: refetchTopics } = useQuery({
+    queryKey: queryKeys.topics,
     queryFn: () => ApiService.getTopicsOptimized({ 
       forceRefresh: false, 
-      includePending: false // Only show approved topics in public view
+      includePending: true // Get all topics, filter client-side
     }),
     staleTime: 3 * 60 * 1000, // 3 minutes - shorter for public view
     gcTime: 10 * 60 * 1000, // 10 minutes
     refetchOnWindowFocus: false, // Don't refetch on focus for public view
   });
+
+  // Filter topics client-side to show only approved topics in public view
+  const topics = allTopics.filter(topic => topic.status === 'approved');
 
   const { data: categories = [], isLoading: categoriesLoading, error: categoriesError } = useQuery({
     queryKey: queryKeys.categories,

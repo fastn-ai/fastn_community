@@ -368,6 +368,9 @@ const ReplyItem = React.memo(({
 
 ReplyItem.displayName = 'ReplyItem';
 
+// Session cache to track if user has been inserted to avoid duplicate calls
+const userInsertedCache = new Map<string, boolean>();
+
 const TopicDetail = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [topic, setTopic] = useState<Topic | null>(null);
@@ -393,6 +396,54 @@ const TopicDetail = () => {
   const user = getUser();
   const isAuthenticated = !!(user && user.access_token && user.profile);
   
+  // Function to ensure user exists in database (only once per session)
+  const ensureUserExists = useCallback(async () => {
+    if (!user?.access_token || !user?.profile) {
+      return;
+    }
+
+    const userId = user.profile.sub || user.profile.sid || user.profile.email;
+    
+    // Check if user has already been inserted in this session
+    if (userInsertedCache.has(userId)) {
+      return; // User already inserted, skip
+    }
+
+    try {
+      const { insertUser } = await import("@/services/api");
+      const authToken = user.access_token;
+      
+      const userPayload = {
+        action: "insertUser" as const,
+        data: {
+          id: userId,
+          username: user.profile.preferred_username || user.profile.email?.split("@")[0] || "user",
+          email: user.profile.email || "",
+          avatar: user.profile.picture || "",
+          bio: "",
+          location: user.profile.locale || "",
+          website: "",
+          twitter: "",
+          github: "",
+          linkedin: "",
+          role_id: 2,
+          is_verified: true,
+          is_active: true,
+          last_login: new Date().toISOString(),
+          created_at: undefined,
+          updated_at: new Date().toISOString(),
+        },
+      };
+      
+      await insertUser(userPayload, authToken);
+      
+      // Mark user as inserted in cache
+      userInsertedCache.set(userId, true);
+    } catch (error) {
+      // User creation/update failed, but don't block the reply
+      console.warn("Failed to ensure user exists:", error);
+    }
+  }, [user]);
 
   // Function to refresh replies (for future use if needed)
   const refreshReplies = async () => {
@@ -439,6 +490,13 @@ const TopicDetail = () => {
       try {
         setLoading(true);
         
+        // Ensure user exists on first page load (first action in session)
+        if (isAuthenticated) {
+          ensureUserExists().catch(() => {
+            // Silently fail, don't block page load
+          });
+        }
+        
         const response = await getAllTopicById(id);
 
         // Handle the response structure
@@ -465,7 +523,7 @@ const TopicDetail = () => {
     };
 
     fetchTopic();
-  }, [id]);
+  }, [id]); // Only depend on id, not on authentication state
 
   const submitReply = async () => {
     // Prevent multiple submissions
@@ -491,39 +549,8 @@ const TopicDetail = () => {
     try {
       setError(null); // Clear any previous errors
       
-      // Ensure user exists in database by calling insertUser first
-      const { insertUser } = await import("@/services/api");
-      const authToken = user?.access_token || "";
-      
-      if (authToken) {
-        try {
-          const userPayload = {
-            action: "insertUser" as const,
-            data: {
-              id: user?.profile?.sub || user?.profile?.sid || user?.profile?.email,
-              username: user?.profile?.preferred_username || user?.profile?.email?.split("@")[0] || "user",
-              email: user?.profile?.email || "",
-              avatar: user?.profile?.picture || "",
-              bio: "",
-              location: user?.profile?.locale || "",
-              website: "",
-              twitter: "",
-              github: "",
-              linkedin: "",
-              role_id: 2,
-              is_verified: true,
-              is_active: true,
-              last_login: new Date().toISOString(),
-              created_at: undefined,
-              updated_at: new Date().toISOString(),
-            },
-          };
-          
-          await insertUser(userPayload, authToken);
-        } catch (userError) {
-          // User creation/update failed, continuing with reply
-        }
-      }
+      // Ensure user exists in database (only once per session)
+      await ensureUserExists();
       
       const replyData = {
         topic_id: id,
@@ -604,39 +631,8 @@ const TopicDetail = () => {
     try {
       setError(null);
 
-      // Ensure user exists in database by calling insertUser first
-      const { insertUser } = await import("@/services/api");
-      const authToken = user?.access_token || "";
-      
-      if (authToken) {
-        try {
-          const userPayload = {
-            action: "insertUser" as const,
-            data: {
-              id: user?.profile?.sub || user?.profile?.sid || user?.profile?.email,
-              username: user?.profile?.preferred_username || user?.profile?.email?.split("@")[0] || "user",
-              email: user?.profile?.email || "",
-              avatar: user?.profile?.picture || "",
-              bio: "",
-              location: user?.profile?.locale || "",
-              website: "",
-              twitter: "",
-              github: "",
-              linkedin: "",
-              role_id: 2,
-              is_verified: true,
-              is_active: true,
-              last_login: new Date().toISOString(),
-              created_at: undefined,
-              updated_at: new Date().toISOString(),
-            },
-          };
-          
-          await insertUser(userPayload, authToken);
-        } catch (userError) {
-          // User creation/update failed, continuing with reply
-        }
-      }
+      // Ensure user exists in database (only once per session)
+      await ensureUserExists();
       
       const subReplyData = {
         topic_id: id,
@@ -957,9 +953,15 @@ const TopicDetail = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="prose prose-invert max-w-none">
-                    <p className="whitespace-pre-line text-foreground">
-                      {topic.content || topic.description}
-                    </p>
+                    {(topic.content || topic.description) ? (
+                      <p className="whitespace-pre-line text-foreground">
+                        {topic.content || topic.description}
+                      </p>
+                    ) : (
+                      <p className="text-muted-foreground italic">
+                        No content provided for this topic.
+                      </p>
+                    )}
                   </div>
                   <div className="flex flex-wrap gap-2 mt-4">
                     {topic.tags && (() => {

@@ -93,10 +93,10 @@ const AdminDashboard = () => {
   });
 
   const { data: topics, isLoading: topicsLoading, refetch: refetchTopics } = useQuery({
-    queryKey: queryKeys.topicsAdmin,
+    queryKey: queryKeys.topics,
     queryFn: () => ApiService.getTopicsOptimized({ 
       forceRefresh: false, 
-      includePending: true 
+      includePending: true // Get all topics including pending
     }),
     staleTime: 1 * 60 * 1000, // 1 minute - shorter for admin dashboard
     gcTime: 3 * 60 * 1000, // 3 minutes
@@ -127,7 +127,7 @@ const AdminDashboard = () => {
     },
     onMutate: async (topicId: string) => {
       // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: queryKeys.topicsAdmin });
+      await queryClient.cancelQueries({ queryKey: queryKeys.topics });
       
       // Snapshot previous value
       const previousTopics = queryClient.getQueryData(['topics']);
@@ -165,7 +165,7 @@ const AdminDashboard = () => {
     },
     onSettled: () => {
       // Always refetch after error or success to ensure consistency
-      queryClient.invalidateQueries({ queryKey: queryKeys.topicsAdmin });
+      queryClient.invalidateQueries({ queryKey: queryKeys.topics });
       queryClient.invalidateQueries({ queryKey: queryKeys.analytics });
     },
   });
@@ -179,7 +179,7 @@ const AdminDashboard = () => {
     },
     onMutate: async (topicId: string) => {
       // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: queryKeys.topicsAdmin });
+      await queryClient.cancelQueries({ queryKey: queryKeys.topics });
       
       // Snapshot previous value
       const previousTopics = queryClient.getQueryData(['topics']);
@@ -217,7 +217,7 @@ const AdminDashboard = () => {
     },
     onSettled: () => {
       // Always refetch after error or success to ensure consistency
-      queryClient.invalidateQueries({ queryKey: queryKeys.topicsAdmin });
+      queryClient.invalidateQueries({ queryKey: queryKeys.topics });
       queryClient.invalidateQueries({ queryKey: queryKeys.analytics });
     },
   });
@@ -229,7 +229,7 @@ const AdminDashboard = () => {
       throw new Error("Delete functionality not yet implemented in API");
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.topicsAdmin });
+      queryClient.invalidateQueries({ queryKey: queryKeys.topics });
       queryClient.invalidateQueries({ queryKey: queryKeys.analytics });
       toast({
         title: 'Success',
@@ -248,7 +248,7 @@ const AdminDashboard = () => {
   const createTopicMutation = useMutation({
     mutationFn: ApiService.createTopic,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.topicsAdmin });
+      queryClient.invalidateQueries({ queryKey: queryKeys.topics });
       queryClient.invalidateQueries({ queryKey: queryKeys.analytics });
       setIsCreateDialogOpen(false);
       setNewTopic({
@@ -566,9 +566,9 @@ const AdminDashboard = () => {
                 onClick={async () => {
                   console.log("Manual refresh clicked");
                   // Invalidate and refetch with force refresh
-                  await queryClient.invalidateQueries({ queryKey: queryKeys.topicsAdmin });
+                  await queryClient.invalidateQueries({ queryKey: queryKeys.topics });
                   await queryClient.refetchQueries({ 
-                    queryKey: queryKeys.topicsAdmin,
+                    queryKey: queryKeys.topics,
                     type: 'active'
                   });
                   

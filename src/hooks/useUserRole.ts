@@ -20,8 +20,11 @@ export function useUserRole(roleId: number, enabled: boolean = true) {
     queryKey: queryKeys.userRole(userId, roleId),
     queryFn: () => ApiService.checkUserRole(roleId),
     enabled: enabled && isAuthenticated && !!userId,
-    staleTime: 5 * 60 * 1000, // 5 minutes - role doesn't change often
+    staleTime: 10 * 60 * 1000, // 10 minutes - role doesn't change often
+    gcTime: 30 * 60 * 1000, // 30 minutes
     retry: 1, // Retry once on failure
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnMount: false, // Don't refetch on component mount if data exists
   });
 }
 

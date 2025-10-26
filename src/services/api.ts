@@ -694,7 +694,7 @@ export class ApiService {
           id: topic.topic_id || topic.id || 0,
           title: topic.title || '',
           description: topic.description || '',
-          content: topic.content || '',
+          content: topic.content || topic.body || topic.text || topic.message || '',
           author_username: topic.author_name || topic.author_username || topic.username || 'anonymous',
           author_avatar: topic.author_avatar || '',
           author_id: topic.author_id || '',
@@ -942,13 +942,10 @@ export class ApiService {
   // Get replies for a specific topic
   static async getRepliesByTopicId(topicId: string): Promise<Reply[]> {
     try {
-      console.log("getRepliesByTopicId called with topicId:", topicId);
       // Try to get auth token from user manager
       const { getUser } = await import("@/services/users/user-manager");
       const user = getUser();
       const authToken = user?.access_token || "";
-      
-      console.log("Auth token available:", !!authToken);
       
       const payload: CrudRepliesPayload = {
         action: "getReplies",
@@ -956,19 +953,14 @@ export class ApiService {
           topic_id: topicId,
         }
       };
-      
-      console.log("Payload:", payload);
 
       if (!authToken) {
         // Try with API key instead of falling back to mock data
         try {
           const response = await getRepliesApi(payload, "", FASTN_API_KEY);
-          console.log("API response:", response);
           
           // Check if response is an array directly
           if (response && Array.isArray(response)) {
-            console.log("Processing API response as array:", response);
-            console.log("First reply fields:", response[0] ? Object.keys(response[0]) : 'No replies');
             
             const processedReplies = response.map((reply: any) => ({
               id: reply.id?.toString() || `reply_${Date.now()}`,
@@ -994,7 +986,6 @@ export class ApiService {
           
           // Check if response has data property
           if (response && response.data && Array.isArray(response.data)) {
-            console.log("Processing API response data:", response.data);
             
             const processedReplies = response.data.map((reply: any) => ({
               id: reply.id?.toString() || `reply_${Date.now()}`,
@@ -1032,12 +1023,9 @@ export class ApiService {
       }
 
       const response = await getRepliesApi(payload, authToken);
-      console.log("Authenticated API response:", response);
       
       // Check if response is an array directly
       if (response && Array.isArray(response)) {
-        console.log("Processing authenticated API response as array:", response);
-        console.log("First reply fields:", response[0] ? Object.keys(response[0]) : 'No replies');
         
         const processedReplies = response.map((reply: any) => ({
           id: reply.id?.toString() || `reply_${Date.now()}`,
@@ -1061,9 +1049,8 @@ export class ApiService {
         return await this.resolveAuthorNames(processedReplies, authToken);
       }
       
-      // Check if response has data property
-      if (response && response.data && Array.isArray(response.data)) {
-        console.log("Processing authenticated API response data:", response.data);
+          // Check if response has data property
+          if (response && response.data && Array.isArray(response.data)) {
         
         const processedReplies = response.data.map((reply: any) => ({
           id: reply.id?.toString() || `reply_${Date.now()}`,
@@ -1091,7 +1078,6 @@ export class ApiService {
       
       // Fallback to mock data
       console.log("Falling back to mock data (authenticated) for topicId:", topicId);
-      console.log("Available mock replies:", mockReplies);
       const filteredReplies = [...mockReplies].filter(reply => reply.topic_id === topicId);
       console.log("Filtered mock replies:", filteredReplies);
       return new Promise((resolve) => { 
@@ -1930,12 +1916,17 @@ export class ApiService {
 
       // Get the current user's ID from the token
       const userId = user?.profile?.sub;
-      console.log("Checking role for user ID:", userId);
-      console.log("User profile:", user?.profile);
       
       if (!userId) {
-        console.error("No user ID found in token");
         return false;
+      }
+
+      // Create cache key for deduplication
+      const cacheKey = `checkUserRole-${userId}-${roleId}`;
+      
+      // If request is already in progress, return the existing promise
+      if (roleCheckCache.has(cacheKey)) {
+        return roleCheckCache.get(cacheKey)!;
       }
 
       const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
@@ -1957,60 +1948,66 @@ export class ApiService {
         headers["authorization"] = authToken;
       }
 
-      const requestBody = { 
-        input: {
-          data: {
-            id: userId
+      // Create the request promise
+      const requestPromise = (async () => {
+        const requestBody = { 
+          input: {
+            data: {
+              id: userId
+            }
           }
-        }
-      };
-      
-     
-      
-      const res = await fetch(GET_USER_BY_ROLE_ID_API_URL, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error(`checkUserRole failed: ${res.status} ${res.statusText}`, errorText);
-        return false;
-      }
-
-      const result = await res.json();
-      
-      
-      // Handle different response formats
-      let rolesArray = null;
-      
-      // Check if response is directly an array: [{ "role_id": 3 }]
-      if (Array.isArray(result)) {
-        rolesArray = result;
-      }
-      // Check if response has a result property: { result: [{ "role_id": 3 }] }
-      else if (result && result.result && Array.isArray(result.result)) {
-        rolesArray = result.result;
-      }
-      // Check if response has data property: { data: [{ "role_id": 3 }] }
-      else if (result && result.data && Array.isArray(result.data)) {
-        rolesArray = result.data;
-      }
-      
-      if (rolesArray) {
-        console.log("Roles array:", rolesArray);
-        const hasRole = rolesArray.some((roleData: any) => {
-          console.log("Checking role:", roleData.role_id, "against expected:", roleId);
-          return roleData.role_id === roleId;
-        });
+        };
         
-       
-        return hasRole;
-      }
-      
+        const res = await fetch(GET_USER_BY_ROLE_ID_API_URL, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(requestBody),
+        });
 
-      return false;
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error(`checkUserRole failed: ${res.status} ${res.statusText}`, errorText);
+          return false;
+        }
+
+        const result = await res.json();
+        
+        // Handle different response formats
+        let rolesArray = null;
+        
+        // Check if response is directly an array: [{ "role_id": 3 }]
+        if (Array.isArray(result)) {
+          rolesArray = result;
+        }
+        // Check if response has a result property: { result: [{ "role_id": 3 }] }
+        else if (result && result.result && Array.isArray(result.result)) {
+          rolesArray = result.result;
+        }
+        // Check if response has data property: { data: [{ "role_id": 3 }] }
+        else if (result && result.data && Array.isArray(result.data)) {
+          rolesArray = result.data;
+        }
+        
+        if (rolesArray) {
+          const hasRole = rolesArray.some((roleData: any) => {
+            return roleData.role_id === roleId;
+          });
+          
+          return hasRole;
+        }
+
+        return false;
+      })();
+
+      // Cache the promise for deduplication
+      roleCheckCache.set(cacheKey, requestPromise);
+      
+      // Clear cache after 5 minutes to prevent stale data
+      setTimeout(() => {
+        roleCheckCache.delete(cacheKey);
+      }, 5 * 60 * 1000);
+
+      return requestPromise;
     } catch (error) {
 
       return false;
@@ -2136,6 +2133,14 @@ export async function crudCategories(payload: CrudCategoriesPayload, authToken: 
 }
 
 export async function crudTags(payload: CrudTagsPayload, authToken: string, apiKey?: string) {
+  // Create a cache key for deduplication
+  const cacheKey = `crudTags-${payload.action}-${authToken ? 'auth' : 'key'}`;
+  
+  // If request is already in progress, return the existing promise
+  if (tagsCache.has(cacheKey)) {
+    return tagsCache.get(cacheKey);
+  }
+
   const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
   const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
   const tenantId = getCookie(TENANT_ID_KEY) || "";
@@ -2156,18 +2161,31 @@ export async function crudTags(payload: CrudTagsPayload, authToken: string, apiK
     headers["authorization"] = `Bearer ${authToken}`;
   }
 
-  const res = await fetch(CRUD_TAGS_API_URL, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ input: payload }),
-  });
+  // Create the request promise
+  const requestPromise = (async () => {
+    const res = await fetch(CRUD_TAGS_API_URL, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ input: payload }),
+    });
 
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`crudTags failed: ${res.status} ${res.statusText} - ${text}`);
-  }
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`crudTags failed: ${res.status} ${res.statusText} - ${text}`);
+    }
 
-  return res.json();
+    return res.json();
+  })();
+
+  // Cache the promise for deduplication
+  tagsCache.set(cacheKey, requestPromise);
+  
+  // Clear cache after 5 minutes to prevent stale data
+  setTimeout(() => {
+    tagsCache.delete(cacheKey);
+  }, 5 * 60 * 1000);
+
+  return requestPromise;
 }
 
 
@@ -2271,7 +2289,21 @@ export async function insertTopicTags(payload: InsertTopicTagsPayload, authToken
   return res.json();
 }
 
+// Request deduplication cache
+const requestCache = new Map<string, Promise<any>>();
+const roleCheckCache = new Map<string, Promise<boolean>>();
+const tagsCache = new Map<string, Promise<any>>();
+const repliesCache = new Map<string, Promise<any>>();
+
 export async function getAllTopics(payload: any, authToken: string, apiKey?: string, forceRefresh: boolean = false) {
+  // Create a cache key for deduplication
+  const cacheKey = `getAllTopics-${authToken ? 'auth' : 'key'}-${forceRefresh}`;
+  
+  // If not forcing refresh and request is already in progress, return the existing promise
+  if (!forceRefresh && requestCache.has(cacheKey)) {
+    return requestCache.get(cacheKey);
+  }
+
   const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
   const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
   const tenantId = getCookie(TENANT_ID_KEY) || "";
@@ -2300,29 +2332,50 @@ export async function getAllTopics(payload: any, authToken: string, apiKey?: str
     headers["authorization"] = `Bearer ${authToken}`;
   }
 
-  console.log("getAllTopics API call:", { 
-    forceRefresh, 
-    headers: Object.keys(headers), 
-    url: GET_TOPICS_API_URL 
-  });
-
-  const res = await fetch(GET_TOPICS_API_URL, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ 
-      input: forceRefresh ? { cacheBust: Date.now() } : {} 
-    }),
-    cache: forceRefresh ? 'no-store' : 'default'
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`getAllTopics failed: ${res.status} ${res.statusText} - ${text}`);
+  // Only log in development to reduce noise
+  if (process.env.NODE_ENV === 'development') {
+    console.log("getAllTopics API call:", { 
+      forceRefresh, 
+      headers: Object.keys(headers), 
+      url: GET_TOPICS_API_URL 
+    });
   }
 
-  const result = await res.json();
-  console.log("getAllTopics API response:", { forceRefresh, resultLength: result?.length });
-  return result;
+  // Create the request promise
+  const requestPromise = (async () => {
+    const res = await fetch(GET_TOPICS_API_URL, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ 
+        input: forceRefresh ? { cacheBust: Date.now() } : {} 
+      }),
+      cache: forceRefresh ? 'no-store' : 'default'
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`getAllTopics failed: ${res.status} ${res.statusText} - ${text}`);
+    }
+
+    const result = await res.json();
+    // Only log in development to reduce noise
+    if (process.env.NODE_ENV === 'development') {
+      console.log("getAllTopics API response:", { forceRefresh, resultLength: result?.length });
+    }
+    return result;
+  })();
+
+  // Cache the promise for deduplication
+  if (!forceRefresh) {
+    requestCache.set(cacheKey, requestPromise);
+    
+    // Clear cache after 30 seconds to prevent stale data
+    setTimeout(() => {
+      requestCache.delete(cacheKey);
+    }, 30000);
+  }
+
+  return requestPromise;
 }
 
 export async function createReplyApi(payload: CrudRepliesPayload, authToken: string, apiKey?: string) {
@@ -2373,8 +2426,14 @@ export async function createReplyApi(payload: CrudRepliesPayload, authToken: str
 }
 
 export async function getRepliesApi(payload: CrudRepliesPayload, authToken: string, apiKey?: string) {
-  console.log("getRepliesApi function called with payload:", payload); // Debug log
+  // Create a cache key for deduplication
+  const cacheKey = `getRepliesApi-${payload.action}-${payload.data?.topic_id || 'all'}-${authToken ? 'auth' : 'key'}`;
   
+  // If request is already in progress, return the existing promise
+  if (repliesCache.has(cacheKey)) {
+    return repliesCache.get(cacheKey);
+  }
+
   const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
   const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
   const tenantId = getCookie(TENANT_ID_KEY) || "";
@@ -2396,27 +2455,31 @@ export async function getRepliesApi(payload: CrudRepliesPayload, authToken: stri
     headers["authorization"] = `Bearer ${authToken}`;
   }
 
-  console.log("Making API call to:", GET_REPLIES_API_URL); // Debug log
-  console.log("With headers:", headers); // Debug log
-  console.log("With body:", JSON.stringify({ input: payload })); // Debug log
+  // Create the request promise
+  const requestPromise = (async () => {
+    const res = await fetch(GET_REPLIES_API_URL, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ input: payload }),
+    });
 
-  const res = await fetch(GET_REPLIES_API_URL, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ input: payload }),
-  });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`getRepliesApi failed: ${res.status} ${res.statusText} - ${text}`);
+    }
 
-  console.log("API response status:", res.status); // Debug log
+    return res.json();
+  })();
 
-  if (!res.ok) {
-    const text = await res.text();
-    console.error("API call failed:", res.status, res.statusText, text); // Debug log
-    throw new Error(`getRepliesApi failed: ${res.status} ${res.statusText} - ${text}`);
-  }
+  // Cache the promise for deduplication
+  repliesCache.set(cacheKey, requestPromise);
+  
+  // Clear cache after 2 minutes to prevent stale data
+  setTimeout(() => {
+    repliesCache.delete(cacheKey);
+  }, 2 * 60 * 1000);
 
-  const result = await res.json();
-  console.log("API response data:", result); // Debug log
-  return result;
+  return requestPromise;
 }
 
 export async function updateReply(payload: CrudRepliesPayload, authToken: string, apiKey?: string) {
