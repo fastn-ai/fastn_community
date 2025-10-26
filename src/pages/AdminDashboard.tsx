@@ -125,37 +125,13 @@ const AdminDashboard = () => {
       console.log("Approve mutation result:", result);
       return result;
     },
-    onMutate: async (topicId: string) => {
-      // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: queryKeys.topics });
-      
-      // Snapshot previous value
-      const previousTopics = queryClient.getQueryData(['topics']);
-      
-      // Optimistically update the cache
-      queryClient.setQueryData(['topics'], (old: any) => {
-        if (!old) return old;
-        return old.map((topic: Topic) => 
-          topic.id.toString() === topicId 
-            ? { ...topic, status: 'approved' as const }
-            : topic
-        );
-      });
-      
-      return { previousTopics };
-    },
     onSuccess: () => {
       toast({
         title: 'Success',
         description: 'Topic approved successfully',
       });
     },
-    onError: (error, topicId, context) => {
-      // Revert optimistic update on error
-      if (context?.previousTopics) {
-        queryClient.setQueryData(['topics'], context.previousTopics);
-      }
-      
+    onError: (error) => {
       console.error("Approve mutation error:", error);
       toast({
         title: 'Error',
@@ -163,10 +139,17 @@ const AdminDashboard = () => {
         variant: 'destructive',
       });
     },
-    onSettled: () => {
-      // Always refetch after error or success to ensure consistency
-      queryClient.invalidateQueries({ queryKey: queryKeys.topics });
-      queryClient.invalidateQueries({ queryKey: queryKeys.analytics });
+    onSettled: async () => {
+      
+      // Explicitly call getAllTopics to refresh the data
+      try {
+        console.log("Refreshing topics after approve mutation...");
+        const freshTopics = await ApiService.getAllTopics(true); // forceRefresh: true
+        queryClient.setQueryData(queryKeys.topics, freshTopics);
+        console.log("Topics refreshed successfully:", freshTopics.length, "topics");
+      } catch (error) {
+        console.error("Failed to refresh topics after approve:", error);
+      }
     },
   });
 
@@ -177,37 +160,13 @@ const AdminDashboard = () => {
       console.log("Reject mutation result:", result);
       return result;
     },
-    onMutate: async (topicId: string) => {
-      // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: queryKeys.topics });
-      
-      // Snapshot previous value
-      const previousTopics = queryClient.getQueryData(['topics']);
-      
-      // Optimistically update the cache
-      queryClient.setQueryData(['topics'], (old: any) => {
-        if (!old) return old;
-        return old.map((topic: Topic) => 
-          topic.id.toString() === topicId 
-            ? { ...topic, status: 'rejected' as const }
-            : topic
-        );
-      });
-      
-      return { previousTopics };
-    },
     onSuccess: () => {
       toast({
         title: 'Success',
         description: 'Topic rejected successfully',
       });
     },
-    onError: (error, topicId, context) => {
-      // Revert optimistic update on error
-      if (context?.previousTopics) {
-        queryClient.setQueryData(['topics'], context.previousTopics);
-      }
-      
+    onError: (error) => {
       console.error("Reject mutation error:", error);
       toast({
         title: 'Error',
@@ -215,10 +174,18 @@ const AdminDashboard = () => {
         variant: 'destructive',
       });
     },
-    onSettled: () => {
+    onSettled: async () => {
       // Always refetch after error or success to ensure consistency
-      queryClient.invalidateQueries({ queryKey: queryKeys.topics });
-      queryClient.invalidateQueries({ queryKey: queryKeys.analytics });
+      
+      // Explicitly call getAllTopics to refresh the data
+      try {
+        console.log("Refreshing topics after reject mutation...");
+        const freshTopics = await ApiService.getAllTopics(true); // forceRefresh: true
+        queryClient.setQueryData(queryKeys.topics, freshTopics);
+        console.log("Topics refreshed successfully:", freshTopics.length, "topics");
+      } catch (error) {
+        console.error("Failed to refresh topics after reject:", error);
+      }
     },
   });
 
