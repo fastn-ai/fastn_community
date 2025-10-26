@@ -56,10 +56,11 @@ export function signOut() {
   // Clear local session immediately
   localStorage.clear();
   sessionStorage.clear();
-  
+
   // Redirect to home page immediately
   window.location.href = '/';
-  
+
+  userManager.signoutRedirect();
   return Promise.resolve();
 }
 
