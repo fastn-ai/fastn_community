@@ -191,9 +191,7 @@ const AdminDashboard = () => {
 
   const deleteTopicMutation = useMutation({
     mutationFn: async (topicId: string) => {
-      // Note: Implement deleteTopicApi method in ApiService if needed
-      console.log("Deleting topic", topicId);
-      throw new Error("Delete functionality not yet implemented in API");
+      return ApiService.deleteTopic(topicId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.topics });

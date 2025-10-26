@@ -1,7 +1,7 @@
 // Mock API Service for fastn community platform
 // This is a frontend-only implementation with mock data
 
-import { INSERT_USER_API_URL, FASTN_SPACE_ID, FASTN_API_KEY, CUSTOM_AUTH_KEY, CUSTOM_AUTH_TOKEN_KEY, TENANT_ID_KEY, CRUD_CATEGORIES_API_URL, CRUD_TAGS_API_URL, GET_TOPIC_BY_USER_API_URL, INSERT_TOPIC_TAGS_API_URL, INSERT_TOPICS_API_URL, GET_TOPICS_API_URL, CREATE_REPLY_API_URL, GET_REPLIES_API_URL, UPDATE_REPLY_API_URL, DELETE_REPLY_API_URL, GET_USER_BY_ROLE_ID_API_URL, UPDATE_TOPIC_STATUS_API_URL } from "@/constants";
+import { INSERT_USER_API_URL, FASTN_SPACE_ID, FASTN_API_KEY, CUSTOM_AUTH_KEY, CUSTOM_AUTH_TOKEN_KEY, TENANT_ID_KEY, CRUD_CATEGORIES_API_URL, CRUD_TAGS_API_URL, GET_TOPIC_BY_USER_API_URL, INSERT_TOPIC_TAGS_API_URL, INSERT_TOPICS_API_URL, GET_TOPICS_API_URL, CREATE_REPLY_API_URL, GET_REPLIES_API_URL, UPDATE_REPLY_API_URL, DELETE_REPLY_API_URL, GET_USER_BY_ROLE_ID_API_URL, UPDATE_TOPIC_STATUS_API_URL, DELETE_TOPIC_API_URL } from "@/constants";
 import { getCookie } from "@/routes/login/oauth";
 import { generateConsistentColor, PREDEFINED_COLORS } from "@/lib/utils";
 
@@ -1830,7 +1830,7 @@ export class ApiService {
     }
   }
 
-  // Delete topic (mock implementation since we don't have a dedicated delete endpoint)
+  // Delete topic using the DeleteTopic API endpoint
   static async deleteTopic(topicId: string): Promise<boolean> {
     try {
       const { getUser } = await import("@/services/users/user-manager");
@@ -1841,11 +1841,20 @@ export class ApiService {
         throw new Error("No auth token available");
       }
 
-      // For now, we'll use a mock implementation since we don't have a dedicated delete endpoint
-      // In a real implementation, you would call the appropriate API endpoint
-      console.log("Deleting topic:", topicId);
+      const payload = {
+        input: {
+        action: "deletetopic",
+          data: {
+            id: topicId
+          }
+        }
+      };
+
+      console.log("Deleting topic with payload:", payload);
       
-      // Clear cache after deletion
+      const response = await deleteTopicApi(payload, authToken);
+      
+      // Clear cache after successful deletion
       ApiService.clearTopicCache();
       
       return true;
@@ -2610,6 +2619,51 @@ export async function updateTopicStatusApi(payload: any, authToken: string) {
   return result;
 }
 
+export async function deleteTopicApi(payload: { action: string; data: { id: string } }, authToken: string) {
+  console.log("deleteTopicApi called with:", { payload, authToken: authToken ? "present" : "missing" });
+  
+  const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
+  const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
+  const tenantId = getCookie(TENANT_ID_KEY) || "";
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "x-fastn-space-id": FASTN_SPACE_ID,
+    stage: "DRAFT",
+  };
+
+  if (isCustomAuth && customAuthToken) {
+    headers["x-fastn-custom-auth"] = "true";
+    headers["authorization"] = customAuthToken; // raw JWT for custom auth
+    if (tenantId) headers["x-fastn-space-tenantid"] = tenantId;
+  } else {
+    headers["authorization"] = `Bearer ${authToken}`;
+  }
+
+  console.log("Making request to:", DELETE_TOPIC_API_URL);
+  console.log("With headers:", headers);
+  console.log("With body:", JSON.stringify(payload));
+
+  const res = await fetch(DELETE_TOPIC_API_URL, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload),
+  });
+
+  console.log("Response status:", res.status);
+  console.log("Response ok:", res.ok);
+
+  if (!res.ok) {
+    const text = await res.text();
+    console.error("API Error:", { status: res.status, statusText: res.statusText, text });
+    throw new Error(`deleteTopic failed: ${res.status} ${res.statusText} - ${text}`);
+  }
+
+  const result = await res.json();
+  console.log("API Response:", result);
+  return result;
+}
+
 // Hook for using API in React components
 export const useApi = () => {
   return {
@@ -2645,6 +2699,7 @@ export const useApi = () => {
     insertTopicTagsApi: insertTopicTags,
     getAllTopicsApi: getAllTopics,
     updateTopicStatusApi,
+    deleteTopicApi,
     // Replies API functions
     createReplyApi,
     getRepliesApi,

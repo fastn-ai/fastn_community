@@ -448,13 +448,13 @@ const UserTopics = () => {
                                 </TableCell>
                                 <TableCell>
                                   <div className="flex items-center gap-2">
-                                    <Button
+                                    {/* <Button
                                       size="sm"
                                       variant="outline"
                                       onClick={() => handleEdit(topic)}
                                     >
                                       <Edit className="w-3 h-3" />
-                                    </Button>
+                                    </Button> */}
                                     <AlertDialog>
                                       <AlertDialogTrigger asChild>
                                         <Button size="sm" variant="outline">
