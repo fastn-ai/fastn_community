@@ -774,10 +774,10 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                       </div>
                     </div>
 
-                    {/* Views */}
+                    {/* Likes */}
                     <div className="col-span-2 flex items-center justify-end">
                       <div className="flex items-center gap-1 text-sm text-gray-600">
-                        <Eye
+                        <Heart
                           className={`h-4 w-4 ${getStatsIconColor("Likes")}`}
                         />
                         <span>{topic.like_count || 0}</span>
