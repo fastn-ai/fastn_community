@@ -406,7 +406,7 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          {/*<Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Views</CardTitle>
               <Eye className="h-4 w-4 text-muted-foreground" />
@@ -417,7 +417,7 @@ const AdminDashboard = () => {
                 Across all topics
               </p>
             </CardContent>
-          </Card>
+          </Card>*/}
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -457,10 +457,10 @@ const AdminDashboard = () => {
                           <h4 className="font-medium text-sm">{topic.title}</h4>
                           <p className="text-xs text-gray-500">by {topic.author_username}</p>
                         </div>
-                        <div className="flex items-center gap-2">
+                        {/*<div className="flex items-center gap-2">
                           {getStatusBadge(topic.status || 'pending')}
                           <span className="text-xs text-gray-500">{topic.view_count} views</span>
-                        </div>
+                        </div>*/}
                       </div>
                     ))}
                   </div>
@@ -559,7 +559,7 @@ const AdminDashboard = () => {
                       <TableHead>Author</TableHead>
                       <TableHead>Category</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Views</TableHead>
+                      <TableHead>Likes</TableHead>
                       <TableHead>Created</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -732,10 +732,10 @@ const AdminDashboard = () => {
                       <span>Total Replies</span>
                       <span className="font-medium">{analytics?.totalReplies}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Total Views</span>
+                    {/*<div className="flex justify-between">
+                      <span>Total likes</span>
                       <span className="font-medium">{analytics?.totalViews}</span>
-                    </div>
+                    </div>*/}
                     <div className="flex justify-between">
                       <span>Total Likes</span>
                       <span className="font-medium">{analytics?.totalLikes}</span>

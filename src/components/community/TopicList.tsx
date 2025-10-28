@@ -659,7 +659,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
             <div className="grid grid-cols-12 gap-4 p-4 border-b font-semibold text-sm">
               <div className="col-span-6">Topic</div>
               <div className="col-span-2 text-right">Replies</div>
-              <div className="col-span-2 text-right">Views</div>
+              <div className="col-span-2 text-right">Likes</div>
               <div className="col-span-2 text-right">Activity</div>
             </div>
 
@@ -778,9 +778,9 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                     <div className="col-span-2 flex items-center justify-end">
                       <div className="flex items-center gap-1 text-sm text-gray-600">
                         <Eye
-                          className={`h-4 w-4 ${getStatsIconColor("views")}`}
+                          className={`h-4 w-4 ${getStatsIconColor("Likes")}`}
                         />
-                        <span>{topic.view_count || 0}</span>
+                        <span>{topic.like_count || 0}</span>
                       </div>
                     </div>
 

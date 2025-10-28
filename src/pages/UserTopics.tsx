@@ -420,7 +420,7 @@ const UserTopics = () => {
                               <TableHead>Title</TableHead>
                               <TableHead>Category</TableHead>
                               <TableHead>Status</TableHead>
-                              <TableHead>Views</TableHead>
+                              {/*<TableHead>Views</TableHead>*/}
                               <TableHead>Likes</TableHead>
                               <TableHead>Created</TableHead>
                               <TableHead>Actions</TableHead>
@@ -530,12 +530,12 @@ const UserTopics = () => {
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-4">
-                          <div className="flex justify-between">
+                          {/*<div className="flex justify-between">
                             <span>Total Views</span>
                             <span className="font-medium">
                               {userTopics?.reduce((sum, topic) => sum + topic.view_count, 0) || 0}
                             </span>
-                          </div>
+                          </div>*/}
                           <div className="flex justify-between">
                             <span>Total Likes</span>
                             <span className="font-medium">
@@ -548,13 +548,13 @@ const UserTopics = () => {
                               {userTopics?.reduce((sum, topic) => sum + topic.reply_count, 0) || 0}
                             </span>
                           </div>
-                          <div className="flex justify-between">
+                          {/*<div className="flex justify-between">
                             <span>Average Views per Topic</span>
                             <span className="font-medium">
                               {userTopics?.length ? 
                                 Math.round(userTopics.reduce((sum, topic) => sum + topic.view_count, 0) / userTopics.length) : 0}
                             </span>
-                          </div>
+                          </div>*/}
                         </div>
                       </CardContent>
                     </Card>
