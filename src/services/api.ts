@@ -1,7 +1,7 @@
 // Mock API Service for fastn community platform
 // This is a frontend-only implementation with mock data
 
-import { INSERT_USER_API_URL, FASTN_SPACE_ID, FASTN_API_KEY, CUSTOM_AUTH_KEY, CUSTOM_AUTH_TOKEN_KEY, TENANT_ID_KEY, CRUD_CATEGORIES_API_URL, CRUD_TAGS_API_URL, GET_TOPIC_BY_USER_API_URL, INSERT_TOPIC_TAGS_API_URL, INSERT_TOPICS_API_URL, GET_TOPICS_API_URL, CREATE_REPLY_API_URL, GET_REPLIES_API_URL, UPDATE_REPLY_API_URL, DELETE_REPLY_API_URL, GET_USER_BY_ROLE_ID_API_URL, UPDATE_TOPIC_STATUS_API_URL, DELETE_TOPIC_API_URL } from "@/constants";
+import { INSERT_USER_API_URL, FASTN_SPACE_ID, FASTN_API_KEY, CUSTOM_AUTH_KEY, CUSTOM_AUTH_TOKEN_KEY, TENANT_ID_KEY, CRUD_CATEGORIES_API_URL, CRUD_TAGS_API_URL, GET_TOPIC_BY_USER_API_URL, INSERT_TOPIC_TAGS_API_URL, INSERT_TOPICS_API_URL, GET_TOPICS_API_URL, CREATE_REPLY_API_URL, GET_REPLIES_API_URL, UPDATE_REPLY_API_URL, DELETE_REPLY_API_URL, UPDATE_TOPIC_STATUS_API_URL, DELETE_TOPIC_API_URL } from "@/constants";
 import { getCookie } from "@/routes/login/oauth";
 import { generateConsistentColor, PREDEFINED_COLORS } from "@/lib/utils";
 
@@ -1842,11 +1842,9 @@ export class ApiService {
       }
 
       const payload = {
-        input: {
         action: "deletetopic",
-          data: {
-            id: topicId
-          }
+        data: {
+          id: topicId
         }
       };
 
@@ -1909,117 +1907,6 @@ export class ApiService {
       return analytics;
     } catch (error) {
       throw error;
-    }
-  }
-
-  // Check if current user has a specific role_id
-  static async checkUserRole(roleId: number): Promise<boolean> {
-    try {
-      const { getUser } = await import("@/services/users/user-manager");
-      const user = getUser();
-      const authToken = user?.access_token || "";
-      
-      if (!authToken) {
-        return false;
-      }
-
-      // Get the current user's ID from the token
-      const userId = user?.profile?.sub;
-      
-      if (!userId) {
-        return false;
-      }
-
-      // Create cache key for deduplication
-      const cacheKey = `checkUserRole-${userId}-${roleId}`;
-      
-      // If request is already in progress, return the existing promise
-      if (roleCheckCache.has(cacheKey)) {
-        return roleCheckCache.get(cacheKey)!;
-      }
-
-      const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
-      const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
-      const tenantId = getCookie(TENANT_ID_KEY) || "";
-
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-        "x-fastn-space-id": FASTN_SPACE_ID,
-        stage: "DRAFT",
-      };
-
-      if (isCustomAuth && customAuthToken) {
-        headers["x-fastn-custom-auth"] = "true";
-        headers["authorization"] = customAuthToken;
-        if (tenantId) headers["x-fastn-space-tenantid"] = tenantId;
-      } else {
-        headers["x-fastn-api-key"] = FASTN_API_KEY;
-        headers["authorization"] = authToken;
-      }
-
-      // Create the request promise
-      const requestPromise = (async () => {
-        const requestBody = { 
-          input: {
-            data: {
-              id: userId
-            }
-          }
-        };
-        
-        const res = await fetch(GET_USER_BY_ROLE_ID_API_URL, {
-          method: "POST",
-          headers,
-          body: JSON.stringify(requestBody),
-        });
-
-        if (!res.ok) {
-          const errorText = await res.text();
-          console.error(`checkUserRole failed: ${res.status} ${res.statusText}`, errorText);
-          return false;
-        }
-
-        const result = await res.json();
-        
-        // Handle different response formats
-        let rolesArray = null;
-        
-        // Check if response is directly an array: [{ "role_id": 3 }]
-        if (Array.isArray(result)) {
-          rolesArray = result;
-        }
-        // Check if response has a result property: { result: [{ "role_id": 3 }] }
-        else if (result && result.result && Array.isArray(result.result)) {
-          rolesArray = result.result;
-        }
-        // Check if response has data property: { data: [{ "role_id": 3 }] }
-        else if (result && result.data && Array.isArray(result.data)) {
-          rolesArray = result.data;
-        }
-        
-        if (rolesArray) {
-          const hasRole = rolesArray.some((roleData: any) => {
-            return roleData.role_id === roleId;
-          });
-          
-          return hasRole;
-        }
-
-        return false;
-      })();
-
-      // Cache the promise for deduplication
-      roleCheckCache.set(cacheKey, requestPromise);
-      
-      // Clear cache after 5 minutes to prevent stale data
-      setTimeout(() => {
-        roleCheckCache.delete(cacheKey);
-      }, 5 * 60 * 1000);
-
-      return requestPromise;
-    } catch (error) {
-
-      return false;
     }
   }
 }
@@ -2300,7 +2187,6 @@ export async function insertTopicTags(payload: InsertTopicTagsPayload, authToken
 
 // Request deduplication cache
 const requestCache = new Map<string, Promise<any>>();
-const roleCheckCache = new Map<string, Promise<boolean>>();
 const tagsCache = new Map<string, Promise<any>>();
 const repliesCache = new Map<string, Promise<any>>();
 

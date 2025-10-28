@@ -35,7 +35,7 @@ ON CONFLICT (name) DO NOTHING;
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
     -- We use TEXT for id to store external OIDC subject identifiers
-    id SERIAL PRIMARY KEY,
+    id TEXT PRIMARY KEY,
 
     username TEXT NOT NULL,
     email TEXT NOT NULL,
@@ -127,7 +127,7 @@ END$$;
 -- Topics table
 CREATE TABLE IF NOT EXISTS topics (
     id SERIAL PRIMARY KEY,
-    author_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    author_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     category_id INTEGER REFERENCES categories(id),
 
     title TEXT NOT NULL,
@@ -162,7 +162,7 @@ CREATE INDEX IF NOT EXISTS topics_created_at_idx ON topics (created_at DESC);
 CREATE TABLE IF NOT EXISTS replies (
     id SERIAL PRIMARY KEY,
     topic_id INTEGER NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
-    author_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    author_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     parent_reply_id INTEGER REFERENCES replies(id) ON DELETE CASCADE, -- For nested replies
     
     content TEXT NOT NULL,
@@ -189,7 +189,7 @@ END$$;
 CREATE INDEX IF NOT EXISTS replies_topic_id_idx ON replies (topic_id);
 CREATE INDEX IF NOT EXISTS replies_author_id_idx ON replies (author_id);
 CREATE INDEX IF NOT EXISTS replies_parent_reply_id_idx ON replies (parent_reply_id);
-CREATE INDEX IF NOT EXISTS replies_is_deleted_idx ON replies (is_deleted);
+
 CREATE INDEX IF NOT EXISTS replies_created_at_idx ON replies (created_at DESC);
 
 -- Likes table (for both topics and replies)
@@ -223,7 +223,7 @@ CREATE INDEX IF NOT EXISTS likes_created_at_idx ON likes (created_at DESC);
 CREATE TABLE IF NOT EXISTS shares (
     id SERIAL PRIMARY KEY,
     topic_id INTEGER NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     
     -- Share platform/type (optional)
     platform TEXT, -- 'twitter', 'facebook', 'linkedin', 'copy_link', etc.
@@ -271,7 +271,7 @@ CREATE INDEX IF NOT EXISTS file_uploads_topic_id_idx ON file_uploads (topic_id);
 CREATE INDEX IF NOT EXISTS file_uploads_reply_id_idx ON file_uploads (reply_id);
 CREATE INDEX IF NOT EXISTS file_uploads_uploaded_by_idx ON file_uploads (uploaded_by);
 CREATE INDEX IF NOT EXISTS file_uploads_mime_type_idx ON file_uploads (mime_type);
-CREATE INDEX IF NOT EXISTS file_uploads_is_deleted_idx ON file_uploads (is_deleted);
+
 CREATE INDEX IF NOT EXISTS file_uploads_uploaded_at_idx ON file_uploads (uploaded_at DESC);
 
 -- Function to update reply count in topics table
@@ -292,15 +292,7 @@ BEGIN
         RETURN OLD;
     ELSIF TG_OP = 'UPDATE' THEN
         -- Handle soft delete changes
-        IF OLD.is_deleted = FALSE AND NEW.is_deleted = TRUE THEN
-            UPDATE topics 
-            SET reply_count = GREATEST(reply_count - 1, 0) 
-            WHERE id = NEW.topic_id;
-        ELSIF OLD.is_deleted = TRUE AND NEW.is_deleted = FALSE THEN
-            UPDATE topics 
-            SET reply_count = reply_count + 1 
-            WHERE id = NEW.topic_id;
-        END IF;
+    
         RETURN NEW;
     END IF;
     RETURN NULL;
@@ -436,7 +428,7 @@ SELECT
     r.parent_reply_id,
     r.like_count as reply_like_count
 FROM topics t
-LEFT JOIN replies r ON t.id = r.topic_id AND r.is_deleted = FALSE
+LEFT JOIN replies r ON t.id = r.topic_id 
 LEFT JOIN users u ON r.author_id = u.id
 ORDER BY t.created_at DESC, r.created_at ASC;
 
@@ -460,7 +452,7 @@ SELECT
     f.mime_type,
     f.uploaded_at
 FROM topics t
-LEFT JOIN file_uploads f ON t.id = f.topic_id AND f.is_deleted = FALSE
+LEFT JOIN file_uploads f ON t.id = f.topic_id 
 ORDER BY t.created_at DESC, f.uploaded_at ASC;
 
 -- Query share statistics for topics

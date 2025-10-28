@@ -8,6 +8,7 @@ import { queryClient } from "@/services/queryClient";
 import { oidcSettings } from "@/services/users/user-manager";
 import { OAuthRedirectApiInfoProvider } from "@/context/oauth-redirect-api-info";
 import { PermissionsProvider } from "@/context/permissions-provider";
+import { UserRoleProvider } from "@/context/UserRoleContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Categories from "./pages/Categories";
@@ -36,7 +37,8 @@ const App = () => (
     <AuthProvider {...oidcSettings}>
       <OAuthRedirectApiInfoProvider>
         <PermissionsProvider>
-          <TooltipProvider>
+          <UserRoleProvider>
+            <TooltipProvider>
             <Toaster />
             <Sonner />
             <BrowserRouter>
@@ -67,7 +69,8 @@ const App = () => (
               </Routes>
             </BrowserRouter>
      
-          </TooltipProvider>
+            </TooltipProvider>
+          </UserRoleProvider>
         </PermissionsProvider>
       </OAuthRedirectApiInfoProvider>
     </AuthProvider>

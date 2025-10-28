@@ -16,7 +16,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import CreateTopicModal from "@/components/ui/create-topic-modal";
 import { useAuth } from "react-oidc-context";
 import { signOut } from "@/services/users/user-manager";
-import { useIsAdmin } from "@/hooks/useUserRole";
+import { useUserRole } from "@/context/UserRoleContext";
 
 const Header = () => {
   const navigate = useNavigate();
@@ -24,9 +24,7 @@ const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateTopicModalOpen, setIsCreateTopicModalOpen] = useState(false);
   const auth = useAuth();
-  
-  // Use the cached hook for admin role check
-  const { isAdmin } = useIsAdmin();
+  const { isAdmin } = useUserRole();
   
   // Check if user is on topic pages
   const isOnTopicPage = location.pathname === '/' || location.pathname === '/top';

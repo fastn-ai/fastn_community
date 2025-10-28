@@ -50,7 +50,6 @@ export const queryKeys = {
   replies: (topicId: string) => ['replies', topicId] as const,
   users: ['users'] as const,
   user: (id: string) => ['users', id] as const,
-  userRole: (userId: string, roleId: number) => ['userRole', userId, roleId] as const,
   tags: ['tags'] as const,
   tagsByTopic: (topicId: string) => ['tags', 'topic', topicId] as const,
   analytics: ['analytics'] as const,
