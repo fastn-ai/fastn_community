@@ -1,7 +1,7 @@
 // Mock API Service for fastn community platform
 // This is a frontend-only implementation with mock data
 
-import { INSERT_USER_API_URL, FASTN_SPACE_ID, FASTN_API_KEY, CUSTOM_AUTH_KEY, CUSTOM_AUTH_TOKEN_KEY, TENANT_ID_KEY, CRUD_CATEGORIES_API_URL, CRUD_TAGS_API_URL, GET_TOPIC_BY_USER_API_URL, INSERT_TOPIC_TAGS_API_URL, INSERT_TOPICS_API_URL, GET_TOPICS_API_URL, CREATE_REPLY_API_URL, GET_REPLIES_API_URL, UPDATE_REPLY_API_URL, DELETE_REPLY_API_URL, UPDATE_TOPIC_STATUS_API_URL, DELETE_TOPIC_API_URL } from "@/constants";
+import { INSERT_USER_API_URL, FASTN_SPACE_ID, FASTN_API_KEY, CUSTOM_AUTH_KEY, CUSTOM_AUTH_TOKEN_KEY, TENANT_ID_KEY, CRUD_CATEGORIES_API_URL, CRUD_TAGS_API_URL, GET_TOPIC_BY_USER_API_URL, INSERT_TOPIC_TAGS_API_URL, INSERT_TOPICS_API_URL, GET_TOPICS_API_URL, CREATE_REPLY_API_URL, GET_REPLIES_API_URL, UPDATE_REPLY_API_URL, DELETE_REPLY_API_URL, UPDATE_TOPIC_STATUS_API_URL, DELETE_TOPIC_API_URL, GET_ALL_USERS_API_URL } from "@/constants";
 import { getCookie } from "@/routes/login/oauth";
 import { generateConsistentColor, PREDEFINED_COLORS } from "@/lib/utils";
 
@@ -841,9 +841,94 @@ export class ApiService {
 
   // Get all users
   static async getAllUsers(): Promise<User[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => resolve([...mockUsers]), 100);
-    });
+    try {
+      // Try to get auth token from user manager
+      const { getUser } = await import("@/services/users/user-manager");
+      const user = getUser();
+      const authToken = user?.access_token || "";
+      
+      const payload = {
+        action: "getAllUsers"
+      };
+
+      if (!authToken) {
+        // Use FASTN API key for public access when user is not logged in
+        try {
+          const response = await getAllUsersApi(payload, "", FASTN_API_KEY);
+          
+          if (response && response.result) {
+            const users = Array.isArray(response.result) ? response.result : [];
+            return users.map((user: any) => ({
+              id: user.id?.toString() || '',
+              username: user.username || user.preferred_username || 'anonymous',
+              email: user.email || '',
+              avatar: user.avatar || user.picture || '',
+              bio: user.bio || '',
+              location: user.location || '',
+              website: user.website || '',
+              twitter: user.twitter || '',
+              github: user.github || '',
+              linkedin: user.linkedin || '',
+              is_verified: user.is_verified || false,
+              is_active: user.is_active !== undefined ? user.is_active : true,
+              topics_count: user.topics_count || 0,
+              replies_count: user.replies_count || 0,
+              likes_received: user.likes_received || 0,
+              badges_count: user.badges_count || 0,
+              reputation_score: user.reputation_score || 0,
+              created_at: user.created_at || user.createdAt || new Date().toISOString(),
+              updated_at: user.updated_at || user.updatedAt || new Date().toISOString(),
+            }));
+          }
+        } catch (error) {
+          console.warn("Failed to fetch users with API key:", error);
+        }
+        
+        // Fallback to mock data
+        return new Promise((resolve) => {
+          setTimeout(() => resolve([...mockUsers]), 100);
+        });
+      }
+
+      // Call the real API with auth token
+      const response = await getAllUsersApi(payload, authToken);
+      
+      if (response && response.result) {
+        const users = Array.isArray(response.result) ? response.result : [];
+        return users.map((user: any) => ({
+          id: user.id?.toString() || '',
+          username: user.username || user.preferred_username || 'anonymous',
+          email: user.email || '',
+          avatar: user.avatar || user.picture || '',
+          bio: user.bio || '',
+          location: user.location || '',
+          website: user.website || '',
+          twitter: user.twitter || '',
+          github: user.github || '',
+          linkedin: user.linkedin || '',
+          is_verified: user.is_verified || false,
+          is_active: user.is_active !== undefined ? user.is_active : true,
+          topics_count: user.topics_count || 0,
+          replies_count: user.replies_count || 0,
+          likes_received: user.likes_received || 0,
+          badges_count: user.badges_count || 0,
+          reputation_score: user.reputation_score || 0,
+          created_at: user.created_at || user.createdAt || new Date().toISOString(),
+          updated_at: user.updated_at || user.updatedAt || new Date().toISOString(),
+        }));
+      }
+      
+      // Fallback to mock data
+      return new Promise((resolve) => {
+        setTimeout(() => resolve([...mockUsers]), 100);
+      });
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      // Fallback to mock data
+      return new Promise((resolve) => {
+        setTimeout(() => resolve([...mockUsers]), 100);
+      });
+    }
   }
 
   // Get all replies
@@ -1850,7 +1935,7 @@ export class ApiService {
 
       console.log("Deleting topic with payload:", payload);
       
-      const response = await deleteTopicApi(payload, authToken);
+      const response = await deleteTopicApi(payload, authToken, FASTN_API_KEY);
       
       // Clear cache after successful deletion
       ApiService.clearTopicCache();
@@ -2505,7 +2590,7 @@ export async function updateTopicStatusApi(payload: any, authToken: string) {
   return result;
 }
 
-export async function deleteTopicApi(payload: { action: string; data: { id: string } }, authToken: string) {
+export async function deleteTopicApi(payload: { action: string; data: { id: string } }, authToken: string, apiKey?: string) {
   console.log("deleteTopicApi called with:", { payload, authToken: authToken ? "present" : "missing" });
   
   const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
@@ -2522,18 +2607,21 @@ export async function deleteTopicApi(payload: { action: string; data: { id: stri
     headers["x-fastn-custom-auth"] = "true";
     headers["authorization"] = customAuthToken; // raw JWT for custom auth
     if (tenantId) headers["x-fastn-space-tenantid"] = tenantId;
+  } else if (apiKey) {
+    headers["x-fastn-api-key"] = apiKey;
+    headers["authorization"] = authToken; // Include auth token even with API key
   } else {
     headers["authorization"] = `Bearer ${authToken}`;
   }
 
   console.log("Making request to:", DELETE_TOPIC_API_URL);
   console.log("With headers:", headers);
-  console.log("With body:", JSON.stringify(payload));
+  console.log("With body:", JSON.stringify({ input: payload }));
 
   const res = await fetch(DELETE_TOPIC_API_URL, {
     method: "POST",
     headers,
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ input: payload }),
   });
 
   console.log("Response status:", res.status);
@@ -2543,6 +2631,54 @@ export async function deleteTopicApi(payload: { action: string; data: { id: stri
     const text = await res.text();
     console.error("API Error:", { status: res.status, statusText: res.statusText, text });
     throw new Error(`deleteTopic failed: ${res.status} ${res.statusText} - ${text}`);
+  }
+
+  const result = await res.json();
+  console.log("API Response:", result);
+  return result;
+}
+
+export async function getAllUsersApi(payload: { action: string }, authToken: string, apiKey?: string) {
+  console.log("getAllUsersApi called with:", { payload, authToken: authToken ? "present" : "missing" });
+  
+  const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
+  const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
+  const tenantId = getCookie(TENANT_ID_KEY) || "";
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "x-fastn-space-id": FASTN_SPACE_ID,
+    stage: "DRAFT",
+  };
+
+  if (isCustomAuth && customAuthToken) {
+    headers["x-fastn-custom-auth"] = "true";
+    headers["authorization"] = customAuthToken; // raw JWT for custom auth
+    if (tenantId) headers["x-fastn-space-tenantid"] = tenantId;
+  } else if (apiKey) {
+    headers["x-fastn-api-key"] = apiKey;
+    headers["authorization"] = authToken; // Include auth token even with API key
+  } else {
+    headers["authorization"] = `Bearer ${authToken}`;
+  }
+
+  console.log("Making request to:", GET_ALL_USERS_API_URL);
+  console.log("With headers:", headers);
+  console.log("With body:", JSON.stringify({ input: payload }));
+
+  const res = await fetch(GET_ALL_USERS_API_URL, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ input: payload }),
+  });
+
+  console.log("Response status:", res.status);
+  console.log("Response ok:", res.ok);
+
+  if (!res.ok) {
+    const text = await res.text();
+    console.error("API Error:", { status: res.status, statusText: res.statusText, text });
+    throw new Error(`getAllUsers failed: ${res.status} ${res.statusText} - ${text}`);
   }
 
   const result = await res.json();
@@ -2590,5 +2726,7 @@ export const useApi = () => {
     createReplyApi,
     getRepliesApi,
     updateReply,
+    // Users API functions
+    getAllUsersApi,
   };
 };

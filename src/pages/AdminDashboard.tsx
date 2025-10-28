@@ -191,22 +191,38 @@ const AdminDashboard = () => {
 
   const deleteTopicMutation = useMutation({
     mutationFn: async (topicId: string) => {
-      return ApiService.deleteTopic(topicId);
+      console.log("Starting delete mutation for topic:", topicId);
+      const result = await ApiService.deleteTopic(topicId);
+      console.log("Delete mutation result:", result);
+      return result;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.topics });
-      queryClient.invalidateQueries({ queryKey: queryKeys.analytics });
       toast({
         title: 'Success',
         description: 'Topic deleted successfully',
       });
     },
     onError: (error) => {
+      console.error("Delete mutation error:", error);
       toast({
         title: 'Error',
         description: `Failed to delete topic: ${error.message}`,
         variant: 'destructive',
       });
+    },
+    onSettled: async () => {
+      // Always refetch after error or success to ensure consistency
+      
+      // Explicitly call getAllTopics to refresh the data
+      try {
+        console.log("Refreshing topics after delete mutation...");
+        const freshTopics = await ApiService.getAllTopics(true); // forceRefresh: true
+        queryClient.setQueryData(queryKeys.topics, freshTopics);
+        queryClient.invalidateQueries({ queryKey: queryKeys.analytics });
+        console.log("Topics refreshed successfully:", freshTopics.length, "topics");
+      } catch (error) {
+        console.error("Failed to refresh topics after delete:", error);
+      }
     },
   });
 
@@ -530,14 +546,25 @@ const AdminDashboard = () => {
                 variant="outline"
                 onClick={async () => {
                   console.log("Manual refresh clicked");
-                  // Invalidate and refetch with force refresh
-                  await queryClient.invalidateQueries({ queryKey: queryKeys.topics });
-                  await queryClient.refetchQueries({ 
-                    queryKey: queryKeys.topics,
-                    type: 'active'
-                  });
-                  
-                  console.log("Manual refresh completed");
+                  try {
+                    // Explicitly call getAllTopics with force refresh
+                    const freshTopics = await ApiService.getAllTopics(true); // forceRefresh: true
+                    queryClient.setQueryData(queryKeys.topics, freshTopics);
+                    queryClient.invalidateQueries({ queryKey: queryKeys.analytics });
+                    console.log("Manual refresh completed:", freshTopics.length, "topics");
+                    
+                    toast({
+                      title: 'Refreshed',
+                      description: 'Topics refreshed successfully',
+                    });
+                  } catch (error) {
+                    console.error("Failed to refresh topics:", error);
+                    toast({
+                      title: 'Error',
+                      description: 'Failed to refresh topics',
+                      variant: 'destructive',
+                    });
+                  }
                 }}
                 className="flex items-center gap-2"
               >
