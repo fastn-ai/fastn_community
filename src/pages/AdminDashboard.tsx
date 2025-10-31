@@ -120,9 +120,7 @@ const AdminDashboard = () => {
   // Mutations for topic management with optimistic updates
   const approveTopicMutation = useMutation({
     mutationFn: async (topicId: string) => {
-      console.log("Starting approve mutation for topic:", topicId);
       const result = await ApiService.updateTopicStatus(topicId, 'approved');
-      console.log("Approve mutation result:", result);
       return result;
     },
     onSuccess: () => {
@@ -132,7 +130,6 @@ const AdminDashboard = () => {
       });
     },
     onError: (error) => {
-      console.error("Approve mutation error:", error);
       toast({
         title: 'Error',
         description: `Failed to approve topic: ${error.message}`,
@@ -140,24 +137,19 @@ const AdminDashboard = () => {
       });
     },
     onSettled: async () => {
-      
       // Explicitly call getAllTopics to refresh the data
       try {
-        console.log("Refreshing topics after approve mutation...");
         const freshTopics = await ApiService.getAllTopics(true); // forceRefresh: true
         queryClient.setQueryData(queryKeys.topics, freshTopics);
-        console.log("Topics refreshed successfully:", freshTopics.length, "topics");
       } catch (error) {
-        console.error("Failed to refresh topics after approve:", error);
+        // Failed to refresh topics
       }
     },
   });
 
   const rejectTopicMutation = useMutation({
     mutationFn: async (topicId: string) => {
-      console.log("Starting reject mutation for topic:", topicId);
       const result = await ApiService.updateTopicStatus(topicId, 'rejected');
-      console.log("Reject mutation result:", result);
       return result;
     },
     onSuccess: () => {
@@ -167,7 +159,6 @@ const AdminDashboard = () => {
       });
     },
     onError: (error) => {
-      console.error("Reject mutation error:", error);
       toast({
         title: 'Error',
         description: `Failed to reject topic: ${error.message}`,
@@ -176,24 +167,19 @@ const AdminDashboard = () => {
     },
     onSettled: async () => {
       // Always refetch after error or success to ensure consistency
-      
       // Explicitly call getAllTopics to refresh the data
       try {
-        console.log("Refreshing topics after reject mutation...");
         const freshTopics = await ApiService.getAllTopics(true); // forceRefresh: true
         queryClient.setQueryData(queryKeys.topics, freshTopics);
-        console.log("Topics refreshed successfully:", freshTopics.length, "topics");
       } catch (error) {
-        console.error("Failed to refresh topics after reject:", error);
+        // Failed to refresh topics
       }
     },
   });
 
   const deleteTopicMutation = useMutation({
     mutationFn: async (topicId: string) => {
-      console.log("Starting delete mutation for topic:", topicId);
       const result = await ApiService.deleteTopic(topicId);
-      console.log("Delete mutation result:", result);
       return result;
     },
     onSuccess: () => {
@@ -203,7 +189,6 @@ const AdminDashboard = () => {
       });
     },
     onError: (error) => {
-      console.error("Delete mutation error:", error);
       toast({
         title: 'Error',
         description: `Failed to delete topic: ${error.message}`,
@@ -212,16 +197,13 @@ const AdminDashboard = () => {
     },
     onSettled: async () => {
       // Always refetch after error or success to ensure consistency
-      
       // Explicitly call getAllTopics to refresh the data
       try {
-        console.log("Refreshing topics after delete mutation...");
         const freshTopics = await ApiService.getAllTopics(true); // forceRefresh: true
         queryClient.setQueryData(queryKeys.topics, freshTopics);
         queryClient.invalidateQueries({ queryKey: queryKeys.analytics });
-        console.log("Topics refreshed successfully:", freshTopics.length, "topics");
       } catch (error) {
-        console.error("Failed to refresh topics after delete:", error);
+        // Failed to refresh topics
       }
     },
   });
@@ -259,19 +241,15 @@ const AdminDashboard = () => {
   // Handle actions with debouncing to prevent double requests
   const handleApprove = (topicId: string) => {
     if (approveTopicMutation.isPending) {
-      console.log("Approve request already in progress, skipping");
       return;
     }
-    console.log("Approving topic:", topicId);
     approveTopicMutation.mutate(topicId);
   };
 
   const handleReject = (topicId: string) => {
     if (rejectTopicMutation.isPending) {
-      console.log("Reject request already in progress, skipping");
       return;
     }
-    console.log("Rejecting topic:", topicId);
     rejectTopicMutation.mutate(topicId);
   };
 
@@ -545,20 +523,17 @@ const AdminDashboard = () => {
               <Button
                 variant="outline"
                 onClick={async () => {
-                  console.log("Manual refresh clicked");
                   try {
                     // Explicitly call getAllTopics with force refresh
                     const freshTopics = await ApiService.getAllTopics(true); // forceRefresh: true
                     queryClient.setQueryData(queryKeys.topics, freshTopics);
                     queryClient.invalidateQueries({ queryKey: queryKeys.analytics });
-                    console.log("Manual refresh completed:", freshTopics.length, "topics");
                     
                     toast({
                       title: 'Refreshed',
                       description: 'Topics refreshed successfully',
                     });
                   } catch (error) {
-                    console.error("Failed to refresh topics:", error);
                     toast({
                       title: 'Error',
                       description: 'Failed to refresh topics',

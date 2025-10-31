@@ -227,14 +227,12 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
   const handleLike = async (topicId: string) => {
     try {
       if (!isAuthenticated || !auth.user) {
-        console.log("User not authenticated");
         return;
       }
 
       const userId = auth.user.profile?.sub || auth.user.profile?.sid || auth.user.profile?.email;
       
       if (!userId) {
-        console.log("User ID not found");
         return;
       }
 
@@ -242,7 +240,6 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
       const likedTopics = JSON.parse(localStorage.getItem('likedTopics') || '{}');
       const likeKey = `${userId}-${topicId}`;
       if (likedTopics[likeKey]) {
-        console.log("Topic already liked");
         return;
       }
 
@@ -259,8 +256,6 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
       
       await submitLikesApi(payload, authToken, FASTN_API_KEY);
       
-      console.log("Like submitted successfully");
-      
       // Save to localStorage
       likedTopics[likeKey] = true;
       localStorage.setItem('likedTopics', JSON.stringify(likedTopics));
@@ -269,15 +264,11 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
       refetchTopics();
       
     } catch (error) {
-      console.error("Error submitting like:", error);
-      
       // Handle duplicate like error
       const errorMessage = error instanceof Error ? error.message : String(error);
       if (errorMessage.includes("duplicate key") || 
           errorMessage.includes("already exists") || 
           errorMessage.includes("likes_unique_topic")) {
-        console.log("Topic already liked");
-        
         // Save to localStorage even if duplicate
         const likedTopics = JSON.parse(localStorage.getItem('likedTopics') || '{}');
         const userId = auth.user?.profile?.sub || auth.user?.profile?.sid || auth.user?.profile?.email;
