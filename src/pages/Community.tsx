@@ -205,7 +205,6 @@ const Community = () => {
     const colors = {
       "Questions": "bg-blue-100 text-blue-800",
       "Best Practices": "bg-green-100 text-green-800",
-      "Tutorials": "bg-purple-100 text-purple-800",
       "Announcements": "bg-red-100 text-red-800",
       "Built with fastn": "bg-orange-100 text-orange-800",
       "Showcase": "bg-pink-100 text-pink-800"
@@ -221,7 +220,6 @@ const Community = () => {
     const icons = {
       "topic": MessageSquare,
       "reply": TrendingUp,
-      "tutorial": Star,
       "announcement": Award
     };
     return icons[type as keyof typeof icons] || MessageSquare;

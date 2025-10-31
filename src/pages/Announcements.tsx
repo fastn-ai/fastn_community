@@ -105,7 +105,6 @@ const Announcements = () => {
     const colors = {
       release: "bg-blue-100 text-blue-800",
       update: "bg-purple-100 text-purple-800",
-      tutorial: "bg-green-100 text-green-800",
       event: "bg-orange-100 text-orange-800"
     };
     return (
@@ -256,7 +255,6 @@ const Announcements = () => {
                     <SelectItem value="all">All Types</SelectItem>
                     <SelectItem value="release">Releases</SelectItem>
                     <SelectItem value="update">Updates</SelectItem>
-                    <SelectItem value="tutorial">Tutorials</SelectItem>
                     <SelectItem value="event">Events</SelectItem>
                   </SelectContent>
                 </Select>

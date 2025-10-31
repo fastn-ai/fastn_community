@@ -23,6 +23,15 @@ const Categories = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Helper function to capitalize category names
+  const capitalizeCategoryName = (name: string): string => {
+    if (!name) return name;
+    return name
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
   // Category configuration with icons and styling - updated to match API categories
   const categoryConfig = {
     "request feature": {
@@ -265,7 +274,7 @@ const Categories = () => {
                         <category.icon className={`w-6 h-6 ${category.color}`} />
                       </div>
                       <div className="flex-1">
-                        <CardTitle className="text-foreground">{category.name}</CardTitle>
+                        <CardTitle className="text-foreground">{capitalizeCategoryName(category.name)}</CardTitle>
                         <p className="text-sm text-muted-foreground mt-1">
                           {category.description}
                         </p>

@@ -344,7 +344,6 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
       "Best Practices": "bg-green-100 text-green-800 border-green-200",
       "Built with fastn": "bg-purple-100 text-purple-800 border-purple-200",
       Showcase: "bg-orange-100 text-orange-800 border-orange-200",
-      Tutorials: "bg-yellow-100 text-yellow-800 border-yellow-200",
     };
 
     return (
@@ -408,8 +407,6 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
         return <Megaphone className="h-4 w-4" />;
       case "built with fastn":
         return <Rocket className="h-4 w-4" />;
-      case "tutorials":
-        return <BookOpen className="h-4 w-4" />;
       case "showcase":
         return <Sparkles className="h-4 w-4" />;
      
@@ -458,8 +455,6 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
         return "text-red-600"; // Megaphone - red for important
       case "built with fastn":
         return "text-purple-600"; // Rocket - purple for innovation
-      case "tutorials":
-        return "text-blue-600"; // BookOpen - blue for learning
       case "showcase":
         return "text-orange-600"; // Sparkles - orange for highlights
       case "community":
