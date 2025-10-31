@@ -457,20 +457,10 @@ const TopicDetail = () => {
       userInsertedCache.set(userId, true);
     } catch (error) {
       // User creation/update failed, but don't block the reply
-      console.warn("Failed to ensure user exists:", error);
+      // Silently handle error
     }
   }, [user]);
 
-  // Function to refresh replies (for future use if needed)
-  const refreshReplies = async () => {
-    try {
-      const { ApiService } = await import("@/services/api");
-      const topicReplies = await ApiService.getRepliesByTopicId(id || "");
-      setReplies(topicReplies);
-    } catch (error) {
-      // Failed to refresh replies
-    }
-  };
 
   // Function to organize replies hierarchically
   const organizeReplies = useMemo(() => (replies: ReplyType[]) => {
@@ -786,20 +776,17 @@ const TopicDetail = () => {
 
   const handleLike = async () => {
     if (!isAuthenticated || !user || !id) {
-      console.log("User not authenticated or topic ID not found");
       return;
     }
 
     // Prevent duplicate likes
     if (liked) {
-      console.log("Topic already liked by user");
       return;
     }
 
     const userId = user.profile?.sub || user.profile?.sid || user.profile?.email;
     
     if (!userId) {
-      console.log("User ID not found");
       return;
     }
 
@@ -818,8 +805,6 @@ const TopicDetail = () => {
       
       await submitLikesApi(payload, user.access_token, FASTN_API_KEY);
       
-      console.log("Like submitted successfully");
-      
       // Save to localStorage
       const likedTopics = JSON.parse(localStorage.getItem('likedTopics') || '{}');
       const likeKey = `${userId}-${id}`;
@@ -836,15 +821,11 @@ const TopicDetail = () => {
       }
       
     } catch (error) {
-      console.error("Error submitting like:", error);
-      
       // Handle duplicate like error gracefully
       const errorMessage = error instanceof Error ? error.message : String(error);
       if (errorMessage.includes("duplicate key") || 
           errorMessage.includes("already exists") || 
           errorMessage.includes("likes_unique_topic")) {
-        console.log("Topic already liked");
-        
         // Save to localStorage even if duplicate
         const likedTopics = JSON.parse(localStorage.getItem('likedTopics') || '{}');
         const likeKey = `${userId}-${id}`;

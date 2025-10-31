@@ -546,7 +546,7 @@ export class ApiService {
           const response = await getAllTopics(null, "", FASTN_API_KEY, forceRefresh);
           return ApiService.processTopicsResponse(response);
         } catch (apiError) {
-          console.warn("API call failed with API key, falling back to mock data:", apiError);
+          // API call failed with API key, falling back to mock data
           return ApiService.getMockTopics();
         }
       }
@@ -555,11 +555,11 @@ export class ApiService {
         const response = await getAllTopics(null, tokenToUse, undefined, forceRefresh);
         return ApiService.processTopicsResponse(response);
       } catch (apiError) {
-        console.warn("API call failed with auth token, falling back to mock data:", apiError);
+        // API call failed with auth token, falling back to mock data
         return ApiService.getMockTopics();
       }
     } catch (error) {
-      console.warn("getAllTopics failed, falling back to mock data:", error);
+      // getAllTopics failed, falling back to mock data
       return ApiService.getMockTopics();
     }
   }
@@ -609,7 +609,7 @@ export class ApiService {
       
       return topics;
     } catch (error) {
-      console.warn("getTopicsOptimized failed, falling back to mock data:", error);
+      // getTopicsOptimized failed, falling back to mock data
       return ApiService.getMockTopics();
     }
   }
@@ -787,7 +787,7 @@ export class ApiService {
           }
           throw new Error("Topic not found");
         } catch (apiError) {
-          console.warn("API call failed with API key, falling back to mock data:", apiError);
+          // API call failed with API key, falling back to mock data
           const mockTopicsData = ApiService.getMockTopics();
           const topic = mockTopicsData.find((t: any) => t.id?.toString() === topicId);
           
@@ -809,7 +809,7 @@ export class ApiService {
         
         throw new Error("Topic not found");
       } catch (apiError) {
-        console.warn("API call failed with auth token, falling back to mock data:", apiError);
+        // API call failed with auth token, falling back to mock data
         const mockTopicsData = ApiService.getMockTopics();
         const topic = mockTopicsData.find((t: any) => t.id?.toString() === topicId);
         
@@ -820,7 +820,7 @@ export class ApiService {
         throw new Error("Topic not found");
       }
     } catch (error) {
-      console.warn("getAllTopicById failed, falling back to mock data:", error);
+      // getAllTopicById failed, falling back to mock data
       const mockTopicsData = ApiService.getMockTopics();
       const topic = mockTopicsData.find((t: any) => t.id?.toString() === topicId);
       
@@ -874,7 +874,7 @@ export class ApiService {
             }));
           }
         } catch (error) {
-          console.warn("Failed to fetch users with API key:", error);
+          // Failed to fetch users with API key
         }
         
         // Fallback to mock data
@@ -916,7 +916,7 @@ export class ApiService {
         setTimeout(() => resolve([...mockUsers]), 100);
       });
     } catch (error) {
-      console.error("Error fetching users:", error);
+      // Error fetching users
       // Fallback to mock data
       return new Promise((resolve) => {
         setTimeout(() => resolve([...mockUsers]), 100);
@@ -961,7 +961,7 @@ export class ApiService {
             }));
           }
         } catch (error) {
-          console.warn("Failed to fetch replies with API key:", error);
+          // Failed to fetch replies with API key
         }
         
         // Fallback to mock data
@@ -1002,7 +1002,7 @@ export class ApiService {
         setTimeout(() => resolve([...mockReplies]), 100);
       });
     } catch (error) {
-      console.warn("Failed to fetch replies:", error);
+      // Failed to fetch replies
       // Fallback to mock data
       return new Promise((resolve) => {
         setTimeout(() => resolve([...mockReplies]), 100);
@@ -1087,14 +1087,11 @@ export class ApiService {
             return await this.resolveAuthorNames(processedReplies, "");
           }
         } catch (error) {
-          console.warn("Failed to fetch replies with API key:", error);
+          // Failed to fetch replies with API key
         }
         
         // Fallback to mock data
-        console.log("Falling back to mock data for topicId:", topicId);
-        console.log("Available mock replies:", mockReplies);
         const filteredReplies = [...mockReplies].filter(reply => reply.topic_id === topicId);
-        console.log("Filtered mock replies:", filteredReplies);
         return new Promise((resolve) => { 
           setTimeout(() => resolve(filteredReplies), 100); 
         });
@@ -1152,21 +1149,14 @@ export class ApiService {
         return await this.resolveAuthorNames(processedReplies, authToken);
       }
       
-      console.log("API response structure not recognized:", response);
-      
-      // Fallback to mock data
-      console.log("Falling back to mock data (authenticated) for topicId:", topicId);
+      // API response structure not recognized, falling back to mock data
       const filteredReplies = [...mockReplies].filter(reply => reply.topic_id === topicId);
-      console.log("Filtered mock replies:", filteredReplies);
       return new Promise((resolve) => { 
         setTimeout(() => resolve(filteredReplies), 100); 
       });
     } catch (error) {
-      console.warn("Failed to fetch replies for topic:", error);
-      console.log("Falling back to mock data (error) for topicId:", topicId);
-      console.log("Available mock replies:", mockReplies);
+      // Failed to fetch replies for topic, falling back to mock data
       const filteredReplies = [...mockReplies].filter(reply => reply.topic_id === topicId);
-      console.log("Filtered mock replies:", filteredReplies);
       return new Promise((resolve) => { 
         setTimeout(() => resolve(filteredReplies), 100); 
       });
@@ -1463,14 +1453,12 @@ export class ApiService {
 
   // Create reply
   static async createReply(replyData: Partial<Reply>): Promise<Reply> {
-    console.log("ApiService.createReply called with:", replyData); // Debug log
     try {
       // Try to get auth token from user manager
       const { getUser } = await import("@/services/users/user-manager");
       const user = getUser();
       const authToken = user?.access_token || "";
       
-      console.log("Auth token available:", !!authToken); // Debug log
       
       const payload: CrudRepliesPayload = {
         action: "createReply",
@@ -1484,7 +1472,6 @@ export class ApiService {
       };
 
       if (!authToken) {
-        console.log("No auth token, trying with API key"); // Debug log
         // Try with API key instead of falling back to mock data
         const response = await createReplyApi(payload, "", FASTN_API_KEY);
         
@@ -1509,7 +1496,6 @@ export class ApiService {
           };
         }
         
-        console.log("API call with API key failed, falling back to mock data"); // Debug log
         throw new Error("No auth token available");
       }
 
@@ -1539,7 +1525,7 @@ export class ApiService {
       throw new Error("Failed to create reply");
     } catch (error) {
       // Fallback to mock data if API fails
-      console.warn("API call failed, using mock data:", error);
+      // API call failed, using mock data
       return new Promise((resolve) => {
         const newReply: Reply = {
           id: `reply_${Date.now()}`,
@@ -1567,14 +1553,12 @@ export class ApiService {
 
   // Edit reply
   static async editReply(replyData: { id: string; content: string }): Promise<Reply> {
-    console.log("ApiService.editReply called with:", replyData); // Debug log
     try {
       // Try to get auth token from user manager
       const { getUser } = await import("@/services/users/user-manager");
       const user = getUser();
       const authToken = user?.access_token || "";
       
-      console.log("Auth token available:", !!authToken); // Debug log
       
       const payload: CrudRepliesPayload = {
         action: "updateReply",
@@ -1585,7 +1569,6 @@ export class ApiService {
       };
 
       if (!authToken) {
-        console.log("No auth token, trying with API key"); // Debug log
         // Try with API key instead of falling back to mock data
         const response = await updateReply(payload, "", FASTN_API_KEY);
         
@@ -1658,7 +1641,7 @@ export class ApiService {
         }, 100); 
       });
     } catch (error) {
-      console.warn("Failed to edit reply:", error);
+      // Failed to edit reply
       // Fallback to mock data
       return new Promise((resolve) => { 
         setTimeout(() => {
@@ -1757,15 +1740,12 @@ export class ApiService {
         }
       };
 
-      console.log("Updating topic status:", { topicId, status, payload });
       const response = await updateTopicStatusApi(payload, authToken);
-      console.log("API response:", response);
       
       // Handle different response formats
       if (response && Array.isArray(response) && response.length > 0) {
         // The API returns an array with the updated topic
         const updatedTopic = response[0];
-        console.log("Updated topic from API:", updatedTopic);
         
         const result = {
           id: updatedTopic.id || (typeof topicId === 'string' ? parseInt(topicId) : topicId),
@@ -1833,7 +1813,7 @@ export class ApiService {
       
       throw new Error("No response received from API");
     } catch (error) {
-      console.error("Error updating topic status:", error);
+      // Error updating topic status
       throw error;
     }
   }
@@ -1853,9 +1833,8 @@ export class ApiService {
       cacheService.invalidate('topics');
       cacheService.invalidate('analytics');
       
-      console.log("Topic cache cleared successfully");
     } catch (error) {
-      console.warn("Failed to clear topic cache:", error);
+      // Failed to clear topic cache
     }
   }
 
@@ -1872,7 +1851,6 @@ export class ApiService {
 
       // For now, we'll use a mock implementation since we don't have a dedicated update endpoint
       // In a real implementation, you would call the appropriate API endpoint
-      console.log("Updating topic:", { topicId, topicData });
       
       // Clear cache after update
       ApiService.clearTopicCache();
@@ -1903,7 +1881,7 @@ export class ApiService {
         updated_at: new Date().toISOString(),
       };
     } catch (error) {
-      console.error("Error updating topic:", error);
+      // Error updating topic
       throw error;
     }
   }
@@ -1926,7 +1904,6 @@ export class ApiService {
         }
       };
 
-      console.log("Deleting topic with payload:", payload);
       
       const response = await deleteTopicApi(payload, authToken, FASTN_API_KEY);
       
@@ -1935,7 +1912,7 @@ export class ApiService {
       
       return true;
     } catch (error) {
-      console.error("Error deleting topic:", error);
+      // Error deleting topic
       throw error;
     }
   }
@@ -2305,14 +2282,6 @@ export async function getAllTopics(payload: any, authToken: string, apiKey?: str
     headers["authorization"] = `Bearer ${authToken}`;
   }
 
-  // Only log in development to reduce noise
-  if (process.env.NODE_ENV === 'development') {
-    console.log("getAllTopics API call:", { 
-      forceRefresh, 
-      headers: Object.keys(headers), 
-      url: GET_TOPICS_API_URL 
-    });
-  }
 
   // Create the request promise
   const requestPromise = (async () => {
@@ -2331,10 +2300,6 @@ export async function getAllTopics(payload: any, authToken: string, apiKey?: str
     }
 
     const result = await res.json();
-    // Only log in development to reduce noise
-    if (process.env.NODE_ENV === 'development') {
-      console.log("getAllTopics API response:", { forceRefresh, resultLength: result?.length });
-    }
     return result;
   })();
 
@@ -2352,7 +2317,6 @@ export async function getAllTopics(payload: any, authToken: string, apiKey?: str
 }
 
 export async function createReplyApi(payload: CrudRepliesPayload, authToken: string, apiKey?: string) {
-  console.log("createReplyApi function called with payload:", payload); // Debug log
   
   const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
   const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
@@ -2375,9 +2339,6 @@ export async function createReplyApi(payload: CrudRepliesPayload, authToken: str
     headers["authorization"] = `Bearer ${authToken}`;
   }
 
-  console.log("Making API call to:", CREATE_REPLY_API_URL); // Debug log
-  console.log("With headers:", headers); // Debug log
-  console.log("With body:", JSON.stringify({ input: payload })); // Debug log
 
   const res = await fetch(CREATE_REPLY_API_URL, {
     method: "POST",
@@ -2385,16 +2346,14 @@ export async function createReplyApi(payload: CrudRepliesPayload, authToken: str
     body: JSON.stringify({ input: payload }),
   });
 
-  console.log("API response status:", res.status); // Debug log
 
   if (!res.ok) {
     const text = await res.text();
-    console.error("API call failed:", res.status, res.statusText, text); // Debug log
+    // API call failed
     throw new Error(`createReplyApi failed: ${res.status} ${res.statusText} - ${text}`);
   }
 
   const result = await res.json();
-  console.log("API response data:", result); // Debug log
   return result;
 }
 
@@ -2456,7 +2415,6 @@ export async function getRepliesApi(payload: CrudRepliesPayload, authToken: stri
 }
 
 export async function updateReply(payload: CrudRepliesPayload, authToken: string, apiKey?: string) {
-  console.log("updateReply function called with payload:", payload); // Debug log
   
   const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
   const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
@@ -2479,9 +2437,6 @@ export async function updateReply(payload: CrudRepliesPayload, authToken: string
     headers["authorization"] = `Bearer ${authToken}`;
   }
 
-  console.log("Making API call to:", UPDATE_REPLY_API_URL); // Debug log
-  console.log("With headers:", headers); // Debug log
-  console.log("With body:", JSON.stringify({ input: payload })); // Debug log
 
   const res = await fetch(UPDATE_REPLY_API_URL, {
     method: "POST",
@@ -2489,16 +2444,14 @@ export async function updateReply(payload: CrudRepliesPayload, authToken: string
     body: JSON.stringify({ input: payload }),
   });
 
-  console.log("API response status:", res.status); // Debug log
 
   if (!res.ok) {
     const text = await res.text();
-    console.error("API call failed:", res.status, res.statusText, text); // Debug log
+    // API call failed
     throw new Error(`updateReply failed: ${res.status} ${res.statusText} - ${text}`);
   }
 
   const result = await res.json();
-  console.log("API response data:", result); // Debug log
   return result;
 }
 
@@ -2539,7 +2492,6 @@ export async function deleteReply(payload: CrudRepliesPayload, authToken: string
 }
 
 export async function updateTopicStatusApi(payload: any, authToken: string) {
-  console.log("updateTopicStatusApi called with:", { payload, authToken: authToken ? "present" : "missing" });
   
   const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
   const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
@@ -2559,9 +2511,6 @@ export async function updateTopicStatusApi(payload: any, authToken: string) {
     headers["authorization"] = `Bearer ${authToken}`;
   }
 
-  console.log("Making request to:", UPDATE_TOPIC_STATUS_API_URL);
-  console.log("With headers:", headers);
-  console.log("With body:", JSON.stringify({ input: payload }));
 
   const res = await fetch(UPDATE_TOPIC_STATUS_API_URL, {
     method: "POST",
@@ -2569,22 +2518,18 @@ export async function updateTopicStatusApi(payload: any, authToken: string) {
     body: JSON.stringify({ input: payload }),
   });
 
-  console.log("Response status:", res.status);
-  console.log("Response ok:", res.ok);
 
   if (!res.ok) {
     const text = await res.text();
-    console.error("API Error:", { status: res.status, statusText: res.statusText, text });
+    // API Error
     throw new Error(`updateTopicStatus failed: ${res.status} ${res.statusText} - ${text}`);
   }
 
   const result = await res.json();
-  console.log("API Response:", result);
   return result;
 }
 
 export async function deleteTopicApi(payload: { action: string; data: { id: string } }, authToken: string, apiKey?: string) {
-  console.log("deleteTopicApi called with:", { payload, authToken: authToken ? "present" : "missing" });
   
   const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
   const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
@@ -2607,9 +2552,6 @@ export async function deleteTopicApi(payload: { action: string; data: { id: stri
     headers["authorization"] = `Bearer ${authToken}`;
   }
 
-  console.log("Making request to:", DELETE_TOPIC_API_URL);
-  console.log("With headers:", headers);
-  console.log("With body:", JSON.stringify({ input: payload }));
 
   const res = await fetch(DELETE_TOPIC_API_URL, {
     method: "POST",
@@ -2617,22 +2559,18 @@ export async function deleteTopicApi(payload: { action: string; data: { id: stri
     body: JSON.stringify({ input: payload }),
   });
 
-  console.log("Response status:", res.status);
-  console.log("Response ok:", res.ok);
 
   if (!res.ok) {
     const text = await res.text();
-    console.error("API Error:", { status: res.status, statusText: res.statusText, text });
+    // API Error
     throw new Error(`deleteTopic failed: ${res.status} ${res.statusText} - ${text}`);
   }
 
   const result = await res.json();
-  console.log("API Response:", result);
   return result;
 }
 
 export async function getAllUsersApi(payload: { action: string }, authToken: string, apiKey?: string) {
-  console.log("getAllUsersApi called with:", { payload, authToken: authToken ? "present" : "missing" });
   
   const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
   const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
@@ -2655,9 +2593,6 @@ export async function getAllUsersApi(payload: { action: string }, authToken: str
     headers["authorization"] = `Bearer ${authToken}`;
   }
 
-  console.log("Making request to:", GET_ALL_USERS_API_URL);
-  console.log("With headers:", headers);
-  console.log("With body:", JSON.stringify({ input: payload }));
 
   const res = await fetch(GET_ALL_USERS_API_URL, {
     method: "POST",
@@ -2665,22 +2600,18 @@ export async function getAllUsersApi(payload: { action: string }, authToken: str
     body: JSON.stringify({ input: payload }),
   });
 
-  console.log("Response status:", res.status);
-  console.log("Response ok:", res.ok);
 
   if (!res.ok) {
     const text = await res.text();
-    console.error("API Error:", { status: res.status, statusText: res.statusText, text });
+    // API Error
     throw new Error(`getAllUsers failed: ${res.status} ${res.statusText} - ${text}`);
   }
 
   const result = await res.json();
-  console.log("API Response:", result);
   return result;
 }
 
 export async function submitLikesApi(payload: { data: { userId: string; topicId: number } }, authToken: string, apiKey?: string) {
-  console.log("submitLikesApi called with:", { payload, authToken: authToken ? "present" : "missing" });
   
   const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
   const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
@@ -2703,9 +2634,6 @@ export async function submitLikesApi(payload: { data: { userId: string; topicId:
     headers["authorization"] = `Bearer ${authToken}`;
   }
 
-  console.log("Making request to:", SUBMIT_LIKES_API_URL);
-  console.log("With headers:", headers);
-  console.log("With body:", JSON.stringify({ input: payload }));
 
   const res = await fetch(SUBMIT_LIKES_API_URL, {
     method: "POST",
@@ -2713,12 +2641,10 @@ export async function submitLikesApi(payload: { data: { userId: string; topicId:
     body: JSON.stringify({ input: payload }),
   });
 
-  console.log("Response status:", res.status);
-  console.log("Response ok:", res.ok);
 
   if (!res.ok) {
     const text = await res.text();
-    console.error("API Error:", { status: res.status, statusText: res.statusText, text });
+    // API Error
     
     // Try to parse error message from JSON
     let errorMessage = text;
@@ -2740,9 +2666,11 @@ export async function submitLikesApi(payload: { data: { userId: string; topicId:
   }
 
   const result = await res.json();
-  console.log("API Response:", result);
   return result;
 }
+
+
+
 
 // Hook for using API in React components
 export const useApi = () => {
@@ -2788,5 +2716,6 @@ export const useApi = () => {
     getAllUsersApi,
     // Likes API functions
     submitLikesApi,
+ 
   };
 };
