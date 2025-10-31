@@ -226,9 +226,67 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
   // Handle topic interactions
   const handleLike = async (topicId: string) => {
     try {
-      // TODO: Implement actual like functionality with API call
+      if (!isAuthenticated || !auth.user) {
+        console.log("User not authenticated");
+        return;
+      }
+
+      const userId = auth.user.profile?.sub || auth.user.profile?.sid || auth.user.profile?.email;
+      
+      if (!userId) {
+        console.log("User ID not found");
+        return;
+      }
+
+      // Check if already liked
+      const likedTopics = JSON.parse(localStorage.getItem('likedTopics') || '{}');
+      const likeKey = `${userId}-${topicId}`;
+      if (likedTopics[likeKey]) {
+        console.log("Topic already liked");
+        return;
+      }
+
+      const payload = {
+        data: {
+          userId: userId,
+          topicId: parseInt(topicId)
+        }
+      };
+
+      const authToken = auth.user.access_token || "";
+      const { submitLikesApi } = await import("@/services/api");
+      const { FASTN_API_KEY } = await import("@/constants");
+      
+      await submitLikesApi(payload, authToken, FASTN_API_KEY);
+      
+      console.log("Like submitted successfully");
+      
+      // Save to localStorage
+      likedTopics[likeKey] = true;
+      localStorage.setItem('likedTopics', JSON.stringify(likedTopics));
+      
+      // Refresh topics to get updated like count
+      refetchTopics();
+      
     } catch (error) {
-      // Handle error silently
+      console.error("Error submitting like:", error);
+      
+      // Handle duplicate like error
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes("duplicate key") || 
+          errorMessage.includes("already exists") || 
+          errorMessage.includes("likes_unique_topic")) {
+        console.log("Topic already liked");
+        
+        // Save to localStorage even if duplicate
+        const likedTopics = JSON.parse(localStorage.getItem('likedTopics') || '{}');
+        const userId = auth.user?.profile?.sub || auth.user?.profile?.sid || auth.user?.profile?.email;
+        if (userId) {
+          const likeKey = `${userId}-${topicId}`;
+          likedTopics[likeKey] = true;
+          localStorage.setItem('likedTopics', JSON.stringify(likedTopics));
+        }
+      }
     }
   };
 
@@ -776,12 +834,17 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
 
                     {/* Likes */}
                     <div className="col-span-2 flex items-center justify-end">
-                      <div className="flex items-center gap-1 text-sm text-gray-600">
+                      <button
+                        onClick={() => handleLike(topic.id.toString())}
+                        className="flex items-center gap-1 text-sm text-gray-600 hover:text-primary transition-colors"
+                        disabled={!isAuthenticated}
+                        title={!isAuthenticated ? "Please sign in to like" : "Click to like"}
+                      >
                         <Heart
                           className={`h-4 w-4 ${getStatsIconColor("Likes")}`}
                         />
                         <span>{topic.like_count || 0}</span>
-                      </div>
+                      </button>
                     </div>
 
                     {/* Activity */}

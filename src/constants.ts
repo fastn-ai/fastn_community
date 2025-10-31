@@ -38,3 +38,4 @@ export const DELETE_REPLY_API_URL = import.meta.env.VITE_DELETE_REPLY_API_URL ||
 export const UPDATE_TOPIC_STATUS_API_URL = import.meta.env.VITE_UPDATE_TOPIC_STATUS_API_URL || API_URL +"getTopicbystatus";
 export const DELETE_TOPIC_API_URL = import.meta.env.VITE_DELETE_TOPIC_API_URL || API_URL +"DeleteTopic";
 export const GET_ALL_USERS_API_URL = import.meta.env.VITE_GET_ALL_USERS_API_URL || API_URL +"getAllUsers";
+export const SUBMIT_LIKES_API_URL = import.meta.env.VITE_SUBMIT_LIKES_API_URL || API_URL +"submitLikes";

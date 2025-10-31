@@ -395,6 +395,22 @@ const TopicDetail = () => {
   // Get the actual authenticated user
   const user = getUser();
   const isAuthenticated = !!(user && user.access_token && user.profile);
+  const [isLiking, setIsLiking] = useState(false);
+  const [liked, setLiked] = useState(false);
+  
+  // Check if user has already liked this topic on mount
+  useEffect(() => {
+    if (isAuthenticated && user && id) {
+      const userId = user.profile?.sub || user.profile?.sid || user.profile?.email;
+      if (userId) {
+        const likedTopics = JSON.parse(localStorage.getItem('likedTopics') || '{}');
+        const likeKey = `${userId}-${id}`;
+        if (likedTopics[likeKey]) {
+          setLiked(true);
+        }
+      }
+    }
+  }, [isAuthenticated, user, id]);
   
   // Function to ensure user exists in database (only once per session)
   const ensureUserExists = useCallback(async () => {
@@ -768,6 +784,83 @@ const TopicDetail = () => {
     }
   };
 
+  const handleLike = async () => {
+    if (!isAuthenticated || !user || !id) {
+      console.log("User not authenticated or topic ID not found");
+      return;
+    }
+
+    // Prevent duplicate likes
+    if (liked) {
+      console.log("Topic already liked by user");
+      return;
+    }
+
+    const userId = user.profile?.sub || user.profile?.sid || user.profile?.email;
+    
+    if (!userId) {
+      console.log("User ID not found");
+      return;
+    }
+
+    try {
+      setIsLiking(true);
+
+      const payload = {
+        data: {
+          userId: userId,
+          topicId: parseInt(id)
+        }
+      };
+
+      const { submitLikesApi } = await import("@/services/api");
+      const { FASTN_API_KEY } = await import("@/constants");
+      
+      await submitLikesApi(payload, user.access_token, FASTN_API_KEY);
+      
+      console.log("Like submitted successfully");
+      
+      // Save to localStorage
+      const likedTopics = JSON.parse(localStorage.getItem('likedTopics') || '{}');
+      const likeKey = `${userId}-${id}`;
+      likedTopics[likeKey] = true;
+      localStorage.setItem('likedTopics', JSON.stringify(likedTopics));
+      
+      // Update local state
+      setLiked(true);
+      if (topic) {
+        setTopic({
+          ...topic,
+          like_count: topic.like_count + 1
+        });
+      }
+      
+    } catch (error) {
+      console.error("Error submitting like:", error);
+      
+      // Handle duplicate like error gracefully
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes("duplicate key") || 
+          errorMessage.includes("already exists") || 
+          errorMessage.includes("likes_unique_topic")) {
+        console.log("Topic already liked");
+        
+        // Save to localStorage even if duplicate
+        const likedTopics = JSON.parse(localStorage.getItem('likedTopics') || '{}');
+        const likeKey = `${userId}-${id}`;
+        likedTopics[likeKey] = true;
+        localStorage.setItem('likedTopics', JSON.stringify(likedTopics));
+        
+        setLiked(true);
+        // Don't show error message for duplicate likes
+      } else {
+        setError(`Failed to like topic: ${errorMessage}`);
+      }
+    } finally {
+      setIsLiking(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -913,9 +1006,15 @@ const TopicDetail = () => {
               </div>
 
               <div className="flex space-x-2">
-                <Button variant="outline" size="sm">
-                  <Heart className="w-4 h-4 mr-2" />
-                  Like
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleLike}
+                  disabled={!isAuthenticated || isLiking}
+                  className={liked ? "border-primary text-primary" : ""}
+                >
+                  <Heart className={`w-4 h-4 mr-2 ${liked ? "fill-current" : ""}`} />
+                  {isLiking ? "Liking..." : "Like"}
                 </Button>
                 <Button variant="outline" size="sm">
                   <Share className="w-4 h-4 mr-2" />
