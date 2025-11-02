@@ -266,9 +266,25 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
     } catch (error) {
       // Handle duplicate like error
       const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes("duplicate key") || 
-          errorMessage.includes("already exists") || 
-          errorMessage.includes("likes_unique_topic")) {
+      const errorJson = (error as any)?.errorJson;
+      const responseText = (error as any)?.response?.text || '';
+      
+      // Check error message, error JSON, and response text for duplicate key indicators
+      const isDuplicateError = 
+        errorMessage.includes("duplicate key") || 
+        errorMessage.includes("already exists") || 
+        errorMessage.includes("likes_unique_topic") ||
+        errorMessage.includes("INVALID_FLOW_ERROR") ||
+        (errorJson && (
+          errorJson.message?.includes("duplicate key") ||
+          errorJson.message?.includes("already exists") ||
+          errorJson.message?.includes("likes_unique_topic") ||
+          errorJson.code === "INVALID_FLOW_ERROR"
+        )) ||
+        responseText.includes("duplicate key") ||
+        responseText.includes("likes_unique_topic");
+      
+      if (isDuplicateError) {
         // Save to localStorage even if duplicate
         const likedTopics = JSON.parse(localStorage.getItem('likedTopics') || '{}');
         const userId = auth.user?.profile?.sub || auth.user?.profile?.sid || auth.user?.profile?.email;

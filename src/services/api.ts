@@ -1,7 +1,7 @@
 // Mock API Service for fastn community platform
 // This is a frontend-only implementation with mock data
 
-import { INSERT_USER_API_URL, FASTN_SPACE_ID, FASTN_API_KEY, CUSTOM_AUTH_KEY, CUSTOM_AUTH_TOKEN_KEY, TENANT_ID_KEY, CRUD_CATEGORIES_API_URL, CRUD_TAGS_API_URL, GET_TOPIC_BY_USER_API_URL, INSERT_TOPIC_TAGS_API_URL, INSERT_TOPICS_API_URL, GET_TOPICS_API_URL, CREATE_REPLY_API_URL, GET_REPLIES_API_URL, UPDATE_REPLY_API_URL, DELETE_REPLY_API_URL, UPDATE_TOPIC_STATUS_API_URL, DELETE_TOPIC_API_URL, GET_ALL_USERS_API_URL, SUBMIT_LIKES_API_URL } from "@/constants";
+import { INSERT_USER_API_URL, FASTN_SPACE_ID, FASTN_API_KEY, CUSTOM_AUTH_KEY, CUSTOM_AUTH_TOKEN_KEY, TENANT_ID_KEY, CRUD_CATEGORIES_API_URL, CRUD_TAGS_API_URL, GET_TOPIC_BY_USER_API_URL, INSERT_TOPIC_TAGS_API_URL, INSERT_TOPICS_API_URL, GET_TOPICS_API_URL, CREATE_REPLY_API_URL, GET_REPLIES_API_URL, UPDATE_REPLY_API_URL, DELETE_REPLY_API_URL, UPDATE_TOPIC_STATUS_API_URL, DELETE_TOPIC_API_URL, GET_ALL_USERS_API_URL, SUBMIT_LIKES_API_URL, SUBMIT_LIKES_FOR_REPLY_API_URL } from "@/constants";
 import { getCookie } from "@/routes/login/oauth";
 import { generateConsistentColor, PREDEFINED_COLORS } from "@/lib/utils";
 
@@ -2648,8 +2648,9 @@ export async function submitLikesApi(payload: { data: { userId: string; topicId:
     
     // Try to parse error message from JSON
     let errorMessage = text;
+    let errorJson: any = null;
     try {
-      const errorJson = JSON.parse(text);
+      errorJson = JSON.parse(text);
       if (errorJson.message) {
         errorMessage = errorJson.message;
       } else if (errorJson.error) {
@@ -2662,6 +2663,7 @@ export async function submitLikesApi(payload: { data: { userId: string; topicId:
     const error = new Error(`submitLikes failed: ${res.status} ${res.statusText} - ${errorMessage}`);
     // Attach the original response for additional context
     (error as any).response = { status: res.status, text };
+    (error as any).errorJson = errorJson; // Attach parsed JSON for easier access
     throw error;
   }
 
@@ -2669,8 +2671,72 @@ export async function submitLikesApi(payload: { data: { userId: string; topicId:
   return result;
 }
 
+export async function submitLikesForReplyApi(payload: { data: { userId: string; reply_id: number } }, authToken: string, apiKey?: string) {
+  console.log("submitLikesForReplyApi called with:", { payload, authToken: authToken ? "present" : "missing" });
+  
+  const isCustomAuth = getCookie(CUSTOM_AUTH_KEY) === "true";
+  const customAuthToken = getCookie(CUSTOM_AUTH_TOKEN_KEY) || "";
+  const tenantId = getCookie(TENANT_ID_KEY) || "";
 
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "x-fastn-space-id": FASTN_SPACE_ID,
+    stage: "DRAFT",
+  };
 
+  if (isCustomAuth && customAuthToken) {
+    headers["x-fastn-custom-auth"] = "true";
+    headers["authorization"] = customAuthToken; // raw JWT for custom auth
+    if (tenantId) headers["x-fastn-space-tenantid"] = tenantId;
+  } else if (apiKey) {
+    headers["x-fastn-api-key"] = apiKey;
+    headers["authorization"] = authToken; // Include auth token even with API key
+  } else {
+    headers["authorization"] = `Bearer ${authToken}`;
+  }
+
+  console.log("Making request to:", SUBMIT_LIKES_FOR_REPLY_API_URL);
+  console.log("With headers:", headers);
+  console.log("With body:", JSON.stringify({ input: payload }));
+
+  const res = await fetch(SUBMIT_LIKES_FOR_REPLY_API_URL, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ input: payload }),
+  });
+
+  console.log("Response status:", res.status);
+  console.log("Response ok:", res.ok);
+
+  if (!res.ok) {
+    const text = await res.text();
+    console.error("API Error:", { status: res.status, statusText: res.statusText, text });
+    
+    // Try to parse error message from JSON
+    let errorMessage = text;
+    let errorJson: any = null;
+    try {
+      errorJson = JSON.parse(text);
+      if (errorJson.message) {
+        errorMessage = errorJson.message;
+      } else if (errorJson.error) {
+        errorMessage = errorJson.error;
+      }
+    } catch (e) {
+      // Use plain text if JSON parse fails
+    }
+    
+    const error = new Error(`submitLikesForReply failed: ${res.status} ${res.statusText} - ${errorMessage}`);
+    // Attach the original response for additional context
+    (error as any).response = { status: res.status, text };
+    (error as any).errorJson = errorJson; // Attach parsed JSON for easier access
+    throw error;
+  }
+
+  const result = await res.json();
+  console.log("API Response:", result);
+  return result;
+}
 
 // Hook for using API in React components
 export const useApi = () => {
@@ -2716,6 +2782,6 @@ export const useApi = () => {
     getAllUsersApi,
     // Likes API functions
     submitLikesApi,
- 
+    submitLikesForReplyApi,
   };
 };
