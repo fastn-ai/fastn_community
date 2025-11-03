@@ -42,14 +42,17 @@ export const queryClient = new QueryClient({
 // Custom query key factory for consistent caching
 export const queryKeys = {
   categories: ['categories'] as const,
-  topics: ['topics'] as const,
+  topics: ['topics'] as const, // Single topics query key for all components
+  topicsWithFilters: (includePending: boolean) => ['topics', 'filters', includePending] as const,
   topic: (id: string) => ['topics', id] as const,
   topicsByCategory: (categoryId: string) => ['topics', 'category', categoryId] as const,
+  topicsByUser: (username: string) => ['topics', 'user', username] as const,
   replies: (topicId: string) => ['replies', topicId] as const,
   users: ['users'] as const,
   user: (id: string) => ['users', id] as const,
   tags: ['tags'] as const,
   tagsByTopic: (topicId: string) => ['tags', 'topic', topicId] as const,
+  analytics: ['analytics'] as const,
 } as const;
 
 // Performance monitoring

@@ -58,14 +58,12 @@ const Announcements = () => {
 
   const handleLike = (id: number) => {
     // Handle like functionality
-    console.log("Liked announcement:", id);
     // You can implement actual like functionality here
     // For now, just log the action
   };
 
   const handleShare = (id: number) => {
     // Handle share functionality
-    console.log("Sharing announcement:", id);
     // You can implement actual share functionality here
     // For example, copy to clipboard or open share dialog
     if (navigator.share) {
@@ -77,13 +75,11 @@ const Announcements = () => {
     } else {
       // Fallback: copy to clipboard
       navigator.clipboard.writeText(window.location.href);
-      console.log("Link copied to clipboard");
     }
   };
 
   const handleBookmark = (id: number) => {
     // Handle bookmark functionality
-    console.log("Bookmarked announcement:", id);
     // You can implement actual bookmark functionality here
     // For now, just log the action
   };
@@ -105,7 +101,6 @@ const Announcements = () => {
     const colors = {
       release: "bg-blue-100 text-blue-800",
       update: "bg-purple-100 text-purple-800",
-      tutorial: "bg-green-100 text-green-800",
       event: "bg-orange-100 text-orange-800"
     };
     return (
@@ -256,7 +251,6 @@ const Announcements = () => {
                     <SelectItem value="all">All Types</SelectItem>
                     <SelectItem value="release">Releases</SelectItem>
                     <SelectItem value="update">Updates</SelectItem>
-                    <SelectItem value="tutorial">Tutorials</SelectItem>
                     <SelectItem value="event">Events</SelectItem>
                   </SelectContent>
                 </Select>

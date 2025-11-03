@@ -23,43 +23,52 @@ const Categories = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Category configuration with icons and styling
+  // Helper function to capitalize category names
+  const capitalizeCategoryName = (name: string): string => {
+    if (!name) return name;
+    return name
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
+  // Category configuration with icons and styling - updated to match API categories
   const categoryConfig = {
-    "Announcements": {
-      icon: Megaphone,
-      color: "text-red-400",
-      bgColor: "bg-red-500/10",
-      path: "/announcements",
-      description: "Official announcements and updates from the fastn team"
-    },
-    "Questions": {
-      icon: HelpCircle,
+    "request feature": {
+      icon: MessageSquare,
       color: "text-blue-400",
       bgColor: "bg-blue-500/10",
-      path: "/questions",
-      description: "Get help with fastn integration and troubleshooting"
+      path: "/request-feature",
+      description: "Feature requests from users"
     },
+    "question": {
+      icon: HelpCircle,
+      color: "text-green-400",
+      bgColor: "bg-green-500/10",
+      path: "/questions",
+      description: "General questions and answers"
+    },
+    "bult with fastn": {
+      icon: Code,
+      color: "text-purple-400",
+      bgColor: "bg-purple-500/10",
+      path: "/built-with-fastn",
+      description: "Showcase of projects built with fastn"
+    },
+    "feadback": {
+      icon: Megaphone,
+      color: "text-orange-400",
+      bgColor: "bg-orange-500/10",
+      path: "/feedback",
+      description: "Product and community feedback"
+    },
+    // Static categories (not from API)
     "Tutorials": {
       icon: BookOpen,
       color: "text-green-400",
       bgColor: "bg-green-500/10",
       isComingSoon: true,
       description: "Step-by-step guides and learning resources"
-      // path: "/tutorials"
-    },
-    "Built with fastn": {
-      icon: Code,
-      color: "text-purple-400",
-      bgColor: "bg-purple-500/10",
-      path: "/built-with-fastn",
-      description: "Showcase your projects and integrations built with fastn"
-    },
-    "Community": {
-      icon: Users,
-      color: "text-orange-400",
-      bgColor: "bg-orange-500/10",
-      path: "/community",
-      description: "General discussions and community conversations"
     },
   };
 
@@ -114,39 +123,29 @@ const Categories = () => {
         // Fallback to default categories if API fails
         setCategories([
           {
-            icon: Megaphone,
-            name: "Announcements",
-            description: "Official announcements and updates from the fastn team",
-            topics: 0,
-            posts: 0,
-            color: "text-red-400",
-            bgColor: "bg-red-500/10",
-            path: "/announcements"
-          },
-          {
-            icon: HelpCircle,
-            name: "Questions",
-            description: "Get help with fastn integration and troubleshooting",
+            icon: MessageSquare,
+            name: "request feature",
+            description: "Feature requests from users",
             topics: 0,
             posts: 0,
             color: "text-blue-400",
             bgColor: "bg-blue-500/10",
+            path: "/request-feature"
+          },
+          {
+            icon: HelpCircle,
+            name: "question",
+            description: "General questions and answers",
+            topics: 0,
+            posts: 0,
+            color: "text-green-400",
+            bgColor: "bg-green-500/10",
             path: "/questions"
           },
           {
-            icon: BookOpen,
-            name: "Tutorials",
-            description: "Step-by-step guides and learning resources",
-            topics: 0,
-            posts:0,
-            color: "text-green-400",
-            bgColor: "bg-green-500/10",
-            isComingSoon: true,
-          },
-          {
             icon: Code,
-            name: "Built with fastn",
-            description: "Showcase your projects and integrations built with fastn",
+            name: "bult with fastn",
+            description: "Showcase of projects built with fastn",
             topics: 0,
             posts: 0,
             color: "text-purple-400",
@@ -154,14 +153,24 @@ const Categories = () => {
             path: "/built-with-fastn"
           },
           {
-            icon: Users,
-            name: "Community",
-            description: "General discussions and community conversations",
+            icon: Megaphone,
+            name: "feadback",
+            description: "Product and community feedback",
             topics: 0,
             posts: 0,
             color: "text-orange-400",
             bgColor: "bg-orange-500/10",
-            path: "/community"
+            path: "/feedback"
+          },
+          {
+            icon: BookOpen,
+            name: "Tutorials",
+            description: "Step-by-step guides and learning resources",
+            topics: 0,
+            posts: 0,
+            color: "text-green-400",
+            bgColor: "bg-green-500/10",
+            isComingSoon: true,
           },
         ]);
       } finally {
@@ -254,8 +263,10 @@ const Categories = () => {
                 {categories.map((category) => (
                 <Card 
                   key={category.name} 
-                  className="hover:shadow-elegant transition-all cursor-pointer border-border/50 hover:border-primary/50"
-                  onClick={() => navigate(category.path)}
+                  className={`hover:shadow-elegant transition-all border-border/50 hover:border-primary/50 ${
+                    category.path ? 'cursor-pointer' : 'cursor-default'
+                  }`}
+                  onClick={() => category.path && navigate(category.path)}
                 >
                   <CardHeader className="pb-4">
                     <div className="flex items-center space-x-4">
@@ -263,7 +274,7 @@ const Categories = () => {
                         <category.icon className={`w-6 h-6 ${category.color}`} />
                       </div>
                       <div className="flex-1">
-                        <CardTitle className="text-foreground">{category.name}</CardTitle>
+                        <CardTitle className="text-foreground">{capitalizeCategoryName(category.name)}</CardTitle>
                         <p className="text-sm text-muted-foreground mt-1">
                           {category.description}
                         </p>

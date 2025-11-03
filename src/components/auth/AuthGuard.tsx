@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Lock, LogIn, ArrowLeft } from 'lucide-react';
+import { useUserRole } from '@/context/UserRoleContext';
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -21,25 +22,19 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({
 }) => {
   const auth = useAuth();
   const navigate = useNavigate();
+  const { isAdmin, isLoading: isLoadingRole } = useUserRole();
+  
+  // Check if user is authenticated
+  const isAuthenticated = auth.isAuthenticated && auth.user;
 
   // Show loading state while authentication is being determined
-  if (auth.isLoading) {
+  if (auth.isLoading || (requireAdmin && isLoadingRole)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
-
-  // Check if user is authenticated
-  const isAuthenticated = auth.isAuthenticated && auth.user;
-  
-  // Check if user is admin (you can customize this logic based on your user roles)
-  const isAdmin = isAuthenticated && (
-    auth.user?.profile?.email?.includes('admin') ||
-    auth.user?.profile?.email?.includes('@fastn.ai') ||
-    auth.user?.profile?.roles?.includes('admin')
-  );
 
   // If authentication is required but user is not authenticated
   if (requireAuth && !isAuthenticated) {
@@ -106,14 +101,13 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({
                 <Lock className="h-6 w-6 text-red-600" />
               </div>
               <CardTitle className="mt-4 text-2xl font-bold text-gray-900">
-                Admin Access Required
+                Access Restricted
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <Alert>
                 <AlertDescription>
-                  You need administrator privileges to access this page. 
-                  {isAuthenticated ? ' Your current account does not have admin access.' : ' Please sign in with an admin account.'}
+                  This page is restricted to administrators only.
                 </AlertDescription>
               </Alert>
               

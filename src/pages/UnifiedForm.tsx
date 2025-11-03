@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Menu,
@@ -8,7 +8,6 @@ import {
   Tag,
   Clock,
   Star,
-  BookOpen,
   MessageSquare,
   Code,
   Megaphone,
@@ -38,23 +37,37 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import Header from "@/components/community/Header";
 import Sidebar from "@/components/community/Sidebar";
-import { useApi } from "@/services/api";
+import { useApi, type Category } from "@/services/api";
 // Removed auth context import
+import { useToast } from "@/hooks/use-toast";
 
 const UnifiedForm = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { createTopic } = useApi();
+  const { createTopic, getAllCategories } = useApi();
+  const { toast } = useToast();
   // Mock user data since we removed authentication
   const user = { id: 'user_1', username: 'admin', email: 'admin@fastn.ai' };
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState("topic");
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [customTag, setCustomTag] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const hasSubmitted = useRef(false);
+  
+  // Validation state
+  const [validationErrors, setValidationErrors] = useState<{
+    title?: string
+    description?: string
+    category?: string
+    content?: string
+    tags?: string
+  }>({})
+  
+  // Categories state
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
 
   // Form data that adapts based on category
   const [formData, setFormData] = useState({
@@ -72,48 +85,26 @@ const UnifiedForm = () => {
     mediaFiles: [] as File[],
   });
 
-  const categoryOptions = [
-    {
-      value: "topic",
-      label: "Topic",
-      icon: MessageSquare,
-      description: "Create a discussion topic",
-    },
-    {
-      value: "tutorial",
-      label: "Tutorial",
-      icon: BookOpen,
-      description: "Write a tutorial guide",
-    },
-  ];
 
-  const topicCategories = ["Announcements", "Questions", "Built with fastn"];
+  // Fetch categories from API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setIsLoadingCategories(true);
+        const fetchedCategories = await getAllCategories();
+        setCategories(fetchedCategories);
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+        setError("Failed to load categories. Please try again.");
+      } finally {
+        setIsLoadingCategories(false);
+      }
+    };
 
-  // Category ID mapping (you may need to adjust these based on your actual category IDs)
-  const categoryIdMapping: { [key: string]: string } = {
-    Announcements: "id_1754163675_740242", // Default category ID
-    Questions: "id_1754163675_740242", // Default category ID
-    "Built with fastn": "id_1754163675_740242", // Default category ID
-  };
+    fetchCategories();
+  }, [getAllCategories]);
 
-  const tutorialCategories = [
-    "Getting Started",
-    "Intermediate",
-    "Advanced",
-    "API Integration",
-    "Database",
-    "Authentication",
-    "Deployment",
-    "Testing",
-    "Performance",
-    "Security",
-  ];
 
-  const difficulties = [
-    { value: "beginner", label: "Beginner", color: "text-green-500" },
-    { value: "intermediate", label: "Intermediate", color: "text-orange-500" },
-    { value: "advanced", label: "Advanced", color: "text-red-500" },
-  ];
 
   const predefinedTags = [
     "fastn",
@@ -129,26 +120,49 @@ const UnifiedForm = () => {
     "best-practices",
   ];
 
-  const handleCategoryChange = (category: string) => {
-    setSelectedCategory(category);
-    // Reset form data when category changes
-    setFormData({
-      title: "",
-      description: "",
-      content: "",
-      category: "",
-      difficulty: "",
-      estimatedTime: "",
-      prerequisites: "",
-      relatedLinks: "",
-      allowRating: true,
-      featured: false,
-      tags: [],
-      mediaFiles: [],
-    });
-    setTags([]);
-    setUploadedFiles([]);
-  };
+  // Validation functions
+  const validateField = (field: string, value: string): string | undefined => {
+    switch (field) {
+      case 'title':
+        if (!value.trim()) return 'Title is required'
+        if (value.trim().length < 5) return 'Title must be at least 5 characters'
+        if (value.trim().length > 200) return 'Title must be less than 200 characters'
+        return undefined
+      case 'description':
+        if (!value.trim()) return 'Description is required'
+        if (value.trim().length < 10) return 'Description must be at least 10 characters'
+        if (value.trim().length > 500) return 'Description must be less than 500 characters'
+        return undefined
+      case 'category':
+        if (!value.trim()) return 'Category is required'
+        return undefined
+      case 'content':
+        if (!value.trim()) return 'Content is required'
+        if (value.trim().length < 10) return 'Content must be at least 10 characters'
+        if (value.trim().length > 10000) return 'Content must be less than 10,000 characters'
+        return undefined
+      case 'tags':
+        if (tags.length === 0) return 'At least one tag is required'
+        if (tags.length > 3) return 'Maximum 3 tags allowed'
+        return undefined
+      default:
+        return undefined
+    }
+  }
+
+  const validateForm = (): boolean => {
+    const errors: typeof validationErrors = {}
+    
+    errors.title = validateField('title', formData.title)
+    errors.description = validateField('description', formData.description)
+    errors.category = validateField('category', formData.category)
+    errors.content = validateField('content', formData.content)
+    errors.tags = validateField('tags', '') // Pass empty string since we check tags array
+    
+    setValidationErrors(errors)
+    return !Object.values(errors).some(error => error !== undefined)
+  }
+
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
@@ -176,6 +190,10 @@ const UnifiedForm = () => {
         tags: [...prev.tags, newTag],
       }));
       setCustomTag("");
+      // Clear validation error when tags change
+      if (validationErrors.tags) {
+        setValidationErrors(prev => ({ ...prev, tags: undefined }))
+      }
     }
   };
 
@@ -185,6 +203,10 @@ const UnifiedForm = () => {
       ...prev,
       tags: prev.tags.filter((tag) => tag !== tagToRemove),
     }));
+    // Clear validation error when tags change
+    if (validationErrors.tags) {
+      setValidationErrors(prev => ({ ...prev, tags: undefined }))
+    }
   };
 
   const addPredefinedTag = (tag: string) => {
@@ -194,6 +216,10 @@ const UnifiedForm = () => {
         ...prev,
         tags: [...prev.tags, tag],
       }));
+      // Clear validation error when tags change
+      if (validationErrors.tags) {
+        setValidationErrors(prev => ({ ...prev, tags: undefined }))
+      }
     }
   };
 
@@ -202,10 +228,13 @@ const UnifiedForm = () => {
 
     // Prevent multiple submissions
     if (isSubmitting || hasSubmitted.current) {
-      console.log(
-        "Form submission already in progress, ignoring duplicate submission"
-      );
       return;
+    }
+
+    // Validate form before submission
+    if (!validateForm()) {
+      setError('Please fix the validation errors below')
+      return
     }
 
     hasSubmitted.current = true;
@@ -213,47 +242,46 @@ const UnifiedForm = () => {
     setError(null);
 
     try {
-      if (selectedCategory === "topic") {
-        // Check if user is authenticated
-        if (!user?.id) {
-          setError(
-            "You must be logged in to create a topic. Please log in and try again."
-          );
-          return;
-        }
-
-        // Create topic using the API
-        const topicData = {
-          title: formData.title,
-          description: formData.description,
-          content: formData.content,
-          author_id: user.id, // Use actual user ID
-          author_username: user.username || user.email?.split("@")[0] || "user", // Use actual username
-          category_id:
-            categoryIdMapping[formData.category] || "id_1754163675_740242", // Map category name to ID
-          is_featured: formData.featured,
-          is_hot: false,
-          is_new: true,
-          view_count: 0,
-          reply_count: 0,
-          like_count: 0,
-          bookmark_count: 0,
-          share_count: 0,
-          tags: formData.tags, // Include tags array
-        };
-
-        console.log("Creating topic with data:", topicData);
-        console.log("Tags being sent:", formData.tags);
-        const createdTopic = await createTopic(topicData);
-        console.log("Topic created successfully:", createdTopic);
-
-        // Navigate to the community page after successful creation
-        navigate("/");
-      } else {
-        // Handle tutorial creation (placeholder for now)
-        console.log("Tutorial creation not implemented yet");
-        navigate("/all-tutorials");
+      // Check if user is authenticated
+      if (!user?.id) {
+        setError(
+          "You must be logged in to create a topic. Please log in and try again."
+        );
+        return;
       }
+
+      // Create topic using the API
+      const topicData = {
+        title: formData.title,
+        description: formData.description,
+        content: formData.content,
+        author_id: user.id, // Use actual user ID
+        author_username: user.username || user.email?.split("@")[0] || "user", // Use actual username
+        category_id: formData.category || "", // Use category ID directly
+        is_featured: formData.featured,
+        is_hot: false,
+        is_new: true,
+        view_count: 0,
+        reply_count: 0,
+        like_count: 0,
+        bookmark_count: 0,
+        share_count: 0,
+        tags: formData.tags, // Include tags array
+      };
+
+      
+      const createdTopic = await createTopic(topicData);
+      
+
+      // Inform user topic is under review
+      toast({
+        title: "Topic submitted",
+        description: "Got it! Our team is reviewing your topic before it goes live",
+        variant: "success",
+      });
+
+      // Navigate to the community page after successful creation
+      navigate("/");
     } catch (error) {
       console.error("Error creating topic:", error);
       setError(
@@ -267,8 +295,6 @@ const UnifiedForm = () => {
     }
   };
 
-  const isTopic = selectedCategory === "topic";
-  const isTutorial = selectedCategory === "tutorial";
 
   return (
     <div className="min-h-screen bg-background">
@@ -319,12 +345,10 @@ const UnifiedForm = () => {
                 </Button>
               </div>
               <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
-                {isTopic ? "Create New Topic" : "Write Tutorial"}
+                Create New Topic
               </h1>
               <p className="text-sm md:text-base text-muted-foreground">
-                {isTopic
-                  ? "Start a new discussion topic in the fastn community."
-                  : "Share your knowledge by writing a tutorial for the community."}
+                Start a new discussion topic in the fastn community.
               </p>
             </div>
           </div>
@@ -339,38 +363,6 @@ const UnifiedForm = () => {
                 </Alert>
               )}
               <form onSubmit={handleSubmit} className="space-y-6" noValidate>
-                {/* Category Selection */}
-                {/*<Card>
-                  <CardHeader>
-                    <CardTitle>Select Type</CardTitle>
-                    <CardDescription>
-                      Choose whether you want to create a topic or write a tutorial
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {categoryOptions.map((option) => (
-                        <div
-                          key={option.value}
-                          className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                            selectedCategory === option.value
-                              ? "border-primary bg-primary/5"
-                              : "border-border hover:border-primary/50"
-                          }`}
-                          onClick={() => handleCategoryChange(option.value)}
-                        >
-                          <div className="flex items-center space-x-3">
-                            <option.icon className="w-6 h-6 text-primary" />
-                            <div>
-                              <h3 className="font-semibold text-foreground">{option.label}</h3>
-                              <p className="text-sm text-muted-foreground">{option.description}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>*/}
 
                 {/* Main Form */}
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -386,145 +378,102 @@ const UnifiedForm = () => {
                           <Label htmlFor="title">Title *</Label>
                           <Input
                             id="title"
-                            placeholder={
-                              isTopic
-                                ? "Enter your topic title..."
-                                : "Enter tutorial title..."
-                            }
+                            placeholder="Enter your topic title..."
                             value={formData.title}
-                            onChange={(e) =>
+                            onChange={(e) => {
                               setFormData((prev) => ({
                                 ...prev,
                                 title: e.target.value,
                               }))
-                            }
+                              // Clear validation error on change
+                              if (validationErrors.title) {
+                                setValidationErrors(prev => ({ ...prev, title: undefined }))
+                              }
+                            }}
+                            onBlur={() => {
+                              const error = validateField('title', formData.title)
+                              setValidationErrors(prev => ({ ...prev, title: error }))
+                            }}
+                            className={`border-border focus:border-primary ${
+                              validationErrors.title ? 'border-red-500 focus:border-red-500' : ''
+                            }`}
                             required
                           />
+                          {validationErrors.title && (
+                            <p className="text-sm text-red-600 dark:text-red-400 mt-1">{validationErrors.title}</p>
+                          )}
                         </div>
 
                         <div>
                           <Label htmlFor="description">Description *</Label>
                           <Textarea
                             id="description"
-                            placeholder={
-                              isTopic
-                                ? "Brief description of your topic..."
-                                : "Brief description of your tutorial..."
-                            }
+                            placeholder="Brief description of your topic..."
                             value={formData.description}
-                            onChange={(e) =>
+                            onChange={(e) => {
                               setFormData((prev) => ({
                                 ...prev,
                                 description: e.target.value,
                               }))
-                            }
+                              // Clear validation error on change
+                              if (validationErrors.description) {
+                                setValidationErrors(prev => ({ ...prev, description: undefined }))
+                              }
+                            }}
+                            onBlur={() => {
+                              const error = validateField('description', formData.description)
+                              setValidationErrors(prev => ({ ...prev, description: error }))
+                            }}
                             rows={3}
+                            className={`border-border focus:border-primary ${
+                              validationErrors.description ? 'border-red-500 focus:border-red-500' : ''
+                            }`}
                             required
                           />
+                          {validationErrors.description && (
+                            <p className="text-sm text-red-600 dark:text-red-400 mt-1">{validationErrors.description}</p>
+                          )}
                         </div>
 
                         <div>
                           <Label htmlFor="category">Category *</Label>
                           <Select
                             value={formData.category}
-                            onValueChange={(value) =>
+                            onValueChange={(value) => {
                               setFormData((prev) => ({
                                 ...prev,
                                 category: value,
                               }))
-                            }
+                              // Clear validation error on change
+                              if (validationErrors.category) {
+                                setValidationErrors(prev => ({ ...prev, category: undefined }))
+                              }
+                            }}
                           >
-                            <SelectTrigger>
+                            <SelectTrigger className={`border-border focus:border-primary ${
+                              validationErrors.category ? 'border-red-500 focus:border-red-500' : ''
+                            }`}>
                               <SelectValue placeholder="Select category" />
                             </SelectTrigger>
                             <SelectContent>
-                              {(isTopic
-                                ? topicCategories
-                                : tutorialCategories
-                              ).map((category) => (
-                                <SelectItem key={category} value={category}>
-                                  {category}
+                              {isLoadingCategories ? (
+                                <SelectItem value="" disabled>
+                                  Loading categories...
                                 </SelectItem>
-                              ))}
+                              ) : (
+                                categories.map((category) => (
+                                  <SelectItem key={category.id} value={category.id}>
+                                    {category.name}
+                                  </SelectItem>
+                                ))
+                              )}
                             </SelectContent>
                           </Select>
+                          {validationErrors.category && (
+                            <p className="text-sm text-red-600 dark:text-red-400 mt-1">{validationErrors.category}</p>
+                          )}
                         </div>
 
-                        {isTutorial && (
-                          <>
-                            <div>
-                              <Label htmlFor="difficulty">
-                                Difficulty Level
-                              </Label>
-                              <Select
-                                value={formData.difficulty}
-                                onValueChange={(value) =>
-                                  setFormData((prev) => ({
-                                    ...prev,
-                                    difficulty: value,
-                                  }))
-                                }
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select difficulty" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {difficulties.map((difficulty) => (
-                                    <SelectItem
-                                      key={difficulty.value}
-                                      value={difficulty.value}
-                                    >
-                                      <div className="flex items-center space-x-2">
-                                        <span>{difficulty.label}</span>
-                                        <div
-                                          className={`w-2 h-2 rounded-full ${difficulty.color.replace(
-                                            "text-",
-                                            "bg-"
-                                          )}`}
-                                        />
-                                      </div>
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            <div>
-                              <Label htmlFor="estimatedTime">
-                                Estimated Time
-                              </Label>
-                              <Input
-                                id="estimatedTime"
-                                placeholder="e.g., 15 minutes, 1 hour"
-                                value={formData.estimatedTime}
-                                onChange={(e) =>
-                                  setFormData((prev) => ({
-                                    ...prev,
-                                    estimatedTime: e.target.value,
-                                  }))
-                                }
-                              />
-                            </div>
-
-                            <div>
-                              <Label htmlFor="prerequisites">
-                                Prerequisites
-                              </Label>
-                              <Textarea
-                                id="prerequisites"
-                                placeholder="What should readers know before starting this tutorial?"
-                                value={formData.prerequisites}
-                                onChange={(e) =>
-                                  setFormData((prev) => ({
-                                    ...prev,
-                                    prerequisites: e.target.value,
-                                  }))
-                                }
-                                rows={2}
-                              />
-                            </div>
-                          </>
-                        )}
                       </CardContent>
                     </Card>
 
@@ -533,9 +482,7 @@ const UnifiedForm = () => {
                       <CardHeader>
                         <CardTitle>Content</CardTitle>
                         <CardDescription>
-                          {isTopic
-                            ? "Write your topic content..."
-                            : "Write your tutorial content..."}
+                          Write your topic content...
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
@@ -543,21 +490,31 @@ const UnifiedForm = () => {
                           <Label htmlFor="content">Content *</Label>
                           <Textarea
                             id="content"
-                            placeholder={
-                              isTopic
-                                ? "Write your topic content here..."
-                                : "Write your tutorial content here..."
-                            }
+                            placeholder="Write your topic content here..."
                             value={formData.content}
-                            onChange={(e) =>
+                            onChange={(e) => {
                               setFormData((prev) => ({
                                 ...prev,
                                 content: e.target.value,
                               }))
-                            }
+                              // Clear validation error on change
+                              if (validationErrors.content) {
+                                setValidationErrors(prev => ({ ...prev, content: undefined }))
+                              }
+                            }}
+                            onBlur={() => {
+                              const error = validateField('content', formData.content)
+                              setValidationErrors(prev => ({ ...prev, content: error }))
+                            }}
                             rows={12}
+                            className={`border-border focus:border-primary ${
+                              validationErrors.content ? 'border-red-500 focus:border-red-500' : ''
+                            }`}
                             required
                           />
+                          {validationErrors.content && (
+                            <p className="text-sm text-red-600 dark:text-red-400 mt-1">{validationErrors.content}</p>
+                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -567,8 +524,7 @@ const UnifiedForm = () => {
                       <CardHeader>
                         <CardTitle>Media Files</CardTitle>
                         <CardDescription>
-                          Upload images, videos, or other files to support your{" "}
-                          {isTopic ? "topic" : "tutorial"}
+                          Upload images, videos, or other files to support your topic
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
@@ -632,8 +588,7 @@ const UnifiedForm = () => {
                       <CardHeader>
                         <CardTitle>Tags</CardTitle>
                         <CardDescription>
-                          Add tags to help others find your{" "}
-                          {isTopic ? "topic" : "tutorial"}
+                          Add tags to help others find your topic
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4">
@@ -679,11 +634,9 @@ const UnifiedForm = () => {
                           </div>
                         </div>
 
-                        {tags.length > 0 && (
-                          <div className="space-y-2">
-                            <h4 className="text-sm font-medium">
-                              Selected Tags:
-                            </h4>
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-medium">Selected Tags: *</h4>
+                          {tags.length > 0 ? (
                             <div className="flex flex-wrap gap-1">
                               {tags.map((tag) => (
                                 <Badge
@@ -696,8 +649,13 @@ const UnifiedForm = () => {
                                 </Badge>
                               ))}
                             </div>
-                          </div>
-                        )}
+                          ) : (
+                            <p className="text-sm text-muted-foreground">Select at least one tag</p>
+                          )}
+                          {validationErrors.tags && (
+                            <p className="text-sm text-red-600 dark:text-red-400">{validationErrors.tags}</p>
+                          )}
+                        </div>
                       </CardContent>
                     </Card>
 
@@ -711,8 +669,7 @@ const UnifiedForm = () => {
                           <div className="space-y-0.5">
                             <Label>Allow Rating</Label>
                             <p className="text-xs text-muted-foreground">
-                              Allow users to rate this{" "}
-                              {isTopic ? "topic" : "tutorial"}
+                              Allow users to rate this topic
                             </p>
                           </div>
                           <Switch
@@ -730,7 +687,7 @@ const UnifiedForm = () => {
                           <div className="space-y-0.5">
                             <Label>Featured</Label>
                             <p className="text-xs text-muted-foreground">
-                              Mark as featured {isTopic ? "topic" : "tutorial"}
+                              Mark as featured topic
                             </p>
                           </div>
                           <Switch
@@ -756,13 +713,9 @@ const UnifiedForm = () => {
                           type="submit"
                           className="w-full"
                           size="lg"
-                          disabled={isSubmitting}
+                          disabled={isSubmitting || Object.values(validationErrors).some(error => error !== undefined)}
                         >
-                          {isSubmitting
-                            ? "Creating..."
-                            : isTopic
-                            ? "Create Topic"
-                            : "Publish Tutorial"}
+                          {isSubmitting ? "Creating..." : "Create Topic"}
                         </Button>
                         <Button
                           type="button"

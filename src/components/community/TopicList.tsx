@@ -1,17 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useAuth } from "react-oidc-context";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import {
   Pagination,
   PaginationContent,
@@ -39,11 +33,17 @@ import {
   Zap,
   Megaphone,
   X,
-  Settings,
+ 
+  Rocket,
+
+  Sparkles,
+  Folder,
+
 } from "lucide-react";
 import { ApiService, Topic, Category } from "@/services/api";
 import { getTagColor } from "@/lib/utils";
 import CreateTopicModal from "@/components/ui/create-topic-modal";
+import { queryKeys } from "@/services/queryClient";
 
 interface TopicListProps {
   sidebarOpen: boolean;
@@ -53,21 +53,41 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const auth = useAuth();
+  const queryClient = useQueryClient();
   const [isCreateTopicModalOpen, setIsCreateTopicModalOpen] = useState(false);
   
   // Check if user is authenticated
   const isAuthenticated = auth.isAuthenticated && auth.user;
-  const [topics, setTopics] = useState<Topic[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [retrying, setRetrying] = useState(false);
+  
+  // Check if user is admin
+ 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 10;
+
+  // Use React Query to fetch data with optimized caching
+  const { data: allTopics = [], isLoading: topicsLoading, error: topicsError, refetch: refetchTopics } = useQuery({
+    queryKey: queryKeys.topics,
+    queryFn: () => ApiService.getTopicsOptimized({ 
+      forceRefresh: false, 
+      includePending: true // Get all topics, filter client-side
+    }),
+    staleTime: 3 * 60 * 1000, // 3 minutes - shorter for public view
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false, // Don't refetch on focus for public view
+  });
+
+  // Filter topics client-side to show only approved topics in public view
+  const topics = allTopics.filter(topic => topic.status === 'approved');
+
+  const { data: categories = [], isLoading: categoriesLoading, error: categoriesError } = useQuery({
+    queryKey: queryKeys.categories,
+    queryFn: ApiService.getAllCategories,
+    staleTime: 30 * 60 * 1000, // 30 minutes
+    gcTime: 60 * 60 * 1000, // 1 hour
+  });
 
   // Read tag from URL parameters on component mount
   useEffect(() => {
@@ -78,96 +98,115 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
     }
   }, [location.search]);
 
-  // Fetch topics and categories from API
-  const fetchData = async (isRetry: boolean = false) => {
-    try {
-      if (isRetry) {
-        setRetrying(true);
-      } else {
-        setLoading(true);
-      }
-      setError(null);
-
-      console.log("Fetching data from API...");
-
-      // Fetch both topics and categories in parallel
-      const [fetchedTopics, fetchedCategories] = await Promise.all([
-        ApiService.getAllTopics(),
-        ApiService.getAllCategories(),
-      ]);
-
-      console.log("Data fetched successfully:", {
-        topics: fetchedTopics.length,
-        categories: fetchedCategories.length,
-      });
-
-      // Debug: Log sample data
-      if (fetchedTopics.length > 0) {
-        console.log("Sample topic:", {
-          id: fetchedTopics[0].id,
-          title: fetchedTopics[0].title,
-          category_name: fetchedTopics[0].category_name,
-          author_username: fetchedTopics[0].author_username,
-          tags: fetchedTopics[0].tags,
-        });
-      }
-
-      if (fetchedCategories.length > 0) {
-        console.log("Sample category:", {
-          id: fetchedCategories[0].id,
-          name: fetchedCategories[0].name,
-        });
-      }
-
-      setTopics(fetchedTopics);
-      setCategories(fetchedCategories);
-      setTotalPages(Math.ceil(fetchedTopics.length / itemsPerPage));
-    } catch (err) {
-      console.error("Error fetching data:", err);
-
-      let errorMessage = "Failed to load data. Please try again later.";
-
-      if (err instanceof Error) {
-        if (err.message.includes("429")) {
-          errorMessage =
-            "Too many requests. Please wait a moment and try again.";
-        } else if (err.message.includes("Network")) {
-          errorMessage =
-            "Network error. Please check your connection and try again.";
-        } else if (err.message.includes("401")) {
-          errorMessage =
-            "Authentication error. Please check your API credentials.";
-        } else if (err.message.includes("403")) {
-          errorMessage = "Access denied. Please check your permissions.";
-        } else if (err.message.includes("500")) {
-          errorMessage = "Server error. Please try again later.";
+  // Parse tags from various formats
+  const parseTags = (tags?: string[] | string | any): string[] => {
+    if (!tags) return [];
+    
+    let result: string[] = [];
+    
+    // If tags is already an array of strings
+    if (Array.isArray(tags)) {
+      result = tags.filter((tag: any) => {
+        if (typeof tag === 'string' && tag.length > 0) {
+          return true;
         }
-      }
-
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-      setRetrying(false);
+        if (typeof tag === 'object' && tag.name && typeof tag.name === 'string') {
+          return true;
+        }
+        return false;
+      }).map((tag: any) => {
+        if (typeof tag === 'string') {
+          return tag;
+        }
+        if (typeof tag === 'object' && tag.name) {
+          return tag.name;
+        }
+        return String(tag);
+      });
     }
+    // Handle the new API structure where tags is an object with value property
+    else if (tags && typeof tags === 'object' && tags.value) {
+      try {
+        const parsedTags = JSON.parse(tags.value);
+        if (Array.isArray(parsedTags)) {
+          result = parsedTags.map((tag: any) => {
+            if (typeof tag === 'string') {
+              return tag;
+            }
+            if (typeof tag === 'object' && tag.name) {
+              return tag.name;
+            }
+            return String(tag);
+          }).filter((tag: string) => tag && tag.length > 0);
+        }
+      } catch (error) {
+        return [];
+      }
+    }
+    // If tags is a string, parse it
+    else if (typeof tags === 'string') {
+      try {
+        // Handle JSON string format
+        if (tags.startsWith('[') || tags.startsWith('{')) {
+          const parsed = JSON.parse(tags);
+          if (Array.isArray(parsed)) {
+            result = parsed.map((tag: any) => {
+              if (typeof tag === 'string') return tag;
+              if (typeof tag === 'object' && tag.name) return tag.name;
+              return String(tag);
+            }).filter((tag: string) => tag && tag.length > 0);
+          }
+        } else {
+          // Handle comma-separated string format
+          const cleanTags = tags.replace(/[{}]/g, "");
+          result = cleanTags
+            .split(",")
+            .map((tag) => tag.trim())
+            .filter((tag) => tag.length > 0);
+        }
+      } catch (error) {
+        return [];
+      }
+    }
+    
+    // Remove duplicates by converting to Set and back to array
+    const uniqueTags = Array.from(new Set(result));
+    return uniqueTags;
   };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
 
   // Filter topics based on search, filter, and tag
   const filteredTopics = topics.filter((topic) => {
     const matchesSearch =
       topic.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       topic.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter =
-      selectedFilter === "all" || topic.category_name === selectedFilter;
+    
+    let matchesFilter = true;
+    if (selectedFilter === "all") {
+      matchesFilter = true;
+    } else if (selectedFilter === "top") {
+      // Filter for top topics (you can customize this logic)
+      matchesFilter = topic.is_hot || topic.is_featured || topic.like_count > 5;
+    } else {
+      matchesFilter = topic.category_name === selectedFilter;
+    }
     
     // Add tag filtering
-    const matchesTag = !selectedTag || (topic.tags && Array.isArray(topic.tags) && topic.tags.includes(selectedTag));
+    const parsedTopicTags = parseTags(topic.tags);
+    const matchesTag = !selectedTag || parsedTopicTags.includes(selectedTag);
     
-    return matchesSearch && matchesFilter && matchesTag;
+    // Debug logging
+    if (selectedTag && topic.tags) {
+      // Tag matching logic
+    }
+    
+    // Only show approved topics
+    const isApproved = topic.status === 'approved' || !topic.status;
+    
+    return matchesSearch && matchesFilter && matchesTag && isApproved;
   });
+
+  // Calculate total pages for pagination
+  const totalPages = Math.ceil(filteredTopics.length / itemsPerPage);
 
   // Paginate topics
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -181,18 +220,145 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
   };
 
   // Handle topic interactions
-  const handleLike = async (topicId: string) => {
+  const handleLike = async (topicId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent navigation when clicking like button
+    
     try {
-      console.log("Liking topic:", topicId);
-      setTopics((prev) =>
-        prev.map((topic) =>
-          topic.id === topicId
-            ? { ...topic, like_count: (topic.like_count || 0) + 1 }
-            : topic
-        )
-      );
+      if (!isAuthenticated || !auth.user) {
+        return;
+      }
+
+      const userId = auth.user.profile?.sub || auth.user.profile?.sid || auth.user.profile?.email;
+      
+      if (!userId) {
+        return;
+      }
+
+      // Check if already liked
+      const likedTopics = JSON.parse(localStorage.getItem('likedTopics') || '{}');
+      const likeKey = `${userId}-${topicId}`;
+      const isCurrentlyLiked = !!likedTopics[likeKey];
+
+      if (isCurrentlyLiked) {
+        // Unlike the topic
+        const payload = {
+          data: {
+            user_id: userId,
+            topic_id: parseInt(topicId)
+          }
+        };
+
+        const authToken = auth.user.access_token || "";
+        const { removeLikeFromTopicApi } = await import("@/services/api");
+        const { FASTN_API_KEY } = await import("@/constants");
+        
+        await removeLikeFromTopicApi(payload, authToken, FASTN_API_KEY);
+        
+        // Remove from localStorage
+        delete likedTopics[likeKey];
+        localStorage.setItem('likedTopics', JSON.stringify(likedTopics));
+        
+        // Update local state immediately with functional update
+        queryClient.setQueryData(queryKeys.topics, (oldData: any) => {
+          if (!oldData || !Array.isArray(oldData)) return oldData;
+          // Create a completely new array with spread operator
+          return oldData.map((topic: any) => {
+            const topicIdStr = typeof topic.id === 'number' ? topic.id.toString() : String(topic.id);
+            if (topicIdStr === topicId) {
+              const currentCount = typeof topic.like_count === 'number' ? topic.like_count : parseInt(String(topic.like_count || '0'), 10);
+              return {
+                ...topic,
+                like_count: Math.max(0, currentCount - 1)
+              };
+            }
+            return { ...topic };
+          });
+        });
+      } else {
+        // Like the topic
+        const payload = {
+          data: {
+            userId: userId,
+            topicId: parseInt(topicId)
+          }
+        };
+
+        const authToken = auth.user.access_token || "";
+        const { submitLikesApi } = await import("@/services/api");
+        const { FASTN_API_KEY } = await import("@/constants");
+        
+        await submitLikesApi(payload, authToken, FASTN_API_KEY);
+        
+        // Save to localStorage
+        likedTopics[likeKey] = true;
+        localStorage.setItem('likedTopics', JSON.stringify(likedTopics));
+        
+        // Update local state immediately with functional update
+        queryClient.setQueryData(queryKeys.topics, (oldData: any) => {
+          if (!oldData || !Array.isArray(oldData)) return oldData;
+          // Create a completely new array with spread operator
+          return oldData.map((topic: any) => {
+            const topicIdStr = typeof topic.id === 'number' ? topic.id.toString() : String(topic.id);
+            if (topicIdStr === topicId) {
+              const currentCount = typeof topic.like_count === 'number' ? topic.like_count : parseInt(String(topic.like_count || '0'), 10);
+              return {
+                ...topic,
+                like_count: currentCount + 1
+              };
+            }
+            return { ...topic };
+          });
+        });
+      }
+      
     } catch (error) {
-      console.error("Error liking topic:", error);
+      // Handle duplicate like error
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorJson = (error as any)?.errorJson;
+      const responseText = (error as any)?.response?.text || '';
+      
+      // Check error message, error JSON, and response text for duplicate key indicators
+      const isDuplicateError = 
+        errorMessage.includes("duplicate key") || 
+        errorMessage.includes("already exists") || 
+        errorMessage.includes("likes_unique_topic") ||
+        errorMessage.includes("INVALID_FLOW_ERROR") ||
+        (errorJson && (
+          errorJson.message?.includes("duplicate key") ||
+          errorJson.message?.includes("already exists") ||
+          errorJson.message?.includes("likes_unique_topic") ||
+          errorJson.code === "INVALID_FLOW_ERROR"
+        )) ||
+        responseText.includes("duplicate key") ||
+        responseText.includes("likes_unique_topic");
+      
+      if (isDuplicateError) {
+        // Save to localStorage even if duplicate
+        const likedTopics = JSON.parse(localStorage.getItem('likedTopics') || '{}');
+        const userId = auth.user?.profile?.sub || auth.user?.profile?.sid || auth.user?.profile?.email;
+        if (userId) {
+          const likeKey = `${userId}-${topicId}`;
+          likedTopics[likeKey] = true;
+          localStorage.setItem('likedTopics', JSON.stringify(likedTopics));
+          
+          // Update local state even for duplicate with functional update
+          queryClient.setQueryData(queryKeys.topics, (oldData: any) => {
+            if (!oldData || !Array.isArray(oldData)) return oldData;
+            // Create a completely new array with spread operator
+            return oldData.map((topic: any) => {
+              const topicIdStr = typeof topic.id === 'number' ? topic.id.toString() : String(topic.id);
+              if (topicIdStr === topicId) {
+                const currentCount = typeof topic.like_count === 'number' ? topic.like_count : parseInt(String(topic.like_count || '0'), 10);
+                return {
+                  ...topic,
+                  like_count: currentCount + 1
+                };
+              }
+              return { ...topic };
+            });
+          });
+        }
+      }
     }
   };
 
@@ -208,25 +374,17 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
         await navigator.clipboard.writeText(
           `${window.location.origin}/topic/${topic.id}`
         );
-        console.log("Link copied to clipboard");
       }
     } catch (error) {
-      console.error("Error sharing topic:", error);
+      // Handle error silently
     }
   };
 
   const handleBookmark = async (topicId: string) => {
     try {
-      console.log("Bookmarking topic:", topicId);
-      setTopics((prev) =>
-        prev.map((topic) =>
-          topic.id === topicId
-            ? { ...topic, bookmark_count: (topic.bookmark_count || 0) + 1 }
-            : topic
-        )
-      );
+      // TODO: Implement actual bookmark functionality with API call
     } catch (error) {
-      console.error("Error bookmarking topic:", error);
+      // Handle error silently
     }
   };
 
@@ -258,7 +416,6 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
       "Best Practices": "bg-green-100 text-green-800 border-green-200",
       "Built with fastn": "bg-purple-100 text-purple-800 border-purple-200",
       Showcase: "bg-orange-100 text-orange-800 border-orange-200",
-      Tutorials: "bg-yellow-100 text-yellow-800 border-yellow-200",
     };
 
     return (
@@ -269,38 +426,12 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
 
   const getCategoryDisplayName = (categoryName: string | undefined) => {
     if (!categoryName) {
-      console.log("Category name is undefined/null");
       return "Uncategorized";
     }
 
-    console.log(`Category name: ${categoryName}`);
     return categoryName;
   };
 
-  const parseTags = (tags?: string[] | string): string[] => {
-    if (!tags) return [];
-    
-    // If tags is already an array, return it
-    if (Array.isArray(tags)) {
-      return tags.filter(tag => tag && tag.length > 0);
-    }
-    
-    // If tags is a string, parse it
-    if (typeof tags === 'string') {
-      try {
-        const cleanTags = tags.replace(/[{}]/g, "");
-        return cleanTags
-          .split(",")
-          .map((tag) => tag.trim())
-          .filter((tag) => tag.length > 0);
-      } catch (error) {
-        console.error("Error parsing tags:", error);
-        return [];
-      }
-    }
-    
-    return [];
-  };
 
   const getInitials = (username: string) => {
     return username
@@ -323,20 +454,106 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
     return date.toLocaleDateString();
   };
 
+  const getCategoryIcon = (categoryName: string) => {
+    const category = categories.find(cat => cat.name === categoryName);
+    if (category?.icon) {
+      switch (category.icon) {
+     
+        case 'folder':
+          return <Folder className="h-4 w-4" />;
+       
+        
+        default:
+          return <MessageSquare className="h-4 w-4" />;
+      }
+    }
+    
+    // Fallback to name-based mapping with meaningful icons
+    switch (categoryName.toLowerCase()) {
+      case "questions":
+      case "question":
+        return <HelpCircle className="h-4 w-4" />;
+      case "best practices":
+        return <Star className="h-4 w-4" />;
+      case "announcements":
+        return <Megaphone className="h-4 w-4" />;
+      case "built with fastn":
+        return <Rocket className="h-4 w-4" />;
+      case "showcase":
+        return <Sparkles className="h-4 w-4" />;
+     
+      default:
+        return <Folder className="h-4 w-4" />;
+    }
+  };
+
+  const getCategoryIconColor = (categoryName: string) => {
+    const category = categories.find(cat => cat.name === categoryName);
+    if (category?.color) {
+      // Convert hex color to text color class with more comprehensive mapping
+      const colorMap: { [key: string]: string } = {
+        '#3B82F6': 'text-blue-600',
+        '#1D4ED8': 'text-blue-700',
+        '#EF4444': 'text-red-600',
+        '#DC2626': 'text-red-700',
+        '#10B981': 'text-emerald-600',
+        '#059669': 'text-emerald-700',
+        '#8B5CF6': 'text-purple-600',
+        '#7C3AED': 'text-purple-700',
+        '#F59E0B': 'text-amber-600',
+        '#D97706': 'text-amber-700',
+        '#F97316': 'text-orange-600',
+        '#EA580C': 'text-orange-700',
+        '#EC4899': 'text-pink-600',
+        '#DB2777': 'text-pink-700',
+        '#06B6D4': 'text-cyan-600',
+        '#0891B2': 'text-cyan-700',
+        '#84CC16': 'text-lime-600',
+        '#65A30D': 'text-lime-700',
+ 
+     
+      };
+      return colorMap[category.color] || 'text-gray-600';
+    }
+    
+    // Fallback to name-based mapping with vibrant colors
+    switch (categoryName.toLowerCase()) {
+      case "questions":
+      case "question":
+        return "text-blue-600"; // HelpCircle - blue for questions
+      case "best practices":
+        return "text-emerald-600"; // Star - emerald for excellence
+      case "announcements":
+        return "text-red-600"; // Megaphone - red for important
+      case "built with fastn":
+        return "text-purple-600"; // Rocket - purple for innovation
+      case "showcase":
+        return "text-orange-600"; // Sparkles - orange for highlights
+      case "community":
+        return "text-cyan-600"; // Users - cyan for community
+      case "security":
+        return "text-green-600"; // Shield - green for safety
+      case "request feature":
+        return "text-indigo-600"; // MessageCircle - indigo for requests
+      case "feedback":
+      case "feadback":
+        return "text-pink-600"; // MessageSquare - pink for feedback
+      case "technology":
+        return "text-purple-600"; // Cpu - purple for technology
+    
+      default:
+        return "text-gray-600";
+    }
+  };
+
   const getFilterIcon = (filter: string) => {
     switch (filter) {
       case "all":
         return <MessageSquare className="h-4 w-4" />;
       case "top":
         return <Trophy className="h-4 w-4" />;
-      case "Questions":
-        return <HelpCircle className="h-4 w-4" />;
-      case "Best Practices":
-        return <Star className="h-4 w-4" />;
-      case "Announcements":
-        return <Megaphone className="h-4 w-4" />;
       default:
-        return <MessageSquare className="h-4 w-4" />;
+        return getCategoryIcon(filter);
     }
   };
 
@@ -346,14 +563,8 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
         return "text-blue-600";
       case "top":
         return "text-yellow-600";
-      case "Questions":
-        return "text-blue-600";
-      case "Best Practices":
-        return "text-green-600";
-      case "Announcements":
-        return "text-red-600";
       default:
-        return "text-gray-600";
+        return getCategoryIconColor(filter);
     }
   };
 
@@ -373,6 +584,9 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
         return "text-gray-600";
     }
   };
+
+  const loading = topicsLoading || categoriesLoading;
+  const error = topicsError || categoriesError;
 
   if (loading) {
     return (
@@ -401,14 +615,14 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
               <h3 className="text-lg font-semibold mb-2">
                 Unable to Load Data
               </h3>
-              <p className="text-muted-foreground mb-6">{error}</p>
+              <p className="text-muted-foreground mb-6">{error?.toString() || 'An error occurred'}</p>
               <div className="flex gap-2 justify-center">
                 <Button
-                  onClick={() => fetchData(true)}
-                  disabled={retrying}
+                  onClick={() => refetchTopics()}
+                  disabled={topicsLoading}
                   className="flex items-center gap-2"
                 >
-                  {retrying ? (
+                  {topicsLoading ? (
                     <>
                       <RefreshCw className="h-4 w-4 animate-spin" />
                       Retrying...
@@ -454,7 +668,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
               <FolderOpen className="h-4 w-4 text-blue-600" />
               Categories
             </Button>
-            {isAuthenticated && (
+            {/*{isAuthenticated && (
               <Button
                 onClick={() => setIsCreateTopicModalOpen(true)}
                 className="hidden sm:flex items-center space-x-2"
@@ -462,17 +676,27 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                 <Plus className="w-4 h-4" />
                 <span>New Topic</span>
               </Button>
-            )}
-            <Button
-              onClick={() => navigate("/admin")}
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              <Settings className="h-4 w-4" />
-              Admin
-            </Button>
+            )}*/}
+           
           </div>
         </div>
+
+        {/* Mock Data Info Banner */}
+        {topics.length > 0 && topics.some(t => t.title === "Welcome to Fastn Community" || t.content?.includes("mock data")) && (
+          <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-semibold text-yellow-800 dark:text-yellow-300 mb-1">
+                  API Rate Limit Reached
+                </h4>
+                <p className="text-sm text-yellow-700 dark:text-yellow-400">
+                  The API is currently rate-limited. Displaying sample data below. Your actual topics will appear once the rate limit resets (usually within 24 hours).
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Active Filters */}
         {(selectedTag || selectedFilter !== "all") && (
@@ -501,6 +725,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
 
         {/* Filter Buttons */}
         <div className="flex gap-2 mb-6 overflow-x-auto">
+          {/* All Topics Button */}
           <Button
             variant={selectedFilter === "all" ? "default" : "outline"}
             onClick={() => setSelectedFilter("all")}
@@ -515,6 +740,8 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
             />
             All Topics
           </Button>
+          
+          {/* Top Button */}
           <Button
             variant={selectedFilter === "top" ? "default" : "outline"}
             onClick={() => setSelectedFilter("top")}
@@ -529,50 +756,25 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
             />
             Top
           </Button>
-          <Button
-            variant={selectedFilter === "Questions" ? "default" : "outline"}
-            onClick={() => setSelectedFilter("Questions")}
-            className="flex items-center gap-2"
-          >
-            <HelpCircle
-              className={`h-4 w-4 ${
-                selectedFilter === "Questions"
-                  ? "text-white"
-                  : getFilterIconColor("Questions")
-              }`}
-            />
-            Questions
-          </Button>
-          <Button
-            variant={
-              selectedFilter === "Best Practices" ? "default" : "outline"
-            }
-            onClick={() => setSelectedFilter("Best Practices")}
-            className="flex items-center gap-2"
-          >
-            <Star
-              className={`h-4 w-4 ${
-                selectedFilter === "Best Practices"
-                  ? "text-white"
-                  : getFilterIconColor("Best Practices")
-              }`}
-            />
-            Best Practices
-          </Button>
-          <Button
-            variant={selectedFilter === "Announcements" ? "default" : "outline"}
-            onClick={() => setSelectedFilter("Announcements")}
-            className="flex items-center gap-2"
-          >
-            <Megaphone
-              className={`h-4 w-4 ${
-                selectedFilter === "Announcements"
-                  ? "text-white"
-                  : getFilterIconColor("Announcements")
-              }`}
-            />
-            Announcements
-          </Button>
+          
+          {/* Dynamic Category Buttons */}
+          {categories.map((category) => (
+            <Button
+              key={category.id}
+              variant={selectedFilter === category.name ? "default" : "outline"}
+              onClick={() => setSelectedFilter(category.name)}
+              className="flex items-center gap-2"
+            >
+              {React.cloneElement(getCategoryIcon(category.name), {
+                className: `h-4 w-4 ${
+                  selectedFilter === category.name
+                    ? "text-white"
+                    : getCategoryIconColor(category.name)
+                }`
+              })}
+              {category.name}
+            </Button>
+          ))}
         </div>
 
         {/* Topics Table */}
@@ -582,7 +784,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
             <div className="grid grid-cols-12 gap-4 p-4 border-b font-semibold text-sm">
               <div className="col-span-6">Topic</div>
               <div className="col-span-2 text-right">Replies</div>
-              <div className="col-span-2 text-right">Views</div>
+              <div className="col-span-2 text-right">Likes</div>
               <div className="col-span-2 text-right">Activity</div>
             </div>
 
@@ -601,7 +803,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                   <div
                     key={topic.id}
                     className="grid grid-cols-12 gap-4 p-4 hover:bg-gray-50 cursor-pointer transition-colors"
-                    onClick={() => navigate(`/topic/${topic.id}`)}
+                    onClick={() => navigate(`/topic/${topic.id.toString()}`)}
                   >
                     {/* Topic Content */}
                     <div className="col-span-6">
@@ -614,9 +816,24 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                         {/* Topic Details */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center space-x-2 mb-1">
-                            <h3 className="font-semibold text-foreground truncate">
-                              {topic.title}
-                            </h3>
+                            <div className="flex items-center gap-2">
+                           
+                              <h3 className="font-semibold text-foreground truncate">
+                                {topic.title}
+                              </h3>
+                            </div>
+                            {/* Category Badge */}
+                            <Badge
+                              className={`${getCategoryBadge(
+                                topic.category_name,
+                                topic.category_color
+                              )} text-xs flex items-center gap-1`}
+                            >
+                              
+                              {getCategoryDisplayName(topic.category_name)}
+                            </Badge>
+                            {/* Tags beside category */}
+                            
                             {topic.is_hot && (
                               <Badge
                                 variant="secondary"
@@ -651,21 +868,11 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                                 ? formatDate(topic.created_at)
                                 : "Unknown"}
                             </span>
-                            <Badge
-                              className={`${getCategoryBadge(
-                                topic.category_name,
-                                topic.category_color
-                              )} text-xs`}
-                            >
-                              {getCategoryDisplayName(topic.category_name)}
-                            </Badge>
-                          </div>
-
-                          {/* Tags */}
-                          <div className="flex gap-1 mt-2">
+                            {/* Tags beside author */}
                             {topic.tags && (() => {
                               const tags = parseTags(topic.tags);
-                              return tags.map((tag, index) => (
+                             
+                              return tags.slice(0, 3).map((tag, index) => (
                                 <span
                                   key={index}
                                   className={`inline-block px-2 py-1 text-xs rounded-full border ${getTagColor(tag)}`}
@@ -675,6 +882,9 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                               ));
                             })()}
                           </div>
+
+                          {/* Tags */}
+                         
                         </div>
                       </div>
                     </div>
@@ -689,14 +899,36 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                       </div>
                     </div>
 
-                    {/* Views */}
+                    {/* Likes */}
                     <div className="col-span-2 flex items-center justify-end">
-                      <div className="flex items-center gap-1 text-sm text-gray-600">
-                        <Eye
-                          className={`h-4 w-4 ${getStatsIconColor("views")}`}
-                        />
-                        <span>{topic.view_count || 0}</span>
-                      </div>
+                      {(() => {
+                        const userId = auth.user?.profile?.sub || auth.user?.profile?.sid || auth.user?.profile?.email;
+                        const likedTopics = JSON.parse(localStorage.getItem('likedTopics') || '{}');
+                        const likeKey = userId ? `${userId}-${topic.id.toString()}` : '';
+                        const isLiked = userId ? !!likedTopics[likeKey] : false;
+                        
+                        return (
+                          <button
+                            onClick={(e) => handleLike(topic.id.toString(), e)}
+                            className={`flex items-center gap-1 text-sm transition-colors ${
+                              isLiked 
+                                ? "text-primary" 
+                                : "text-gray-600 hover:text-primary"
+                            }`}
+                            disabled={!isAuthenticated}
+                            title={!isAuthenticated ? "Please sign in to like" : isLiked ? "Click to unlike" : "Click to like"}
+                          >
+                            <Heart
+                              className={`h-4 w-4 transition-all ${
+                                isLiked 
+                                  ? "text-primary" 
+                                  : "text-gray-600"
+                              }`}
+                            />
+                            <span key={`like-count-${topic.id}-${topic.like_count}`}>{topic.like_count || 0}</span>
+                          </button>
+                        );
+                      })()}
                     </div>
 
                     {/* Activity */}

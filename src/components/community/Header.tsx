@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Search, Bell, User, Menu, Plus, Settings, MessageSquare, LogOut, LogIn } from "lucide-react";
+import { Search, Bell, User, Menu, Plus, Settings, MessageSquare, LogOut, LogIn, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -16,6 +16,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import CreateTopicModal from "@/components/ui/create-topic-modal";
 import { useAuth } from "react-oidc-context";
 import { signOut } from "@/services/users/user-manager";
+import { useUserRole } from "@/context/UserRoleContext";
 
 const Header = () => {
   const navigate = useNavigate();
@@ -23,6 +24,7 @@ const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateTopicModalOpen, setIsCreateTopicModalOpen] = useState(false);
   const auth = useAuth();
+  const { isAdmin } = useUserRole();
   
   // Check if user is on topic pages
   const isOnTopicPage = location.pathname === '/' || location.pathname === '/top';
@@ -88,12 +90,10 @@ const Header = () => {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Searching for:", searchQuery);
     // Implement search functionality
   };
 
   const handleNotificationClick = (notificationId: number) => {
-    console.log("Notification clicked:", notificationId);
     // Handle notification click
   };
 
@@ -160,7 +160,7 @@ const Header = () => {
         {/* Right side actions */}
         <div className="flex items-center space-x-4">
           {/* New Topic Button - Only show when authenticated and NOT on topic pages */}
-          {isAuthenticated && !isOnTopicPage && (
+          {/*{isAuthenticated && !isOnTopicPage && (
             <Button 
               onClick={() => setIsCreateTopicModalOpen(true)}
               className="hidden sm:flex items-center space-x-2"
@@ -168,7 +168,7 @@ const Header = () => {
               <Plus className="w-4 h-4" />
               <span>New Topic </span>
             </Button>
-          )}
+          )}*/}
 
           {/* Notifications */}
           <DropdownMenu>
@@ -262,13 +262,22 @@ const Header = () => {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate("/admin")}>
-                  <Settings className="w-4 h-4 mr-2" />
-                  Admin Dashboard
-                </DropdownMenuItem>
-                <DropdownMenuItem>
+                {isAdmin && (
+                  <>
+                    <DropdownMenuItem onClick={() => navigate("/admin")}>
+                      <Shield className="w-4 h-4 mr-2" />
+                      Admin Dashboard
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                <DropdownMenuItem onClick={() => navigate("/my-topics")}>
                   <MessageSquare className="w-4 h-4 mr-2" />
                   My Topics
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Settings className="w-4 h-4 mr-2" />
+                  Settings
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={logout}>

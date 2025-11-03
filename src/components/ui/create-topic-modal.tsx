@@ -8,21 +8,24 @@ import { Badge } from './badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select'
 import { Alert, AlertDescription } from './alert'
 import { Textarea } from './textarea'
-import { useApi } from '@/services/api'
+import { useApi, type Category } from '@/services/api'
 import { useAuth } from 'react-oidc-context'
 import { AuthGuard } from '@/components/auth/AuthGuard'
+import { useToast } from '@/hooks/use-toast'
 
 interface CreateTopicModalProps {
   isOpen: boolean
   onClose: () => void
+  onSuccess?: () => void
   position?: 'top' | 'bottom'
 }
 
-const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicModalProps) => {
+const CreateTopicModal = ({ isOpen, onClose, onSuccess, position = 'bottom' }: CreateTopicModalProps) => {
   const navigate = useNavigate()
-  const { createTopic } = useApi()
+  const { createTopic, getAllCategories, getAllTags } = useApi()
   const modalRef = useRef<HTMLDivElement>(null)
   const auth = useAuth()
+  const { toast } = useToast()
   
   // Get user data from authentication context
   const user = auth.user ? {
@@ -39,22 +42,25 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
   const [tagSearchQuery, setTagSearchQuery] = useState('')
   const [categorySearchQuery, setCategorySearchQuery] = useState('')
   const [templateApplied, setTemplateApplied] = useState(false)
+  
+  // Validation state
+  const [validationErrors, setValidationErrors] = useState<{
+    topicName?: string
+    title?: string
+    category?: string
+    content?: string
+    tags?: string
+  }>({})
+  
+  // Categories state
+  const [categories, setCategories] = useState<Category[]>([])
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true)
+  
+  // Tags state
+  const [availableTags, setAvailableTags] = useState<any[]>([])
+  const [isLoadingTags, setIsLoadingTags] = useState(true)
 
-  // Static tags - no backend needed
-  const availableTags = [
-    { id: 'tag_1', name: 'fastn', color: '#8B5CF6' },
-    { id: 'tag_2', name: 'development', color: '#06B6D4' },
-    { id: 'tag_3', name: 'api', color: '#10B981' },
-    { id: 'tag_4', name: 'integration', color: '#F59E0B' },
-    { id: 'tag_5', name: 'workflow', color: '#EF4444' },
-    { id: 'tag_6', name: 'database', color: '#8B5CF6' },
-    { id: 'tag_7', name: 'authentication', color: '#06B6D4' },
-    { id: 'tag_8', name: 'deployment', color: '#10B981' },
-    { id: 'tag_9', name: 'testing', color: '#F59E0B' },
-    { id: 'tag_10', name: 'performance', color: '#EF4444' },
-    { id: 'tag_11', name: 'security', color: '#8B5CF6' },
-    { id: 'tag_12', name: 'best-practices', color: '#06B6D4' },
-  ]
+  // Tags are now fetched from API
   
   const [formData, setFormData] = useState({
     topicName: '',
@@ -66,37 +72,87 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
     allowRating: true,
   })
 
-  const topicCategories = [
-    { id: 'cat_1', name: 'Questions', color: '#3B82F6' },
-    { id: 'cat_2', name: 'Built with fastn', color: '#8B5CF6' },
-    { id: 'cat_3', name: 'Feature Request', color: '#10B981' },
-    { id: 'cat_4', name: 'Feedback', color: '#F59E0B' }
-  ]
+  // Fetch categories and tags from API
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+    
+        setIsLoadingCategories(true)
+        setIsLoadingTags(true)
+        
+        // Fetch categories and tags separately to handle partial failures
+        const categoriesPromise = getAllCategories().catch(error => {
+          console.error('❌ Error fetching categories:', error)
+          return [] // Return empty array if categories fail
+        })
+        
+        const tagsPromise = getAllTags().catch(error => {
+          console.error('❌ Error fetching tags:', error)
+          return [] // Return empty array if tags fail
+        })
+        
+        const [fetchedCategories, fetchedTags] = await Promise.all([
+          categoriesPromise,
+          tagsPromise
+        ])
+        
+        
+        setCategories(fetchedCategories)
+        setAvailableTags(fetchedTags)
+        
+        // Show specific error messages for partial failures
+        if (fetchedCategories.length === 0 && fetchedTags.length === 0) {
+          setError('Failed to load categories and tags. Please refresh the page and try again.')
+        } else if (fetchedCategories.length === 0) {
+          setError('Failed to load categories. You can still create topics without categories.')
+        } else if (fetchedTags.length === 0) {
+          setError('Failed to load tags. You can still create topics without tags.')
+        } else {
+          // Clear any previous errors if both loaded successfully
+          setError(null)
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error)
+        setError('Failed to load data. Please try again.')
+      } finally {
+        setIsLoadingCategories(false)
+        setIsLoadingTags(false)
+      }
+    }
+
+    if (isOpen) {
+      fetchData()
+    }
+  }, [isOpen, getAllCategories, getAllTags])
 
   const categoryTemplates = {
-    'Questions': `<!-- Thank you for opening a feature request. If this is for a node, please add the node subcategory. Otherwise, follow the below template. -->
+    'question': `<!-- Thank you for asking a question! Please provide as much detail as possible to help us give you the best answer. -->
 
-**The idea is:**
+**What are you trying to achieve?**
 
-<!-- Describe the idea in detail -->
+<!-- Describe what you're trying to accomplish -->
 
-**My use case:**
+**What have you tried so far?**
 
-<!-- Share use cases to help us understand better. -->
+<!-- Share what you've already attempted -->
 
-**I think it would be beneficial to add this because:**
+**Current setup:**
 
-<!-- What problem will this new feature solve? -->
+<!-- Describe your current environment, versions, etc. -->
 
-**Any resources to support this?**
+**Expected behavior:**
 
-<!-- Link to external documentation, etc. -->
+<!-- What should happen? -->
 
-**Are you willing to work on this?**
+**Actual behavior:**
 
-<!-- Don't forget to upvote this request. The more votes this Feature Request gets, the higher the priority. -->`,
+<!-- What actually happens? -->
+
+**Additional context:**
+
+<!-- Any other details that might help -->`,
     
-    'Built with fastn': `<!-- Thank you for sharing your fastn project! Please provide details about your implementation. -->
+    'bult with fastn': `<!-- Thank you for sharing your fastn project! Please provide details about your implementation. -->
 
 **Project Overview:**
 
@@ -126,7 +182,7 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
 
 <!-- What challenges did you face and how did you solve them? -->`,
     
-    'Feature Request': `<!-- Thank you for opening a feature request. If this is for a node, please add the node subcategory. Otherwise, follow the below template. -->
+    'request feature': `<!-- Thank you for opening a feature request. If this is for a node, please add the node subcategory. Otherwise, follow the below template. -->
 
 **The idea is:**
 
@@ -148,7 +204,7 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
 
 <!-- Don't forget to upvote this request. The more votes this Feature Request gets, the higher the priority. -->`,
     
-    'Feedback': `<!-- Thank you for providing feedback! Your input helps us improve fastn. -->
+    'feadback': `<!-- Thank you for providing feedback! Your input helps us improve fastn. -->
 
 **Type of Feedback:**
 
@@ -171,11 +227,49 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
 <!-- Any other relevant information -->`
   }
   
-  const categoryIdMapping: { [key: string]: string } = {
-    Questions: 'id_1754163675_740242',
-    'Built with fastn': 'id_1754163675_740242',
-    'Feature Request': 'id_1754163675_740242',
-    Feedback: 'id_1754163675_740242',
+  // Category ID mapping is no longer needed since we use API category IDs directly
+
+  // Validation functions
+  const validateField = (field: string, value: string): string | undefined => {
+    switch (field) {
+      case 'topicName':
+        if (!value.trim()) return 'Topic name is required'
+        if (value.trim().length < 3) return 'Topic name must be at least 3 characters'
+        if (value.trim().length > 100) return 'Topic name must be less than 100 characters'
+        return undefined
+      case 'title':
+        if (!value.trim()) return 'Title is required'
+        if (value.trim().length < 5) return 'Title must be at least 5 characters'
+        if (value.trim().length > 200) return 'Title must be less than 200 characters'
+        return undefined
+      case 'category':
+        if (!value.trim()) return 'Category is required'
+        return undefined
+      case 'content':
+        if (!value.trim()) return 'Content is required'
+        if (value.trim().length < 10) return 'Content must be at least 10 characters'
+        if (value.trim().length > 10000) return 'Content must be less than 10,000 characters'
+        return undefined
+      case 'tags':
+        if (selectedTags.length === 0) return 'At least one tag is required'
+        if (selectedTags.length > 3) return 'Maximum 3 tags allowed'
+        return undefined
+      default:
+        return undefined
+    }
+  }
+
+  const validateForm = (): boolean => {
+    const errors: typeof validationErrors = {}
+    
+    errors.topicName = validateField('topicName', formData.topicName)
+    errors.title = validateField('title', formData.title)
+    errors.category = validateField('category', formData.category)
+    errors.content = validateField('content', formData.content)
+    errors.tags = validateField('tags', '') // Pass empty string since we check selectedTags array
+    
+    setValidationErrors(errors)
+    return !Object.values(errors).some(error => error !== undefined)
   }
 
   // Reset form when modal opens/closes
@@ -195,6 +289,7 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
       setCategorySearchQuery('')
       setTemplateApplied(false)
       setError(null)
+      setValidationErrors({})
       setIsMinimized(false)
     }
   }, [isOpen])
@@ -235,6 +330,10 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
     } else {
       setSelectedTags([...selectedTags, tagName])
     }
+    // Clear validation error when tags change
+    if (validationErrors.tags) {
+      setValidationErrors(prev => ({ ...prev, tags: undefined }))
+    }
   }
 
   // Filter tags based on search query
@@ -243,13 +342,13 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
   )
 
   // Filter categories based on search query
-  const filteredCategories = topicCategories.filter(category => 
+  const filteredCategories = categories.filter(category => 
     category.name.toLowerCase().includes(categorySearchQuery.toLowerCase())
   )
 
   const applyTemplate = (category: string) => {
     const template = categoryTemplates[category as keyof typeof categoryTemplates]
-    if (template) {
+    if (template && category) {
       // Keep template as plain text for textarea
       setFormData(prev => ({ ...prev, content: template }))
       setTemplateApplied(true)
@@ -272,6 +371,12 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
     
     if (isSubmitting) return
     
+    // Validate form before submission
+    if (!validateForm()) {
+      setError('Please fix the validation errors below')
+      return
+    }
+    
     setIsSubmitting(true)
     setError(null)
 
@@ -281,13 +386,26 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
         return
       }
 
+      // Check if we have at least categories or tags available
+      if (categories.length === 0 && availableTags.length === 0) {
+        setError('Unable to load categories and tags. Please refresh the page and try again.')
+        return
+      }
+
+      // Find the first selected tag's ID (only if tags are available)
+      const firstSelectedTag = availableTags.length > 0 ? availableTags.find(tag => selectedTags.includes(tag.name)) : null;
+      
+      // Find category ID (only if categories are available)
+      const selectedCategory = categories.length > 0 ? categories.find(cat => cat.name === formData.category) : null;
+      
       const topicData = {
         title: formData.topicName || formData.title,
         description: formData.description,
         content: formData.content,
         author_id: user.id,
         author_username: user.username || user.email?.split('@')[0] || 'user',
-        category_id: categoryIdMapping[formData.category] || 'id_1754163675_740242',
+        category_id: selectedCategory?.id || null,
+        tag_id: firstSelectedTag?.id || null,
         is_featured: formData.featured,
         is_hot: false,
         is_new: true,
@@ -298,9 +416,22 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
         share_count: 0,
         tags: selectedTags,
       }
+      
 
       const createdTopic = await createTopic(topicData)
-      console.log('Topic created successfully:', createdTopic)
+      
+      
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess()
+      }
+      
+      // Inform user topic is under review
+      toast({
+        title: 'Topic submitted',
+        description: 'Got it! Our team is reviewing your topic before it goes live',
+        variant: 'success',
+      })
       
       // Close modal and navigate to community
       onClose()
@@ -360,7 +491,7 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
               size="sm"
               onClick={(e) => {
                 e.stopPropagation()
-                console.log('Fullscreen button clicked, current state:', isFullscreen)
+                
                 setIsFullscreen(!isFullscreen)
               }}
               className="h-8 w-8 p-0 hover:bg-muted/50 relative z-20"
@@ -373,7 +504,7 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
               size="sm"
               onClick={(e) => {
                 e.stopPropagation()
-                console.log('Minimize button clicked, current state:', isMinimized)
+                
                 setIsMinimized(!isMinimized)
               }}
               className="h-8 w-8 p-0 hover:bg-muted/50 relative z-20"
@@ -411,30 +542,62 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
 
             {/* Topic Name */}
             <div className="space-y-1">
-              <Label htmlFor="topicName" className="text-sm font-medium text-muted-foreground">Topic Name</Label>
+              <Label htmlFor="topicName" className="text-sm font-medium text-muted-foreground">Topic Name *</Label>
               <Input
                 id="topicName"
                 placeholder="Enter topic name..."
                 value={formData.topicName}
-                onChange={(e) => setFormData({ ...formData, topicName: e.target.value })}
-                className="h-9 text-base border-primary/50 focus:border-primary"
+                onChange={(e) => {
+                  setFormData({ ...formData, topicName: e.target.value })
+                  // Clear validation error on change
+                  if (validationErrors.topicName) {
+                    setValidationErrors(prev => ({ ...prev, topicName: undefined }))
+                  }
+                }}
+                onBlur={() => {
+                  const error = validateField('topicName', formData.topicName)
+                  setValidationErrors(prev => ({ ...prev, topicName: error }))
+                }}
+                className={`h-9 text-base border-border focus:border-primary ${
+                  validationErrors.topicName ? 'border-red-500 focus:border-red-500' : ''
+                }`}
               />
+              {validationErrors.topicName && (
+                <p className="text-sm text-red-600 dark:text-red-400">{validationErrors.topicName}</p>
+              )}
             </div>
 
             {/* Title */}
             <div className="space-y-1">
+              <Label htmlFor="title" className="text-sm font-medium text-muted-foreground">Title *</Label>
               <Input
                 id="title"
                 placeholder="What is this discussion about in one brief sentence?"
                 value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="h-9 text-base border-primary/50 focus:border-primary"
+                onChange={(e) => {
+                  setFormData({ ...formData, title: e.target.value })
+                  // Clear validation error on change
+                  if (validationErrors.title) {
+                    setValidationErrors(prev => ({ ...prev, title: undefined }))
+                  }
+                }}
+                onBlur={() => {
+                  const error = validateField('title', formData.title)
+                  setValidationErrors(prev => ({ ...prev, title: error }))
+                }}
+                className={`h-9 text-base border-border focus:border-primary ${
+                  validationErrors.title ? 'border-red-500 focus:border-red-500' : ''
+                }`}
               />
+              {validationErrors.title && (
+                <p className="text-sm text-red-600 dark:text-red-400">{validationErrors.title}</p>
+              )}
             </div>
 
             {/* Category and Tags Row */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
+                <Label className="text-sm font-medium text-muted-foreground">Category *</Label>
                 <div className="relative">
               <Select
                 value={formData.category}
@@ -443,9 +606,15 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
                   setCategorySearchQuery('')
                   resetTemplate()
                   applyTemplate(value)
+                  // Clear validation error on change
+                  if (validationErrors.category) {
+                    setValidationErrors(prev => ({ ...prev, category: undefined }))
+                  }
                 }}
               >
-                    <SelectTrigger className="h-9 border-primary/50 focus:border-primary">
+                    <SelectTrigger className={`h-9 border-border focus:border-primary ${
+                      validationErrors.category ? 'border-red-500 focus:border-red-500' : ''
+                    }`}>
                       <SelectValue placeholder="category..." />
                     </SelectTrigger>
                     <SelectContent className="max-h-[300px]">
@@ -465,7 +634,11 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
                       
                       {/* Category Options */}
                       <div className="max-h-[200px] overflow-y-auto">
-                        {filteredCategories.length > 0 ? (
+                        {isLoadingCategories ? (
+                          <div className="p-2 text-sm text-muted-foreground text-center">
+                            Loading categories...
+                          </div>
+                        ) : filteredCategories.length > 0 ? (
                           filteredCategories.map((category) => (
                             <SelectItem key={category.id} value={category.name}>
                               <div className="flex items-center gap-2">
@@ -486,9 +659,13 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
                     </SelectContent>
                   </Select>
                 </div>
+                {validationErrors.category && (
+                  <p className="text-sm text-red-600 dark:text-red-400">{validationErrors.category}</p>
+                )}
               </div>
 
               <div className="space-y-1">
+                <Label className="text-sm font-medium text-muted-foreground">Tags *</Label>
                 <div className="relative">
                   <Select
                     value=""
@@ -496,11 +673,15 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
                       if (value && !selectedTags.includes(value)) {
                         setSelectedTags([...selectedTags, value])
                         setTagSearchQuery('')
+                        // Clear validation error when tags change
+                        if (validationErrors.tags) {
+                          setValidationErrors(prev => ({ ...prev, tags: undefined }))
+                        }
                       }
                     }}
                   >
-                    <SelectTrigger className="h-9 border-primary/50 focus:border-primary">
-                      <SelectValue placeholder="optional tags" />
+                    <SelectTrigger className="h-9 border-border focus:border-primary">
+                      <SelectValue placeholder="select tags..." />
                     </SelectTrigger>
                     <SelectContent className="max-h-[300px]">
                       {/* Search Input */}
@@ -519,7 +700,11 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
                       
                       {/* Tag Options */}
                       <div className="max-h-[200px] overflow-y-auto">
-                        {filteredTags.length > 0 ? (
+                        {isLoadingTags ? (
+                          <div className="p-2 text-sm text-muted-foreground text-center">
+                            Loading tags...
+                          </div>
+                        ) : filteredTags.length > 0 ? (
                           filteredTags.map((tag) => (
                             <SelectItem 
                               key={tag.id} 
@@ -551,9 +736,8 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
             </div>
 
             {/* Selected Tags */}
-            {selectedTags.length > 0 && (
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-muted-foreground">Selected Tags</Label>
+            <div className="space-y-2">
+              {selectedTags.length > 0 ? (
                 <div className="flex flex-wrap gap-1.5">
                   {selectedTags.map((tagName) => {
                     const tag = availableTags.find(t => t.name === tagName)
@@ -562,7 +746,13 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
                         key={tagName}
                         variant="secondary"
                         className="cursor-pointer text-xs px-2 py-1 hover:bg-destructive/10 hover:text-destructive"
-                        onClick={() => setSelectedTags(selectedTags.filter(t => t !== tagName))}
+                        onClick={() => {
+                          setSelectedTags(selectedTags.filter(t => t !== tagName))
+                          // Clear validation error when tags change
+                          if (validationErrors.tags) {
+                            setValidationErrors(prev => ({ ...prev, tags: undefined }))
+                          }
+                        }}
                         style={tag?.color ? { backgroundColor: tag.color + '20', color: tag.color } : undefined}
                       >
                         {tagName} <X className="w-3 h-3 ml-1" />
@@ -570,8 +760,13 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
                     )
                   })}
                 </div>
-              </div>
-            )}
+              ) : (
+                <p className="text-sm text-muted-foreground">Select at least one tag</p>
+              )}
+              {validationErrors.tags && (
+                <p className="text-sm text-red-600 dark:text-red-400">{validationErrors.tags}</p>
+              )}
+            </div>
 
             {/* Tip */}
             <div className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-lg border border-border/50">
@@ -581,15 +776,29 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
 
             {/* Content Editor */}
             <div className="space-y-1">
-              <Label htmlFor="content" className="text-sm font-medium text-muted-foreground">Content</Label>
+              <Label htmlFor="content" className="text-sm font-medium text-muted-foreground">Content *</Label>
               <Textarea
                 id="content"
-                placeholder={formData.category ? "Start typing your content..." : "Select a category before typing here..."}
+                placeholder="Start typing your content..."
                 value={formData.content}
-                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                className="min-h-[300px] resize-none"
-                disabled={!formData.category}
+                onChange={(e) => {
+                  setFormData({ ...formData, content: e.target.value })
+                  // Clear validation error on change
+                  if (validationErrors.content) {
+                    setValidationErrors(prev => ({ ...prev, content: undefined }))
+                  }
+                }}
+                onBlur={() => {
+                  const error = validateField('content', formData.content)
+                  setValidationErrors(prev => ({ ...prev, content: error }))
+                }}
+                className={`min-h-[300px] resize-none border-border focus:border-primary ${
+                  validationErrors.content ? 'border-red-500 focus:border-red-500' : ''
+                }`}
               />
+              {validationErrors.content && (
+                <p className="text-sm text-red-600 dark:text-red-400">{validationErrors.content}</p>
+              )}
             </div>
 
 
@@ -597,7 +806,7 @@ const CreateTopicModal = ({ isOpen, onClose, position = 'bottom' }: CreateTopicM
             <div className="flex gap-3 pt-4 border-t border-border/50">
               <Button
                 type="submit"
-                disabled={isSubmitting || !formData.topicName || !formData.category || !formData.content}
+                disabled={isSubmitting || !formData.topicName || !formData.content || Object.values(validationErrors).some(error => error !== undefined)}
                 className="flex-1 h-9 bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
               >
                 {isSubmitting ? 'Creating Topic...' : '+ Create Topic'}

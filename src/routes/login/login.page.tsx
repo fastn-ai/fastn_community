@@ -1,5 +1,6 @@
 import { Spinner } from "@/components/utils-components/spinner";
 import { getUser, signIn } from "@/services/users/user-manager";
+import { insertUser, InsertUserPayload } from "@/services/api";
 import { AppRoutes } from "@/utils/config";
 import React from "react";
 import { useAuth } from "react-oidc-context";
@@ -33,6 +34,34 @@ export function LoginPage() {
       const user = getUser();
       if (user) {
         localStorage.setItem("logged_in_user_email", user?.profile?.email || "");
+        const authToken = user?.access_token || "";
+        try {
+          const payload: InsertUserPayload = {
+            action: "insertUser",
+            data: {
+              id: user?.profile?.sub || user?.profile?.sid || user?.profile?.email,
+              username: user?.profile?.preferred_username || user?.profile?.email?.split("@")[0] || "user",
+              email: user?.profile?.email || "",
+              avatar: user?.profile?.picture || "",
+              bio: "",
+              location: user?.profile?.locale || "",
+              website: "",
+              twitter: "",
+              github: "",
+              linkedin: "",
+              role_id: 2,
+              is_verified: true,
+              is_active: true,
+              last_login: new Date().toISOString(),
+              created_at: undefined,
+              updated_at: new Date().toISOString(),
+            },
+          };
+          // Fire and forget; avoid blocking navigation
+          insertUser(payload, authToken).catch(console.warn);
+        } catch (e) {
+          console.warn("insertUser error", e);
+        }
         if (returnTo) {
           navigate(returnTo);
         } else {
@@ -55,6 +84,45 @@ export function LoginPage() {
   React.useEffect(() => {
     // Handle auth state changes
     if (auth.isAuthenticated && !auth.isLoading && !auth.error && !auth.activeNavigator) {
+      const insertedFlagKey = "crud_user_insert_done";
+      const alreadyInserted = localStorage.getItem(insertedFlagKey);
+      if (!alreadyInserted) {
+        const user = getUser() || (auth.user as any);
+        const authToken = (user && (user.access_token || user?.access_token)) || "";
+        if (authToken) {
+          try {
+            const payload: InsertUserPayload = {
+              action: "insertUser",
+              data: {
+                id: user?.profile?.sub || user?.profile?.sid || user?.profile?.email,
+                username:
+                  user?.profile?.preferred_username ||
+                  user?.profile?.email?.split("@")[0] ||
+                  "user",
+                email: user?.profile?.email || "",
+                avatar: user?.profile?.picture || "",
+                bio: "",
+                location: user?.profile?.locale || "",
+                website: "",
+                twitter: "",
+                github: "",
+                linkedin: "",
+                role_id: 2,
+                is_verified: true,
+                is_active: true,
+                last_login: new Date().toISOString(),
+                created_at: undefined,
+                updated_at: new Date().toISOString(),
+              },
+            };
+            insertUser(payload, authToken)
+              .then(() => localStorage.setItem(insertedFlagKey, "1"))
+              .catch(console.warn);
+          } catch (e) {
+            console.warn("insertUser error", e);
+          }
+        }
+      }
       if (returnTo) {
         navigate(returnTo);
       } else {

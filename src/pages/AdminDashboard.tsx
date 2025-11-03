@@ -61,8 +61,10 @@ import {
   Edit,
   Trash2,
   MoreHorizontal,
+  RefreshCw,
 } from 'lucide-react';
 import { ApiService, Topic, User, Category } from '@/services/api';
+import { queryKeys } from '@/services/queryClient';
 import { toast } from '@/hooks/use-toast';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 
@@ -82,69 +84,135 @@ const AdminDashboard = () => {
     tags: [] as string[],
   });
 
-  // Fetch data
+  // Fetch data with optimized caching
   const { data: analytics, isLoading: analyticsLoading } = useQuery({
-    queryKey: ['analytics'],
+    queryKey: queryKeys.analytics,
     queryFn: ApiService.getAnalytics,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  const { data: topics, isLoading: topicsLoading } = useQuery({
-    queryKey: ['topics'],
-    queryFn: ApiService.getAllTopics,
+  const { data: topics, isLoading: topicsLoading, refetch: refetchTopics } = useQuery({
+    queryKey: queryKeys.topics,
+    queryFn: () => ApiService.getTopicsOptimized({ 
+      forceRefresh: false, 
+      includePending: true // Get all topics including pending
+    }),
+    staleTime: 1 * 60 * 1000, // 1 minute - shorter for admin dashboard
+    gcTime: 3 * 60 * 1000, // 3 minutes
+    refetchOnWindowFocus: false, // Disable to prevent duplicate calls
   });
 
   const { data: users, isLoading: usersLoading } = useQuery({
     queryKey: ['users'],
     queryFn: ApiService.getAllUsers,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
   const { data: categories, isLoading: categoriesLoading } = useQuery({
     queryKey: ['categories'],
     queryFn: ApiService.getAllCategories,
+    staleTime: 30 * 60 * 1000, // 30 minutes - categories don't change often
+    gcTime: 60 * 60 * 1000, // 1 hour
   });
 
-  // Mutations
+  // Mutations for topic management with optimistic updates
   const approveTopicMutation = useMutation({
-    mutationFn: ApiService.approveTopic,
+    mutationFn: async (topicId: string) => {
+      const result = await ApiService.updateTopicStatus(topicId, 'approved');
+      return result;
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['topics'] });
-      queryClient.invalidateQueries({ queryKey: ['analytics'] });
       toast({
         title: 'Success',
         description: 'Topic approved successfully',
       });
     },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: `Failed to approve topic: ${error.message}`,
+        variant: 'destructive',
+      });
+    },
+    onSettled: async () => {
+      // Explicitly call getAllTopics to refresh the data
+      try {
+        const freshTopics = await ApiService.getAllTopics(true); // forceRefresh: true
+        queryClient.setQueryData(queryKeys.topics, freshTopics);
+      } catch (error) {
+        // Failed to refresh topics
+      }
+    },
   });
 
   const rejectTopicMutation = useMutation({
-    mutationFn: ApiService.rejectTopic,
+    mutationFn: async (topicId: string) => {
+      const result = await ApiService.updateTopicStatus(topicId, 'rejected');
+      return result;
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['topics'] });
-      queryClient.invalidateQueries({ queryKey: ['analytics'] });
       toast({
         title: 'Success',
         description: 'Topic rejected successfully',
       });
     },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: `Failed to reject topic: ${error.message}`,
+        variant: 'destructive',
+      });
+    },
+    onSettled: async () => {
+      // Always refetch after error or success to ensure consistency
+      // Explicitly call getAllTopics to refresh the data
+      try {
+        const freshTopics = await ApiService.getAllTopics(true); // forceRefresh: true
+        queryClient.setQueryData(queryKeys.topics, freshTopics);
+      } catch (error) {
+        // Failed to refresh topics
+      }
+    },
   });
 
   const deleteTopicMutation = useMutation({
-    mutationFn: ApiService.deleteTopic,
+    mutationFn: async (topicId: string) => {
+      const result = await ApiService.deleteTopic(topicId);
+      return result;
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['topics'] });
-      queryClient.invalidateQueries({ queryKey: ['analytics'] });
       toast({
         title: 'Success',
         description: 'Topic deleted successfully',
       });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: `Failed to delete topic: ${error.message}`,
+        variant: 'destructive',
+      });
+    },
+    onSettled: async () => {
+      // Always refetch after error or success to ensure consistency
+      // Explicitly call getAllTopics to refresh the data
+      try {
+        const freshTopics = await ApiService.getAllTopics(true); // forceRefresh: true
+        queryClient.setQueryData(queryKeys.topics, freshTopics);
+        queryClient.invalidateQueries({ queryKey: queryKeys.analytics });
+      } catch (error) {
+        // Failed to refresh topics
+      }
     },
   });
 
   const createTopicMutation = useMutation({
     mutationFn: ApiService.createTopic,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['topics'] });
-      queryClient.invalidateQueries({ queryKey: ['analytics'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.topics });
+      queryClient.invalidateQueries({ queryKey: queryKeys.analytics });
       setIsCreateDialogOpen(false);
       setNewTopic({
         title: '',
@@ -170,12 +238,18 @@ const AdminDashboard = () => {
     return matchesSearch && matchesStatus;
   }) || [];
 
-  // Handle actions
+  // Handle actions with debouncing to prevent double requests
   const handleApprove = (topicId: string) => {
+    if (approveTopicMutation.isPending) {
+      return;
+    }
     approveTopicMutation.mutate(topicId);
   };
 
   const handleReject = (topicId: string) => {
+    if (rejectTopicMutation.isPending) {
+      return;
+    }
     rejectTopicMutation.mutate(topicId);
   };
 
@@ -326,7 +400,7 @@ const AdminDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          {/*<Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Views</CardTitle>
               <Eye className="h-4 w-4 text-muted-foreground" />
@@ -337,7 +411,7 @@ const AdminDashboard = () => {
                 Across all topics
               </p>
             </CardContent>
-          </Card>
+          </Card>*/}
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -377,10 +451,10 @@ const AdminDashboard = () => {
                           <h4 className="font-medium text-sm">{topic.title}</h4>
                           <p className="text-xs text-gray-500">by {topic.author_username}</p>
                         </div>
-                        <div className="flex items-center gap-2">
+                        {/*<div className="flex items-center gap-2">
                           {getStatusBadge(topic.status || 'pending')}
                           <span className="text-xs text-gray-500">{topic.view_count} views</span>
-                        </div>
+                        </div>*/}
                       </div>
                     ))}
                   </div>
@@ -446,6 +520,32 @@ const AdminDashboard = () => {
                   <SelectItem value="rejected">Rejected</SelectItem>
                 </SelectContent>
               </Select>
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    // Explicitly call getAllTopics with force refresh
+                    const freshTopics = await ApiService.getAllTopics(true); // forceRefresh: true
+                    queryClient.setQueryData(queryKeys.topics, freshTopics);
+                    queryClient.invalidateQueries({ queryKey: queryKeys.analytics });
+                    
+                    toast({
+                      title: 'Refreshed',
+                      description: 'Topics refreshed successfully',
+                    });
+                  } catch (error) {
+                    toast({
+                      title: 'Error',
+                      description: 'Failed to refresh topics',
+                      variant: 'destructive',
+                    });
+                  }
+                }}
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Refresh
+              </Button>
             </div>
 
             {/* Topics Table */}
@@ -461,7 +561,7 @@ const AdminDashboard = () => {
                       <TableHead>Author</TableHead>
                       <TableHead>Category</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Views</TableHead>
+                      <TableHead>Likes</TableHead>
                       <TableHead>Created</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -484,22 +584,46 @@ const AdminDashboard = () => {
                             {topic.status === 'pending' && (
                               <>
                                 <Button
+                                  key={`approve-${topic.id}`}
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => handleApprove(topic.id)}
+                                  onClick={() => handleApprove(topic.id.toString())}
                                   disabled={approveTopicMutation.isPending}
                                 >
                                   <CheckCircle className="w-3 h-3" />
                                 </Button>
                                 <Button
+                                  key={`reject-${topic.id}`}
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => handleReject(topic.id)}
+                                  onClick={() => handleReject(topic.id.toString())}
                                   disabled={rejectTopicMutation.isPending}
                                 >
                                   <XCircle className="w-3 h-3" />
                                 </Button>
                               </>
+                            )}
+                            {topic.status === 'approved' && (
+                              <Button
+                                key={`reject-${topic.id}`}
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleReject(topic.id.toString())}
+                                disabled={rejectTopicMutation.isPending}
+                              >
+                                <XCircle className="w-3 h-3" />
+                              </Button>
+                            )}
+                            {topic.status === 'rejected' && (
+                              <Button
+                                key={`approve-${topic.id}`}
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleApprove(topic.id.toString())}
+                                disabled={approveTopicMutation.isPending}
+                              >
+                                <CheckCircle className="w-3 h-3" />
+                              </Button>
                             )}
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
@@ -517,7 +641,7 @@ const AdminDashboard = () => {
                                 <AlertDialogFooter>
                                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                                   <AlertDialogAction
-                                    onClick={() => handleDelete(topic.id)}
+                                    onClick={() => handleDelete(topic.id.toString())}
                                     className="bg-red-600 hover:bg-red-700"
                                   >
                                     Delete
@@ -610,10 +734,10 @@ const AdminDashboard = () => {
                       <span>Total Replies</span>
                       <span className="font-medium">{analytics?.totalReplies}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Total Views</span>
+                    {/*<div className="flex justify-between">
+                      <span>Total likes</span>
                       <span className="font-medium">{analytics?.totalViews}</span>
-                    </div>
+                    </div>*/}
                     <div className="flex justify-between">
                       <span>Total Likes</span>
                       <span className="font-medium">{analytics?.totalLikes}</span>
