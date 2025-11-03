@@ -58,14 +58,12 @@ const Announcements = () => {
 
   const handleLike = (id: number) => {
     // Handle like functionality
-    console.log("Liked announcement:", id);
     // You can implement actual like functionality here
     // For now, just log the action
   };
 
   const handleShare = (id: number) => {
     // Handle share functionality
-    console.log("Sharing announcement:", id);
     // You can implement actual share functionality here
     // For example, copy to clipboard or open share dialog
     if (navigator.share) {
@@ -77,13 +75,11 @@ const Announcements = () => {
     } else {
       // Fallback: copy to clipboard
       navigator.clipboard.writeText(window.location.href);
-      console.log("Link copied to clipboard");
     }
   };
 
   const handleBookmark = (id: number) => {
     // Handle bookmark functionality
-    console.log("Bookmarked announcement:", id);
     // You can implement actual bookmark functionality here
     // For now, just log the action
   };

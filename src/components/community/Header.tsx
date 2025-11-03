@@ -90,12 +90,10 @@ const Header = () => {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Searching for:", searchQuery);
     // Implement search functionality
   };
 
   const handleNotificationClick = (notificationId: number) => {
-    console.log("Notification clicked:", notificationId);
     // Handle notification click
   };
 

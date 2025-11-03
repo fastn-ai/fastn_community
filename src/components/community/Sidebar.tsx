@@ -45,7 +45,7 @@ const Sidebar = () => {
   // Use React Query to fetch topics (shared with TopicList)
   const { data: topics = [], isLoading: topicsLoading, error: topicsError } = useQuery({
     queryKey: queryKeys.topics,
-    queryFn: ApiService.getAllTopics,
+    queryFn: () => ApiService.getTopicsOptimized({ forceRefresh: false, includePending: true }),
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
@@ -111,14 +111,7 @@ const Sidebar = () => {
 
   const popularTags = loading ? [] : getPopularTags();
   
-  // Debug logging
-  useEffect(() => {
-    if (!loading && tags.length > 0) {
-      console.log('Sidebar - Available tags:', tags);
-      console.log('Sidebar - Popular tags:', popularTags);
-      console.log('Sidebar - Selected tag:', selectedTag);
-    }
-  }, [loading, tags, popularTags, selectedTag]);
+  
 
   const isActive = (path: string) => {
     return location.pathname === path;

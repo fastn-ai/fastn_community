@@ -33,8 +33,6 @@ import {
   Heart,
   Share,
   Bookmark,
-  ThumbsUp,
-  ThumbsDown,
   Reply,
   ArrowLeft,
 } from "lucide-react";
@@ -67,8 +65,6 @@ interface ReplyItemProps {
   handleReplyToReply: (replyId: string) => void;
   handleSubmitSubReply: () => void;
   handleCancelSubReply: () => void;
-  handleLikeReply: (replyId: string) => void;
-  likedReplies: Set<string>;
 }
 
 // Forward declare the comparison function
@@ -97,9 +93,7 @@ const arePropsEqual = (prevProps: ReplyItemProps, nextProps: ReplyItemProps) => 
   }
   
   // Re-render if liked status changed
-  const prevLiked = prevProps.likedReplies.has(prevProps.reply.id);
-  const nextLiked = nextProps.likedReplies.has(nextProps.reply.id);
-  if (prevLiked !== nextLiked) return false;
+  
   
   // Re-render if children changed
   if (prevProps.reply.children.length !== nextProps.reply.children.length) return false;
@@ -129,8 +123,7 @@ const ReplyItem = React.memo(({
   handleReplyToReply,
   handleSubmitSubReply,
   handleCancelSubReply,
-  handleLikeReply,
-  likedReplies,
+  
 }: ReplyItemProps) => {
   const isSubReply = depth > 0;
   
@@ -268,16 +261,6 @@ const ReplyItem = React.memo(({
                 {reply.content}
               </p>
               <div className="flex items-center space-x-4">
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => handleLikeReply(reply.id)}
-                  disabled={!isAuthenticated || likedReplies.has(reply.id)}
-                  className={likedReplies.has(reply.id) ? "text-primary" : ""}
-                >
-                  <ThumbsUp className={`w-4 h-4 mr-2 ${likedReplies.has(reply.id) ? "fill-current" : ""}`} />
-                  {reply.like_count || 0}
-                </Button>
                 {isAuthenticated && (
                   <Button 
                     variant="ghost" 
@@ -367,8 +350,7 @@ const ReplyItem = React.memo(({
               handleReplyToReply={handleReplyToReply}
               handleSubmitSubReply={handleSubmitSubReply}
               handleCancelSubReply={handleCancelSubReply}
-              handleLikeReply={handleLikeReply}
-              likedReplies={likedReplies}
+              
             />
           ))}
         </div>
@@ -408,33 +390,25 @@ const TopicDetail = () => {
   const isAuthenticated = !!(user && user.access_token && user.profile);
   const [isLiking, setIsLiking] = useState(false);
   const [liked, setLiked] = useState(false);
-  const [likedReplies, setLikedReplies] = useState<Set<string>>(new Set());
-  const [likingReplyId, setLikingReplyId] = useState<string | null>(null);
   
-  // Check if user has already liked this topic on mount
+  
+  // Check if user has already liked this topic on mount and when topic changes
   useEffect(() => {
-    if (isAuthenticated && user && id) {
+    if (isAuthenticated && user && id && topic) {
       const userId = user.profile?.sub || user.profile?.sid || user.profile?.email;
       if (userId) {
         const likedTopics = JSON.parse(localStorage.getItem('likedTopics') || '{}');
         const likeKey = `${userId}-${id}`;
-        if (likedTopics[likeKey]) {
-          setLiked(true);
+        const isLiked = !!likedTopics[likeKey];
+        if (isLiked !== liked) {
+          setLiked(isLiked);
         }
 
         // Check liked replies
-        const likedRepliesData = JSON.parse(localStorage.getItem('likedReplies') || '{}');
-        const userLikedReplies = likedRepliesData[userId] || {};
-        const likedReplyIds = new Set<string>();
-        Object.keys(userLikedReplies).forEach(replyId => {
-          if (userLikedReplies[replyId]) {
-            likedReplyIds.add(replyId);
-          }
-        });
-        setLikedReplies(likedReplyIds);
+        
       }
     }
-  }, [isAuthenticated, user, id]);
+  }, [isAuthenticated, user, id, topic, liked]);
   
   // Function to ensure user exists in database (only once per session)
   const ensureUserExists = useCallback(async () => {
@@ -532,6 +506,15 @@ const TopicDetail = () => {
         // Handle the response structure
         if (response) {
           setTopic(response);
+          // Check if user has liked this topic after fetching
+          if (isAuthenticated && user) {
+            const userId = user.profile?.sub || user.profile?.sid || user.profile?.email;
+            if (userId) {
+              const likedTopics = JSON.parse(localStorage.getItem('likedTopics') || '{}');
+              const likeKey = `${userId}-${id}`;
+              setLiked(!!likedTopics[likeKey]);
+            }
+          }
           // Load replies for this topic
           try {
             const { ApiService } = await import("@/services/api");
@@ -803,172 +786,138 @@ const TopicDetail = () => {
       return;
     }
 
-    // Prevent duplicate likes
-    if (liked) {
-      return;
-    }
-
     const userId = user.profile?.sub || user.profile?.sid || user.profile?.email;
     
     if (!userId) {
       return;
     }
 
-    try {
-      setIsLiking(true);
+    // Toggle: if already liked, unlike; otherwise like
+    if (liked) {
+      // Unlike the topic
+      try {
+        setIsLiking(true);
 
-      const payload = {
-        data: {
-          userId: userId,
-          topicId: parseInt(id)
-        }
-      };
+        const payload = {
+          data: {
+            user_id: userId,
+            topic_id: parseInt(id)
+          }
+        };
 
-      const { submitLikesApi } = await import("@/services/api");
-      const { FASTN_API_KEY } = await import("@/constants");
-      
-      await submitLikesApi(payload, user.access_token, FASTN_API_KEY);
-      
-      // Save to localStorage
-      const likedTopics = JSON.parse(localStorage.getItem('likedTopics') || '{}');
-      const likeKey = `${userId}-${id}`;
-      likedTopics[likeKey] = true;
-      localStorage.setItem('likedTopics', JSON.stringify(likedTopics));
-      
-      // Update local state
-      setLiked(true);
-      if (topic) {
-        setTopic({
-          ...topic,
-          like_count: topic.like_count + 1
+        const { removeLikeFromTopicApi } = await import("@/services/api");
+        const { FASTN_API_KEY } = await import("@/constants");
+        
+        await removeLikeFromTopicApi(payload, user.access_token, FASTN_API_KEY);
+        
+        // Remove from localStorage
+        const likedTopics = JSON.parse(localStorage.getItem('likedTopics') || '{}');
+        const likeKey = `${userId}-${id}`;
+        delete likedTopics[likeKey];
+        localStorage.setItem('likedTopics', JSON.stringify(likedTopics));
+        
+        // Update local state
+        setLiked(false);
+        setTopic(prevTopic => {
+          if (!prevTopic) return prevTopic;
+          const newLikeCount = Math.max(0, (prevTopic.like_count || 0) - 1);
+          return {
+            ...prevTopic,
+            like_count: newLikeCount
+          };
         });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        setError(`Failed to unlike topic: ${errorMessage}`);
+      } finally {
+        setIsLiking(false);
       }
-      
-    } catch (error) {
-      // Handle duplicate like error gracefully
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      const errorJson = (error as any)?.errorJson;
-      const responseText = (error as any)?.response?.text || '';
-      
-      // Check error message, error JSON, and response text for duplicate key indicators
-      const isDuplicateError = 
-        errorMessage.includes("duplicate key") || 
-        errorMessage.includes("already exists") || 
-        errorMessage.includes("likes_unique_topic") ||
-        errorMessage.includes("INVALID_FLOW_ERROR") ||
-        (errorJson && (
-          errorJson.message?.includes("duplicate key") ||
-          errorJson.message?.includes("already exists") ||
-          errorJson.message?.includes("likes_unique_topic") ||
-          errorJson.code === "INVALID_FLOW_ERROR"
-        )) ||
-        responseText.includes("duplicate key") ||
-        responseText.includes("likes_unique_topic");
-      
-      if (isDuplicateError) {
-        // Save to localStorage even if duplicate
+    } else {
+      // Like the topic
+      try {
+        setIsLiking(true);
+
+        const payload = {
+          data: {
+            userId: userId,
+            topicId: parseInt(id)
+          }
+        };
+
+        const { submitLikesApi } = await import("@/services/api");
+        const { FASTN_API_KEY } = await import("@/constants");
+        
+        await submitLikesApi(payload, user.access_token, FASTN_API_KEY);
+        
+        // Save to localStorage
         const likedTopics = JSON.parse(localStorage.getItem('likedTopics') || '{}');
         const likeKey = `${userId}-${id}`;
         likedTopics[likeKey] = true;
         localStorage.setItem('likedTopics', JSON.stringify(likedTopics));
         
+        // Update local state
         setLiked(true);
-        // Don't show error message for duplicate likes
-      } else {
-        setError(`Failed to like topic: ${errorMessage}`);
-      }
-    } finally {
-      setIsLiking(false);
-    }
-  };
-
-  const handleLikeReply = async (replyId: string) => {
-    if (!isAuthenticated || !user) {
-      return;
-    }
-
-    // Prevent duplicate likes
-    if (likedReplies.has(replyId)) {
-      return;
-    }
-
-    const userId = user.profile?.sub || user.profile?.sid || user.profile?.email;
-    
-    if (!userId) {
-      return;
-    }
-
-    try {
-      setLikingReplyId(replyId);
-
-      const payload = {
-        data: {
-          userId: userId,
-          reply_id: parseInt(replyId)
-        }
-      };
-
-      const { submitLikesForReplyApi } = await import("@/services/api");
-      const { FASTN_API_KEY } = await import("@/constants");
-      
-      await submitLikesForReplyApi(payload, user.access_token, FASTN_API_KEY);
-      
-      // Save to localStorage
-      const likedRepliesData = JSON.parse(localStorage.getItem('likedReplies') || '{}');
-      if (!likedRepliesData[userId]) {
-        likedRepliesData[userId] = {};
-      }
-      likedRepliesData[userId][replyId] = true;
-      localStorage.setItem('likedReplies', JSON.stringify(likedRepliesData));
-      
-      // Update local state
-      setLikedReplies(prev => new Set(prev).add(replyId));
-      
-      // Update reply like count
-      setReplies(prevReplies =>
-        prevReplies.map(reply =>
-          reply.id === replyId
-            ? { ...reply, like_count: (reply.like_count || 0) + 1 }
-            : reply
-        )
-      );
-      
-    } catch (error) {
-      // Handle duplicate like error gracefully
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      const errorJson = (error as any)?.errorJson;
-      const responseText = (error as any)?.response?.text || '';
-      
-      // Check error message, error JSON, and response text for duplicate key indicators
-      const isDuplicateError = 
-        errorMessage.includes("duplicate key") || 
-        errorMessage.includes("already exists") || 
-        errorMessage.includes("likes_unique") ||
-        errorMessage.includes("INVALID_FLOW_ERROR") ||
-        (errorJson && (
-          errorJson.message?.includes("duplicate key") ||
-          errorJson.message?.includes("already exists") ||
-          errorJson.message?.includes("likes_unique") ||
-          errorJson.code === "INVALID_FLOW_ERROR"
-        )) ||
-        responseText.includes("duplicate key") ||
-        responseText.includes("likes_unique");
-      
-      if (isDuplicateError) {
-        // Save to localStorage even if duplicate
-        const likedRepliesData = JSON.parse(localStorage.getItem('likedReplies') || '{}');
-        if (!likedRepliesData[userId]) {
-          likedRepliesData[userId] = {};
-        }
-        likedRepliesData[userId][replyId] = true;
-        localStorage.setItem('likedReplies', JSON.stringify(likedRepliesData));
+        setTopic(prevTopic => {
+          if (!prevTopic) return prevTopic;
+          const newLikeCount = (prevTopic.like_count || 0) + 1;
+          return {
+            ...prevTopic,
+            like_count: newLikeCount
+          };
+        });
         
-        setLikedReplies(prev => new Set(prev).add(replyId));
+      } catch (error) {
+        // Handle duplicate like error gracefully
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorJson = (error as any)?.errorJson;
+        const responseText = (error as any)?.response?.text || '';
+        
+        // Check error message, error JSON, and response text for duplicate key indicators
+        const isDuplicateError = 
+          errorMessage.includes("duplicate key") || 
+          errorMessage.includes("already exists") || 
+          errorMessage.includes("likes_unique_topic") ||
+          errorMessage.includes("INVALID_FLOW_ERROR") ||
+          (errorJson && (
+            errorJson.message?.includes("duplicate key") ||
+            errorJson.message?.includes("already exists") ||
+            errorJson.message?.includes("likes_unique_topic") ||
+            errorJson.code === "INVALID_FLOW_ERROR"
+          )) ||
+          responseText.includes("duplicate key") ||
+          responseText.includes("likes_unique_topic");
+        
+        if (isDuplicateError) {
+          // Save to localStorage even if duplicate
+          const likedTopics = JSON.parse(localStorage.getItem('likedTopics') || '{}');
+          const likeKey = `${userId}-${id}`;
+          likedTopics[likeKey] = true;
+          localStorage.setItem('likedTopics', JSON.stringify(likedTopics));
+          
+          setLiked(true);
+          // Update like count even for duplicate (in case it wasn't updated before)
+          setTopic(prevTopic => {
+            if (!prevTopic) return prevTopic;
+            // Only increment if not already liked in state
+            if (!liked) {
+              return {
+                ...prevTopic,
+                like_count: (prevTopic.like_count || 0) + 1
+              };
+            }
+            return prevTopic;
+          });
+          // Don't show error message for duplicate likes
+        } else {
+          setError(`Failed to like topic: ${errorMessage}`);
+        }
+      } finally {
+        setIsLiking(false);
       }
-    } finally {
-      setLikingReplyId(null);
     }
   };
+
+// Reply like feature removed
 
   if (loading) {
     return (
@@ -1110,6 +1059,10 @@ const TopicDetail = () => {
                       <MessageSquare className="w-4 h-4" />
                       <span>{topic.reply_count} replies</span>
                     </span>
+                    <span className="flex items-center space-x-1">
+                      <Heart className="w-4 h-4 text-gray-600" />
+                      <span>{topic.like_count || 0} likes</span>
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1122,8 +1075,12 @@ const TopicDetail = () => {
                   disabled={!isAuthenticated || isLiking}
                   className={liked ? "border-primary text-primary" : ""}
                 >
-                  <Heart className={`w-4 h-4 mr-2 ${liked ? "fill-current" : ""}`} />
-                  {isLiking ? "Liking..." : "Like"}
+                  <Heart className={`w-4 h-4 mr-2 transition-all ${
+                    liked 
+                      ? "text-primary" 
+                      : "text-gray-600"
+                  }`} />
+                  {isLiking ? (liked ? "Unliking..." : "Liking...") : (liked ? "Unlike" : "Like")}
                 </Button>
                 <Button variant="outline" size="sm">
                   <Share className="w-4 h-4 mr-2" />
@@ -1176,35 +1133,33 @@ const TopicDetail = () => {
                       const parseTags = (tags?: string[] | string | any): string[] => {
                         if (!tags) return [];
                         
+                        let result: string[] = [];
+                        
                         // If tags is already an array of objects with name property
                         if (Array.isArray(tags)) {
-                          const result = tags.map((tag: any) => {
+                          result = tags.map((tag: any) => {
                             if (typeof tag === 'object' && tag.name) {
                               return tag.name;
                             }
                             return tag;
                           }).filter((tag: string) => tag && tag.length > 0);
-                          return result;
                         }
-                        
                         // Handle the new API structure where tags is an object with value property
-                        if (tags && typeof tags === 'object' && tags.value) {
+                        else if (tags && typeof tags === 'object' && tags.value) {
                           try {
                             const parsedTags = JSON.parse(tags.value);
                             if (Array.isArray(parsedTags)) {
-                              const result = parsedTags.map((tag: any) => tag.name || tag).filter((tag: string) => tag && tag.length > 0);
-                              return result;
+                              result = parsedTags.map((tag: any) => tag.name || tag).filter((tag: string) => tag && tag.length > 0);
                             }
                           } catch (error) {
                             return [];
                           }
                         }
-                        
                         // If tags is a string, parse it
-                        if (typeof tags === 'string') {
+                        else if (typeof tags === 'string') {
                           try {
                             const cleanTags = tags.replace(/[{}]/g, "");
-                            return cleanTags
+                            result = cleanTags
                               .split(",")
                               .map((tag) => tag.trim())
                               .filter((tag) => tag.length > 0);
@@ -1213,7 +1168,9 @@ const TopicDetail = () => {
                           }
                         }
                         
-                        return [];
+                        // Remove duplicates by converting to Set and back to array
+                        const uniqueTags = Array.from(new Set(result));
+                        return uniqueTags;
                       };
                       
                       const parsedTags = parseTags(topic.tags);
@@ -1260,8 +1217,6 @@ const TopicDetail = () => {
                     handleReplyToReply={handleReplyToReply}
                     handleSubmitSubReply={handleSubmitSubReply}
                     handleCancelSubReply={handleCancelSubReply}
-                    handleLikeReply={handleLikeReply}
-                    likedReplies={likedReplies}
                   />
                 ))}
               </div>

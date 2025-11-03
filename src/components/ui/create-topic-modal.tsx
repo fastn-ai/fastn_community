@@ -76,7 +76,7 @@ const CreateTopicModal = ({ isOpen, onClose, onSuccess, position = 'bottom' }: C
   useEffect(() => {
     const fetchData = async () => {
       try {
-        console.log('🔄 Starting to fetch categories and tags...')
+    
         setIsLoadingCategories(true)
         setIsLoadingTags(true)
         
@@ -96,12 +96,6 @@ const CreateTopicModal = ({ isOpen, onClose, onSuccess, position = 'bottom' }: C
           tagsPromise
         ])
         
-        console.log('✅ Fetched data:', {
-          categoriesCount: fetchedCategories.length,
-          tagsCount: fetchedTags.length,
-          categories: fetchedCategories,
-          tags: fetchedTags
-        })
         
         setCategories(fetchedCategories)
         setAvailableTags(fetchedTags)
@@ -422,17 +416,10 @@ const CreateTopicModal = ({ isOpen, onClose, onSuccess, position = 'bottom' }: C
         share_count: 0,
         tags: selectedTags,
       }
-
-      console.log("🔍 Topic data being sent:", {
-        ...topicData,
-        selectedCategory: selectedCategory?.name,
-        firstSelectedTag: firstSelectedTag?.name,
-        categoriesCount: categories.length,
-        tagsCount: availableTags.length
-      });
+      
 
       const createdTopic = await createTopic(topicData)
-      console.log('Topic created successfully:', createdTopic)
+      
       
       // Call onSuccess callback if provided
       if (onSuccess) {
@@ -504,7 +491,7 @@ const CreateTopicModal = ({ isOpen, onClose, onSuccess, position = 'bottom' }: C
               size="sm"
               onClick={(e) => {
                 e.stopPropagation()
-                console.log('Fullscreen button clicked, current state:', isFullscreen)
+                
                 setIsFullscreen(!isFullscreen)
               }}
               className="h-8 w-8 p-0 hover:bg-muted/50 relative z-20"
@@ -517,7 +504,7 @@ const CreateTopicModal = ({ isOpen, onClose, onSuccess, position = 'bottom' }: C
               size="sm"
               onClick={(e) => {
                 e.stopPropagation()
-                console.log('Minimize button clicked, current state:', isMinimized)
+                
                 setIsMinimized(!isMinimized)
               }}
               className="h-8 w-8 p-0 hover:bg-muted/50 relative z-20"

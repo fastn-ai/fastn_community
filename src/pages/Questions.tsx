@@ -65,13 +65,11 @@ const Questions = () => {
 
   const handleLike = (id: string) => {
     // Handle like functionality
-    console.log("Liked question:", id);
     // You can implement actual like functionality here
   };
 
   const handleShare = (id: string) => {
     // Handle share functionality
-    console.log("Sharing question:", id);
     // You can implement actual share functionality here
     if (navigator.share) {
       navigator.share({
@@ -91,7 +89,6 @@ const Questions = () => {
 
   const handleBookmark = (id: string) => {
     // Handle bookmark functionality
-    console.log("Bookmarked question:", id);
     // You can implement actual bookmark functionality here
   };
 

@@ -36,18 +36,18 @@ export function Toaster() {
 export const notify = {
   success: (message: string) => {
     // This would typically use the toast hook
-    console.log('Success:', message);
+    
   },
   error: (message: string) => {
     // This would typically use the toast hook
-    console.log('Error:', message);
+    
   },
   info: (message: string) => {
     // This would typically use the toast hook
-    console.log('Info:', message);
+    
   },
   warning: (message: string) => {
     // This would typically use the toast hook
-    console.log('Warning:', message);
+    
   },
 };

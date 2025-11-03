@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,19 +33,12 @@ import {
   Zap,
   Megaphone,
   X,
-  Settings,
-  Code,
-  BookOpen,
-  Lightbulb,
+ 
   Rocket,
-  Shield,
-  Users,
-  FileText,
+
   Sparkles,
   Folder,
-  MessageCircle,
-  Wrench,
-  Cpu,
+
 } from "lucide-react";
 import { ApiService, Topic, Category } from "@/services/api";
 import { getTagColor } from "@/lib/utils";
@@ -60,6 +53,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const auth = useAuth();
+  const queryClient = useQueryClient();
   const [isCreateTopicModalOpen, setIsCreateTopicModalOpen] = useState(false);
   
   // Check if user is authenticated
@@ -108,9 +102,11 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
   const parseTags = (tags?: string[] | string | any): string[] => {
     if (!tags) return [];
     
+    let result: string[] = [];
+    
     // If tags is already an array of strings
     if (Array.isArray(tags)) {
-      return tags.filter((tag: any) => {
+      result = tags.filter((tag: any) => {
         if (typeof tag === 'string' && tag.length > 0) {
           return true;
         }
@@ -128,13 +124,12 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
         return String(tag);
       });
     }
-    
     // Handle the new API structure where tags is an object with value property
-    if (tags && typeof tags === 'object' && tags.value) {
+    else if (tags && typeof tags === 'object' && tags.value) {
       try {
         const parsedTags = JSON.parse(tags.value);
         if (Array.isArray(parsedTags)) {
-          return parsedTags.map((tag: any) => {
+          result = parsedTags.map((tag: any) => {
             if (typeof tag === 'string') {
               return tag;
             }
@@ -148,34 +143,35 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
         return [];
       }
     }
-    
     // If tags is a string, parse it
-    if (typeof tags === 'string') {
+    else if (typeof tags === 'string') {
       try {
         // Handle JSON string format
         if (tags.startsWith('[') || tags.startsWith('{')) {
           const parsed = JSON.parse(tags);
           if (Array.isArray(parsed)) {
-            return parsed.map((tag: any) => {
+            result = parsed.map((tag: any) => {
               if (typeof tag === 'string') return tag;
               if (typeof tag === 'object' && tag.name) return tag.name;
               return String(tag);
             }).filter((tag: string) => tag && tag.length > 0);
           }
+        } else {
+          // Handle comma-separated string format
+          const cleanTags = tags.replace(/[{}]/g, "");
+          result = cleanTags
+            .split(",")
+            .map((tag) => tag.trim())
+            .filter((tag) => tag.length > 0);
         }
-        
-        // Handle comma-separated string format
-        const cleanTags = tags.replace(/[{}]/g, "");
-        return cleanTags
-          .split(",")
-          .map((tag) => tag.trim())
-          .filter((tag) => tag.length > 0);
       } catch (error) {
         return [];
       }
     }
     
-    return [];
+    // Remove duplicates by converting to Set and back to array
+    const uniqueTags = Array.from(new Set(result));
+    return uniqueTags;
   };
 
   // Filter topics based on search, filter, and tag
@@ -224,7 +220,9 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
   };
 
   // Handle topic interactions
-  const handleLike = async (topicId: string) => {
+  const handleLike = async (topicId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent navigation when clicking like button
+    
     try {
       if (!isAuthenticated || !auth.user) {
         return;
@@ -239,29 +237,79 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
       // Check if already liked
       const likedTopics = JSON.parse(localStorage.getItem('likedTopics') || '{}');
       const likeKey = `${userId}-${topicId}`;
-      if (likedTopics[likeKey]) {
-        return;
+      const isCurrentlyLiked = !!likedTopics[likeKey];
+
+      if (isCurrentlyLiked) {
+        // Unlike the topic
+        const payload = {
+          data: {
+            user_id: userId,
+            topic_id: parseInt(topicId)
+          }
+        };
+
+        const authToken = auth.user.access_token || "";
+        const { removeLikeFromTopicApi } = await import("@/services/api");
+        const { FASTN_API_KEY } = await import("@/constants");
+        
+        await removeLikeFromTopicApi(payload, authToken, FASTN_API_KEY);
+        
+        // Remove from localStorage
+        delete likedTopics[likeKey];
+        localStorage.setItem('likedTopics', JSON.stringify(likedTopics));
+        
+        // Update local state immediately with functional update
+        queryClient.setQueryData(queryKeys.topics, (oldData: any) => {
+          if (!oldData || !Array.isArray(oldData)) return oldData;
+          // Create a completely new array with spread operator
+          return oldData.map((topic: any) => {
+            const topicIdStr = typeof topic.id === 'number' ? topic.id.toString() : String(topic.id);
+            if (topicIdStr === topicId) {
+              const currentCount = typeof topic.like_count === 'number' ? topic.like_count : parseInt(String(topic.like_count || '0'), 10);
+              return {
+                ...topic,
+                like_count: Math.max(0, currentCount - 1)
+              };
+            }
+            return { ...topic };
+          });
+        });
+      } else {
+        // Like the topic
+        const payload = {
+          data: {
+            userId: userId,
+            topicId: parseInt(topicId)
+          }
+        };
+
+        const authToken = auth.user.access_token || "";
+        const { submitLikesApi } = await import("@/services/api");
+        const { FASTN_API_KEY } = await import("@/constants");
+        
+        await submitLikesApi(payload, authToken, FASTN_API_KEY);
+        
+        // Save to localStorage
+        likedTopics[likeKey] = true;
+        localStorage.setItem('likedTopics', JSON.stringify(likedTopics));
+        
+        // Update local state immediately with functional update
+        queryClient.setQueryData(queryKeys.topics, (oldData: any) => {
+          if (!oldData || !Array.isArray(oldData)) return oldData;
+          // Create a completely new array with spread operator
+          return oldData.map((topic: any) => {
+            const topicIdStr = typeof topic.id === 'number' ? topic.id.toString() : String(topic.id);
+            if (topicIdStr === topicId) {
+              const currentCount = typeof topic.like_count === 'number' ? topic.like_count : parseInt(String(topic.like_count || '0'), 10);
+              return {
+                ...topic,
+                like_count: currentCount + 1
+              };
+            }
+            return { ...topic };
+          });
+        });
       }
-
-      const payload = {
-        data: {
-          userId: userId,
-          topicId: parseInt(topicId)
-        }
-      };
-
-      const authToken = auth.user.access_token || "";
-      const { submitLikesApi } = await import("@/services/api");
-      const { FASTN_API_KEY } = await import("@/constants");
-      
-      await submitLikesApi(payload, authToken, FASTN_API_KEY);
-      
-      // Save to localStorage
-      likedTopics[likeKey] = true;
-      localStorage.setItem('likedTopics', JSON.stringify(likedTopics));
-      
-      // Refresh topics to get updated like count
-      refetchTopics();
       
     } catch (error) {
       // Handle duplicate like error
@@ -292,6 +340,23 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
           const likeKey = `${userId}-${topicId}`;
           likedTopics[likeKey] = true;
           localStorage.setItem('likedTopics', JSON.stringify(likedTopics));
+          
+          // Update local state even for duplicate with functional update
+          queryClient.setQueryData(queryKeys.topics, (oldData: any) => {
+            if (!oldData || !Array.isArray(oldData)) return oldData;
+            // Create a completely new array with spread operator
+            return oldData.map((topic: any) => {
+              const topicIdStr = typeof topic.id === 'number' ? topic.id.toString() : String(topic.id);
+              if (topicIdStr === topicId) {
+                const currentCount = typeof topic.like_count === 'number' ? topic.like_count : parseInt(String(topic.like_count || '0'), 10);
+                return {
+                  ...topic,
+                  like_count: currentCount + 1
+                };
+              }
+              return { ...topic };
+            });
+          });
         }
       }
     }
@@ -836,17 +901,34 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
 
                     {/* Likes */}
                     <div className="col-span-2 flex items-center justify-end">
-                      <button
-                        onClick={() => handleLike(topic.id.toString())}
-                        className="flex items-center gap-1 text-sm text-gray-600 hover:text-primary transition-colors"
-                        disabled={!isAuthenticated}
-                        title={!isAuthenticated ? "Please sign in to like" : "Click to like"}
-                      >
-                        <Heart
-                          className={`h-4 w-4 ${getStatsIconColor("Likes")}`}
-                        />
-                        <span>{topic.like_count || 0}</span>
-                      </button>
+                      {(() => {
+                        const userId = auth.user?.profile?.sub || auth.user?.profile?.sid || auth.user?.profile?.email;
+                        const likedTopics = JSON.parse(localStorage.getItem('likedTopics') || '{}');
+                        const likeKey = userId ? `${userId}-${topic.id.toString()}` : '';
+                        const isLiked = userId ? !!likedTopics[likeKey] : false;
+                        
+                        return (
+                          <button
+                            onClick={(e) => handleLike(topic.id.toString(), e)}
+                            className={`flex items-center gap-1 text-sm transition-colors ${
+                              isLiked 
+                                ? "text-primary" 
+                                : "text-gray-600 hover:text-primary"
+                            }`}
+                            disabled={!isAuthenticated}
+                            title={!isAuthenticated ? "Please sign in to like" : isLiked ? "Click to unlike" : "Click to like"}
+                          >
+                            <Heart
+                              className={`h-4 w-4 transition-all ${
+                                isLiked 
+                                  ? "text-primary" 
+                                  : "text-gray-600"
+                              }`}
+                            />
+                            <span key={`like-count-${topic.id}-${topic.like_count}`}>{topic.like_count || 0}</span>
+                          </button>
+                        );
+                      })()}
                     </div>
 
                     {/* Activity */}

@@ -228,9 +228,6 @@ const UnifiedForm = () => {
 
     // Prevent multiple submissions
     if (isSubmitting || hasSubmitted.current) {
-      console.log(
-        "Form submission already in progress, ignoring duplicate submission"
-      );
       return;
     }
 
@@ -272,10 +269,9 @@ const UnifiedForm = () => {
         tags: formData.tags, // Include tags array
       };
 
-      console.log("Creating topic with data:", topicData);
-      console.log("Tags being sent:", formData.tags);
+      
       const createdTopic = await createTopic(topicData);
-      console.log("Topic created successfully:", createdTopic);
+      
 
       // Inform user topic is under review
       toast({
