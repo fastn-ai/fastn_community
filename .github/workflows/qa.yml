@@ -1,0 +1,63 @@
+name : QA - Deploy
+
+on:
+  workflow_dispatch:
+
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.QA_AWS_ACCESS_KEY_ID  }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.QA_AWS_SECRET_ACCESS_KEY }}
+  AWS_REGION: 'us-east-1'
+  AWS_S3_BUCKET: 's3://community.qa.fastn.ai'
+  CLOUDFRONT_DISTRIBUTION_ID: E3FYIBTVOEGZBQ
+#   ALLOWED_ACTORS: '["Waqas-Shah-42-fastn", "saqadir","Saleem-fastn","sarmadnawaz","km2011","ZainAtFastn", "fuhidy", "MohdFahd", "snb-45"]'
+
+jobs:
+  build-with-app-path:
+    runs-on: ubuntu-24.04
+
+    steps:
+    #   - name: check github actor
+    #     if:  ${{ !contains(fromJson(env.ALLOWED_ACTORS), github.actor) }}
+    #     run: |
+    #       echo "The github actor ${{ github.actor }} is not allowed to run this github action"
+    #       echo "Allowed github actors are: ${{env.ALLOWED_ACTORS }}"
+    #       exit 1
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.x"
+      - name: Install dependencies
+        run: |
+          npm ci
+      - name: Build project
+        run: |
+          npm run build:dev
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Upload to S3
+        run: |
+          aws s3 sync dist/ ${{ env.AWS_S3_BUCKET }}/
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation --distribution-id ${{ env.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/app*"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ env.AWS_REGION }}
+    #   - name: Notify Slack on successful deployment
+    #     if: success()
+    #     run: |
+    #       DEPLOYER="${{ github.actor }}"
+    #       BRANCH="${GITHUB_REF##*/}"
+    #       COMMIT_MESSAGE=$(git log -1 --pretty=%B)
+    #       curl -X POST -H 'Content-type: application/json' \
+    #       --data "{
+    #         \"text\": \"✅ Copilot (FE) Deployment to *QA* succeeded!\n\n*Repository:* <https://github.com/${{ github.repository }}|${{ github.repository }}>\n*Branch:* ${BRANCH}\n*Commit:* <https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>\n*Message:* ${COMMIT_MESSAGE}\n*Triggered by:* ${DEPLOYER}\"
+    #       }" \
+    #       ${{ secrets.SLACK_QA_WEBHOOK_URL }}
