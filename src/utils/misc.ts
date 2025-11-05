@@ -177,21 +177,27 @@ export const getSendMessageApiKey = () => {
 
 // --------------------- Get Environment From Hostname ---------------------
 export const getEnvironmentFromHostname = () => {
-  switch (window.location.hostname) {
+  const hostname = window.location.hostname;
+  
+  // Handle community subdomains specifically
+  if (hostname === "community.qa.fastn.ai" || hostname.includes("community.qa.fastn.ai")) {
+    return "QA";
+  } else if (hostname === "community.live.fastn.ai" || hostname.includes("community.live.fastn.ai")) {
+    return "Live";
+  } else if (hostname.includes("qa.fastn.ai")) {
+    return "QA";
+  } else if (hostname.includes("live.fastn.ai") || hostname.includes("fastn.ai")) {
+    return "Live";
+  }
+  
+  switch (hostname) {
     case "localhost":
       return "Localhost";
     case "app.dev.fastn.ai":
     case "Dev":
-    case "live.fastn.ai":
       return "Live";
     case "app.hp-poc.fastn.ai":
       return "HP";
-    case "qa.fastn.ai":
-      return "QA";
-    case "app.ucl.dev":
-      return "live.fastn.ai";
-    case "app.qa.ucl.dev":
-      return "qa.fastn.ai";
     default:
       return "unknown";
   }
@@ -416,9 +422,27 @@ export const getPath = () => {
 
 // it handles the domain extraction
 export function extractServiceUrl(service: string) {
-  if (window.location.hostname.includes("app.ucl.dev")) {
-    return "https://live.fastn.ai/api";
+  const hostname = window.location.hostname;
+  
+  // Handle community subdomains specifically
+  if (hostname === "community.qa.fastn.ai" || hostname.includes("community.qa.fastn.ai")) {
+    if (service === "api") {
+      return "https://qa.fastn.ai/api";
+    } else if (service === "auth") {
+      return "https://qa.fastn.ai/auth";
+    } else if (service === "widget") {
+      return "https://qa.fastn.ai/widget";
+    }
+  } else if (hostname === "community.live.fastn.ai" || hostname.includes("community.live.fastn.ai")) {
+    if (service === "api") {
+      return "https://live.fastn.ai/api";
+    } else if (service === "auth") {
+      return "https://live.fastn.ai/auth";
+    } else if (service === "widget") {
+      return "https://live.fastn.ai/widget";
+    }
   }
+  
   const origin = getOrigin();
   if (origin.includes("localhost")) {
     if (service === "widget") {
@@ -431,10 +455,6 @@ export function extractServiceUrl(service: string) {
   }
 
   let serviceUrl = origin;
-
-  if (serviceUrl.includes("ucl.dev")) {
-    serviceUrl = serviceUrl.replace("ucl.dev", "fastn.ai");
-  }
 
   if (serviceUrl.includes("hotfix.qa.fastn.ai")) {
     serviceUrl = serviceUrl.replace("hotfix.qa.fastn.ai", "hotfix.qa.fastn.ai");
@@ -453,19 +473,29 @@ export function extractServiceUrl(service: string) {
 }
 
 export const getKeyCloakUri = () => {
-  if (window.location.hostname.includes("qa.ucl.dev")) {
+  const hostname = window.location.hostname;
+  
+  // Handle community subdomains specifically
+  if (hostname === "community.qa.fastn.ai" || hostname.includes("community.qa.fastn.ai")) {
     return "https://qa.fastn.ai/auth";
-  } else if (window.location.hostname.includes("ucl.dev")) {
+  } else if (hostname === "community.live.fastn.ai" || hostname.includes("community.live.fastn.ai")) {
     return "https://live.fastn.ai/auth";
   }
   
   // Use environment variable for localhost development if available
-  if (window.location.hostname.includes("localhost")) {
+  if (hostname.includes("localhost")) {
     const envKeycloakUrl = import.meta.env.VITE_APP_KEYCLOAK_URL as string;
     if (envKeycloakUrl) {
       return envKeycloakUrl;
     }
     // Fallback if environment variable is not set
+    return "https://live.fastn.ai/auth";
+  }
+  
+  // For other fastn.ai domains, determine auth URL based on subdomain
+  if (hostname.includes("qa.fastn.ai")) {
+    return "https://qa.fastn.ai/auth";
+  } else if (hostname.includes("fastn.ai")) {
     return "https://live.fastn.ai/auth";
   }
   
@@ -485,7 +515,6 @@ const fastn = [
   "https://qa.fastn.ai/api",
   "https://api.qa.fastn.ai",
   "http://localhost:8443",
-  "https://app.ucl.dev",
   "https://api.live.fastn.ai",
 ];
 
