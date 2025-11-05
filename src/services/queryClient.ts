@@ -53,6 +53,7 @@ export const queryKeys = {
   tags: ['tags'] as const,
   tagsByTopic: (topicId: string) => ['tags', 'topic', topicId] as const,
   analytics: ['analytics'] as const,
+  notifications: ['notifications'] as const,
 } as const;
 
 // Performance monitoring

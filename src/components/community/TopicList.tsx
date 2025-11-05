@@ -5,6 +5,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "react-oidc-context";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 import {
   Pagination,
@@ -650,23 +659,25 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
 
   return (
     <div className="flex-1 ml-0 transition-all duration-300">
-      <div className="container mx-auto px-4 py-8">
+      <div className="mx-auto w-full max-w-screen-2xl px-6 lg:px-10 py-4 sm:py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 sm:mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">Topics</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">Topics</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
               Latest discussions in the fastn community
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="hidden md:flex gap-2 sm:gap-3 self-start md:self-auto">
             <Button
               variant="outline"
+              size="sm"
               className="flex items-center gap-2"
               onClick={() => navigate("/categories")}
             >
               <FolderOpen className="h-4 w-4 text-blue-600" />
-              Categories
+              <span className="hidden sm:inline">Categories</span>
+              <span className="sm:hidden">Cat</span>
             </Button>
             {/*{isAuthenticated && (
               <Button
@@ -724,12 +735,13 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
         )}
 
         {/* Filter Buttons */}
-        <div className="flex gap-2 mb-6 overflow-x-auto">
+        <div className="flex flex-wrap items-center gap-2 mb-6 overflow-x-auto pb-2 -mx-2 sm:mx-0 px-2 sm:px-0">
           {/* All Topics Button */}
           <Button
             variant={selectedFilter === "all" ? "default" : "outline"}
+            size="sm"
             onClick={() => setSelectedFilter("all")}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 flex-shrink-0"
           >
             <MessageSquare
               className={`h-4 w-4 ${
@@ -744,8 +756,9 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
           {/* Top Button */}
           <Button
             variant={selectedFilter === "top" ? "default" : "outline"}
+            size="sm"
             onClick={() => setSelectedFilter("top")}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 flex-shrink-0"
           >
             <Trophy
               className={`h-4 w-4 ${
@@ -762,8 +775,9 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
             <Button
               key={category.id}
               variant={selectedFilter === category.name ? "default" : "outline"}
+              size="sm"
               onClick={() => setSelectedFilter(category.name)}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 flex-shrink-0"
             >
               {React.cloneElement(getCategoryIcon(category.name), {
                 className: `h-4 w-4 ${
@@ -775,179 +789,190 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
               {category.name}
             </Button>
           ))}
+
+          {/* Mobile Categories shortcut */}
+          <div className="md:hidden ml-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+              onClick={() => navigate("/categories")}
+            >
+              <FolderOpen className="h-4 w-4 text-blue-600" />
+              Categories
+            </Button>
+          </div>
         </div>
 
         {/* Topics Table */}
         <Card className="mb-6">
           <CardContent className="p-0">
-            {/* Table Header */}
-            <div className="grid grid-cols-12 gap-4 p-4 border-b font-semibold text-sm">
-              <div className="col-span-6">Topic</div>
-              <div className="col-span-2 text-right">Replies</div>
-              <div className="col-span-2 text-right">Likes</div>
-              <div className="col-span-2 text-right">Activity</div>
-            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Topic</TableHead>
+                  <TableHead className="text-right">Replies</TableHead>
+                  <TableHead className="text-right">Likes</TableHead>
+                  <TableHead className="text-right">Activity</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedTopics.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-8">
+                      <p className="text-muted-foreground">
+                        {searchQuery || selectedFilter !== "all" || selectedTag
+                          ? "No topics match your search criteria."
+                          : "No topics found."}
+                      </p>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedTopics.map((topic) => (
+                    <TableRow
+                      key={topic.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => navigate(`/topic/${topic.id.toString()}`)}
+                    >
+                      {/* Topic Column */}
+                      <TableCell>
+                        <div className="flex items-start gap-3">
+                          {/* Avatar */}
+                          <Avatar className="w-10 h-10 flex-shrink-0">
+                            <AvatarFallback className="bg-indigo-50 text-indigo-600 text-sm">
+                              {getInitials(topic.author_username)}
+                            </AvatarFallback>
+                          </Avatar>
 
-            {/* Topics List */}
-            {paginatedTopics.length === 0 ? (
-              <div className="p-8 text-center">
-                <p className="text-muted-foreground">
-                  {searchQuery || selectedFilter !== "all" || selectedTag
-                    ? "No topics match your search criteria."
-                    : "No topics found."}
-                </p>
-              </div>
-            ) : (
-              <div className="divide-y">
-                {paginatedTopics.map((topic) => (
-                  <div
-                    key={topic.id}
-                    className="grid grid-cols-12 gap-4 p-4 hover:bg-gray-50 cursor-pointer transition-colors"
-                    onClick={() => navigate(`/topic/${topic.id.toString()}`)}
-                  >
-                    {/* Topic Content */}
-                    <div className="col-span-6">
-                      <div className="flex items-start gap-3">
-                        {/* Avatar */}
-                        <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600 flex-shrink-0">
-                          {getInitials(topic.author_username)}
-                        </div>
-
-                        {/* Topic Details */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <div className="flex items-center gap-2">
-                           
-                              <h3 className="font-semibold text-foreground truncate">
+                          {/* Topic Details */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 mb-2">
+                              <h3 className="font-semibold text-sm sm:text-base text-foreground break-words">
                                 {topic.title}
                               </h3>
-                            </div>
-                            {/* Category Badge */}
-                            <Badge
-                              className={`${getCategoryBadge(
-                                topic.category_name,
-                                topic.category_color
-                              )} text-xs flex items-center gap-1`}
-                            >
-                              
-                              {getCategoryDisplayName(topic.category_name)}
-                            </Badge>
-                            {/* Tags beside category */}
-                            
-                            {topic.is_hot && (
-                              <Badge
-                                variant="secondary"
-                                className="bg-orange-100 text-orange-800 border-orange-200"
-                              >
-                                <Zap className="w-3 h-3 mr-1 text-orange-600" />
-                                Hot
-                              </Badge>
-                            )}
-                            {topic.is_featured && (
-                              <Badge
-                                variant="secondary"
-                                className="bg-yellow-100 text-yellow-800 border-yellow-200"
-                              >
-                                <Star className="w-3 h-3 mr-1 text-yellow-600" />
-                                Featured
-                              </Badge>
-                            )}
-                          </div>
-
-                          <p className="text-sm text-gray-600 line-clamp-2 mb-2">
-                            {topic.description}
-                          </p>
-
-                          <div className="flex items-center space-x-4 text-xs text-gray-500">
-                            <span className="font-medium">
-                              {topic.author_username}
-                            </span>
-                            <span>•</span>
-                            <span>
-                              {topic.created_at
-                                ? formatDate(topic.created_at)
-                                : "Unknown"}
-                            </span>
-                            {/* Tags beside author */}
-                            {topic.tags && (() => {
-                              const tags = parseTags(topic.tags);
-                             
-                              return tags.slice(0, 3).map((tag, index) => (
-                                <span
-                                  key={index}
-                                  className={`inline-block px-2 py-1 text-xs rounded-full border ${getTagColor(tag)}`}
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                {/* Category Badge */}
+                                <Badge
+                                  className={`${getCategoryBadge(
+                                    topic.category_name,
+                                    topic.category_color
+                                  )} text-xs flex items-center gap-1`}
                                 >
-                                  {tag}
-                                </span>
-                              ));
-                            })()}
+                                  {getCategoryDisplayName(topic.category_name)}
+                                </Badge>
+                                {/* Tags beside category */}
+                                {topic.is_hot && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="bg-orange-100 text-orange-800 border-orange-200 text-xs"
+                                  >
+                                    <Zap className="w-3 h-3 mr-1 text-orange-600" />
+                                    Hot
+                                  </Badge>
+                                )}
+                                {topic.is_featured && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="bg-yellow-100 text-yellow-800 border-yellow-200 text-xs"
+                                  >
+                                    <Star className="w-3 h-3 mr-1 text-yellow-600" />
+                                    Featured
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+
+                            <p className="text-xs sm:text-sm text-gray-600 line-clamp-2 mb-2">
+                              {topic.description}
+                            </p>
+
+                            <div className="flex items-center flex-wrap gap-1.5 sm:gap-2 text-xs text-gray-500">
+                              <span className="font-medium">
+                                {topic.author_username}
+                              </span>
+                              <span className="hidden sm:inline">•</span>
+                              <span>
+                                {topic.created_at
+                                  ? formatDate(topic.created_at)
+                                  : "Unknown"}
+                              </span>
+                              {/* Tags beside author */}
+                              {topic.tags && (() => {
+                                const tags = parseTags(topic.tags);
+                               
+                                return tags.slice(0, 3).map((tag, index) => (
+                                  <span
+                                    key={index}
+                                    className={`inline-block px-2 py-0.5 text-xs rounded-full border ${getTagColor(tag)}`}
+                                  >
+                                    {tag}
+                                  </span>
+                                ));
+                              })()}
+                            </div>
                           </div>
-
-                          {/* Tags */}
-                         
                         </div>
-                      </div>
-                    </div>
+                      </TableCell>
 
-                    {/* Replies */}
-                    <div className="col-span-2 flex items-center justify-end">
-                      <div className="flex items-center gap-1 text-sm text-gray-600">
-                        <MessageSquare
-                          className={`h-4 w-4 ${getStatsIconColor("replies")}`}
-                        />
-                        <span>{topic.reply_count || 0}</span>
-                      </div>
-                    </div>
+                      {/* Replies Column */}
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1 text-sm text-gray-600">
+                          <MessageSquare className="h-4 w-4" />
+                          <span>{topic.reply_count || 0}</span>
+                        </div>
+                      </TableCell>
 
-                    {/* Likes */}
-                    <div className="col-span-2 flex items-center justify-end">
-                      {(() => {
-                        const userId = auth.user?.profile?.sub || auth.user?.profile?.sid || auth.user?.profile?.email;
-                        const likedTopics = JSON.parse(localStorage.getItem('likedTopics') || '{}');
-                        const likeKey = userId ? `${userId}-${topic.id.toString()}` : '';
-                        const isLiked = userId ? !!likedTopics[likeKey] : false;
-                        
-                        return (
-                          <button
-                            onClick={(e) => handleLike(topic.id.toString(), e)}
-                            className={`flex items-center gap-1 text-sm transition-colors ${
-                              isLiked 
-                                ? "text-primary" 
-                                : "text-gray-600 hover:text-primary"
-                            }`}
-                            disabled={!isAuthenticated}
-                            title={!isAuthenticated ? "Please sign in to like" : isLiked ? "Click to unlike" : "Click to like"}
-                          >
-                            <Heart
-                              className={`h-4 w-4 transition-all ${
+                      {/* Likes Column */}
+                      <TableCell className="text-right">
+                        {(() => {
+                          const userId = auth.user?.profile?.sub || auth.user?.profile?.sid || auth.user?.profile?.email;
+                          const likedTopics = JSON.parse(localStorage.getItem('likedTopics') || '{}');
+                          const likeKey = userId ? `${userId}-${topic.id.toString()}` : '';
+                          const isLiked = userId ? !!likedTopics[likeKey] : false;
+                          
+                          return (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleLike(topic.id.toString(), e);
+                              }}
+                              className={`flex items-center gap-1 text-sm transition-colors ml-auto ${
                                 isLiked 
                                   ? "text-primary" 
-                                  : "text-gray-600"
+                                  : "text-gray-600 hover:text-primary"
                               }`}
-                            />
-                            <span key={`like-count-${topic.id}-${topic.like_count}`}>{topic.like_count || 0}</span>
-                          </button>
-                        );
-                      })()}
-                    </div>
+                              disabled={!isAuthenticated}
+                              title={!isAuthenticated ? "Please sign in to like" : isLiked ? "Click to unlike" : "Click to like"}
+                            >
+                              <Heart
+                                className={`h-4 w-4 transition-all ${
+                                  isLiked 
+                                    ? "text-primary fill-primary" 
+                                    : "text-gray-600"
+                                }`}
+                              />
+                              <span key={`like-count-${topic.id}-${topic.like_count}`}>{topic.like_count || 0}</span>
+                            </button>
+                          );
+                        })()}
+                      </TableCell>
 
-                    {/* Activity */}
-                    <div className="col-span-2 flex items-center justify-end">
-                      <div className="flex items-center gap-1 text-sm text-gray-600">
-                        <Clock
-                          className={`h-4 w-4 ${getStatsIconColor("activity")}`}
-                        />
-                        <span>
-                          {topic.created_at
-                            ? formatDate(topic.created_at)
-                            : "Unknown"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                      {/* Activity Column */}
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1 text-sm text-gray-600">
+                          <Clock className="h-4 w-4" />
+                          <span>
+                            {topic.created_at
+                              ? formatDate(topic.created_at)
+                              : "Unknown"}
+                          </span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
 

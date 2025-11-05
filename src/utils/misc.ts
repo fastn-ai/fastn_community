@@ -459,8 +459,13 @@ export const getKeyCloakUri = () => {
     return "https://live.fastn.ai/auth";
   }
   
-  // Fallback for localhost development
+  // Use environment variable for localhost development if available
   if (window.location.hostname.includes("localhost")) {
+    const envKeycloakUrl = import.meta.env.VITE_APP_KEYCLOAK_URL as string;
+    if (envKeycloakUrl) {
+      return envKeycloakUrl;
+    }
+    // Fallback if environment variable is not set
     return "https://live.fastn.ai/auth";
   }
   
@@ -508,7 +513,8 @@ export const getKeyCloakAuthorityUrl = () => {
 export const getKeyCloakPostLogoutRedirectUri = () => {
   // Use localhost:3000 for development since that's what's configured in Keycloak
   const baseOrigin = window.location.hostname === "localhost" ? "http://localhost:3000" : window.location.origin;
-  return baseOrigin;
+  // Redirect back to the app's login route after logout
+  return baseOrigin + AppRoutes.getAuthRoute();
 };
 
 export const getFirstPath = () => {

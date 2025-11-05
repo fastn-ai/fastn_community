@@ -481,3 +481,119 @@ CREATE TABLE IF NOT EXISTS topic_tags (
     tag_id SERIAL NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
     PRIMARY KEY (topic_id, tag_id)
 );
+
+-- Notifications table
+CREATE TABLE IF NOT EXISTS notifications (
+    id SERIAL PRIMARY KEY,
+    recipient_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    
+    -- Notification content
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    type TEXT NOT NULL DEFAULT 'general', -- 'reply', 'like', 'solved', 'follow', 'mention', 'digest', etc.
+    
+    -- Optional references to related entities
+    topic_id INTEGER REFERENCES topics(id) ON DELETE CASCADE,
+    reply_id INTEGER REFERENCES replies(id) ON DELETE CASCADE,
+    actor_id TEXT REFERENCES users(id) ON DELETE SET NULL, -- User who triggered the notification
+    
+    -- Navigation link (optional, can be generated from type + topic_id/reply_id)
+    link TEXT,
+    
+    -- Read status
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    read_at TIMESTAMPTZ,
+    
+    -- Timestamps
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Ensure updated_at changes on updates for notifications
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger WHERE tgname = 'notifications_set_updated_at'
+    ) THEN
+        CREATE TRIGGER notifications_set_updated_at
+        BEFORE UPDATE ON notifications
+        FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+    END IF;
+END$$;
+
+-- Helpful indexes for notifications
+CREATE INDEX IF NOT EXISTS notifications_recipient_id_idx ON notifications (recipient_id);
+CREATE INDEX IF NOT EXISTS notifications_is_read_idx ON notifications (is_read);
+CREATE INDEX IF NOT EXISTS notifications_created_at_idx ON notifications (created_at DESC);
+CREATE INDEX IF NOT EXISTS notifications_recipient_read_idx ON notifications (recipient_id, is_read);
+CREATE INDEX IF NOT EXISTS notifications_type_idx ON notifications (type);
+CREATE INDEX IF NOT EXISTS notifications_topic_id_idx ON notifications (topic_id);
+CREATE INDEX IF NOT EXISTS notifications_reply_id_idx ON notifications (reply_id);
+
+-- Function to create notification when reply is added
+CREATE OR REPLACE FUNCTION create_reply_notification()
+RETURNS TRIGGER AS $$
+DECLARE
+    topic_author_id TEXT;
+    topic_title TEXT;
+    reply_author_username TEXT;
+BEGIN
+    -- Get topic author and title
+    SELECT author_id, title INTO topic_author_id, topic_title
+    FROM topics
+    WHERE id = NEW.topic_id;
+    
+    -- Get reply author username
+    SELECT username INTO reply_author_username
+    FROM users
+    WHERE id = NEW.author_id;
+    
+    -- Only notify if reply author is different from topic author
+    IF topic_author_id != NEW.author_id THEN
+        INSERT INTO notifications (
+            recipient_id,
+            title,
+            message,
+            type,
+            topic_id,
+            reply_id,
+            actor_id,
+            link
+        ) VALUES (
+            topic_author_id,
+            'New reply to your topic',
+            COALESCE(reply_author_username, 'Someone') || ' replied to ''' || topic_title || '''',
+            'reply',
+            NEW.topic_id,
+            NEW.id,
+            NEW.author_id,
+            '/topic/' || NEW.topic_id
+        );
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to create notification on reply insert
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger WHERE tgname = 'create_reply_notification_trigger'
+    ) THEN
+        CREATE TRIGGER create_reply_notification_trigger
+        AFTER INSERT ON replies
+        FOR EACH ROW EXECUTE FUNCTION create_reply_notification();
+    END IF;
+END$$;
+
+-- Function to mark notification as read
+CREATE OR REPLACE FUNCTION mark_notification_read(notification_id_param INTEGER)
+RETURNS VOID AS $$
+BEGIN
+    UPDATE notifications
+    SET is_read = TRUE,
+        read_at = NOW()
+    WHERE id = notification_id_param;
+END;
+$$ LANGUAGE plpgsql;

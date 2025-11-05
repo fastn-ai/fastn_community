@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Menu, Trophy, Star, Users, Target, Gift, TrendingUp, CheckCircle, Clock, MessageSquare, Search, ArrowLeft, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,19 +8,81 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/community/Header";
 import Sidebar from "@/components/community/Sidebar";
+import { useAllTopics } from "@/hooks/useApi";
+import { useQuery } from "@tanstack/react-query";
 import { ApiService } from "@/services/api";
+
+// Static open questions data
+const staticOpenQuestions = [
+  {
+    id: 1,
+    title: "How to implement OAuth2 with fastn?",
+    category: "Authentication",
+    difficulty: "Intermediate",
+    bounty: 50,
+    timeAgo: "2 hours ago",
+    views: 23,
+    tags: ["oauth", "authentication", "security"]
+  },
+  {
+    id: 2,
+    title: "Best practices for handling large datasets in fastn workflows",
+    category: "Performance",
+    difficulty: "Advanced",
+    bounty: 75,
+    timeAgo: "4 hours ago",
+    views: 15,
+    tags: ["performance", "data", "workflows"]
+  },
+  {
+    id: 3,
+    title: "Setting up webhook endpoints for real-time notifications",
+    category: "Integration",
+    difficulty: "Intermediate",
+    bounty: 40,
+    timeAgo: "6 hours ago",
+    views: 31,
+    tags: ["webhooks", "notifications", "integration"]
+  },
+  {
+    id: 4,
+    title: "Error handling patterns for API rate limiting",
+    category: "Best Practices",
+    difficulty: "Intermediate",
+    bounty: 35,
+    timeAgo: "8 hours ago",
+    views: 19,
+    tags: ["error-handling", "rate-limiting", "api"]
+  },
+  {
+    id: 5,
+    title: "Creating custom connectors for third-party services",
+    category: "Development",
+    difficulty: "Advanced",
+    bounty: 60,
+    timeAgo: "1 day ago",
+    views: 42,
+    tags: ["connectors", "third-party", "development"]
+  }
+];
 
 const AnswerEarn = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [retrying, setRetrying] = useState(false);
+  
+  // Fetch all topics using React Query hook
+  const { data: topics = [], isLoading: topicsLoading, error: topicsError, refetch: refetchTopics } = useAllTopics();
+  
+  // Fetch all replies to count answers per user
+  const { data: allReplies = [], isLoading: repliesLoading } = useQuery({
+    queryKey: ['replies', 'all'],
+    queryFn: ApiService.getAllReplies,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
   
   // Data states
-  const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
-  const [openQuestions, setOpenQuestions] = useState<any[]>([]);
+  const [openQuestions] = useState<any[]>(staticOpenQuestions);
 
   // Fallback sample data for when API fails
   const fallbackLeaderboardData = [
@@ -76,165 +138,107 @@ const AnswerEarn = () => {
     }
   ];
 
-  // Static open questions data
-  const staticOpenQuestions = [
-    {
-      id: 1,
-      title: "How to implement OAuth2 with fastn?",
-      category: "Authentication",
-      difficulty: "Intermediate",
-      bounty: 50,
-      timeAgo: "2 hours ago",
-      views: 23,
-      tags: ["oauth", "authentication", "security"]
-    },
-    {
-      id: 2,
-      title: "Best practices for handling large datasets in fastn workflows",
-      category: "Performance",
-      difficulty: "Advanced",
-      bounty: 75,
-      timeAgo: "4 hours ago",
-      views: 15,
-      tags: ["performance", "data", "workflows"]
-    },
-    {
-      id: 3,
-      title: "Setting up webhook endpoints for real-time notifications",
-      category: "Integration",
-      difficulty: "Intermediate",
-      bounty: 40,
-      timeAgo: "6 hours ago",
-      views: 31,
-      tags: ["webhooks", "notifications", "integration"]
-    },
-    {
-      id: 4,
-      title: "Error handling patterns for API rate limiting",
-      category: "Best Practices",
-      difficulty: "Intermediate",
-      bounty: 35,
-      timeAgo: "8 hours ago",
-      views: 19,
-      tags: ["error-handling", "rate-limiting", "api"]
-    },
-    {
-      id: 5,
-      title: "Creating custom connectors for third-party services",
-      category: "Development",
-      difficulty: "Advanced",
-      bounty: 60,
-      timeAgo: "1 day ago",
-      views: 42,
-      tags: ["connectors", "third-party", "development"]
-    }
-  ];
+  // Extract unique users from topics and count their activity
+  const userStatsFromTopics = useMemo(() => {
+    const userMap: Record<string, {
+      id: string;
+      username: string;
+      avatar?: string;
+      topicsCreated: number;
+      repliesCount: number;
+      totalLikes: number;
+    }> = {};
 
-  // Fetch data from API
-  const fetchData = async (isRetry: boolean = false) => {
-    try {
-      if (isRetry) {
-        setRetrying(true);
-      } else {
-        setLoading(true);
-      }
-      setError(null);
-
-      // Add delay to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Always use static data for open questions
-      setOpenQuestions(staticOpenQuestions);
-
-      // Fetch users for leaderboard data
-      let fetchedUsers: any[] = [];
-      let hasErrors = false;
-
-      try {
-        const usersResult = await ApiService.getAllUsers();
-        fetchedUsers = usersResult;
-      } catch (err) {
-        console.error('Failed to fetch users:', err);
-        hasErrors = true;
-      }
-
-      // Transform users into leaderboard data (only if we have users)
-      if (fetchedUsers.length > 0) {
-        const userStats = fetchedUsers.map(user => {
-          const userReplies = user.replies_count || 0;
-          const totalPoints = user.reputation_score || 0;
-          
-          // Calculate level based on reputation score
-          let level = "Beginner";
-          if (totalPoints >= 2000) level = "Master";
-          else if (totalPoints >= 1500) level = "Expert";
-          else if (totalPoints >= 1000) level = "Advanced";
-          else if (totalPoints >= 500) level = "Intermediate";
-
-          // Generate badges based on activity
-          const badges = [];
-          if (totalPoints >= 1000) badges.push("Gold");
-          else if (totalPoints >= 500) badges.push("Silver");
-          else if (totalPoints >= 100) badges.push("Bronze");
-          if (userReplies >= 10) badges.push("Helper");
-
-          // Calculate streak (mock data for now)
-          const streak = Math.floor(Math.random() * 30) + 1;
-
-          return {
-            id: user.id,
-            name: user.username,
-            avatar: user.avatar,
-            points: totalPoints,
-            answers: userReplies,
-            badges,
-            rank: 0, // Will be set after sorting
-            streak,
-            level
+    // Count topics created by each user
+    topics.forEach((topic) => {
+      if (topic.author_id) {
+        if (!userMap[topic.author_id]) {
+          userMap[topic.author_id] = {
+            id: topic.author_id,
+            username: topic.author_username || topic.author_name || 'anonymous',
+            avatar: topic.author_avatar,
+            topicsCreated: 0,
+            repliesCount: 0,
+            totalLikes: topic.like_count || 0,
           };
-        });
-
-        // Sort by points and assign ranks
-        const sortedUsers = userStats
-          .sort((a, b) => b.points - a.points)
-          .slice(0, 5) // Only show top 5 for the preview
-          .map((user, index) => ({
-            ...user,
-            rank: index + 1
-          }));
-
-        setLeaderboardData(sortedUsers);
-      } else {
-        // Fallback to sample data if API fails
-        setLeaderboardData(fallbackLeaderboardData);
+        }
+        userMap[topic.author_id].topicsCreated += 1;
+        userMap[topic.author_id].totalLikes += topic.like_count || 0;
       }
+    });
 
-      // Show warning if data failed to load
-      if (hasErrors) {
-        toast({
-          title: "Partial Data Loaded",
-          description: "Leaderboard data may not be up to date due to server limitations. Please try again later.",
-          variant: "default",
-        });
+    // Count replies per user
+    allReplies.forEach((reply) => {
+      if (reply.author_id) {
+        if (!userMap[reply.author_id]) {
+          userMap[reply.author_id] = {
+            id: reply.author_id,
+            username: reply.author_username || 'anonymous',
+            avatar: reply.author_avatar,
+            topicsCreated: 0,
+            repliesCount: 0,
+            totalLikes: reply.like_count || 0,
+          };
+        }
+        userMap[reply.author_id].repliesCount += 1;
+        userMap[reply.author_id].totalLikes += reply.like_count || 0;
       }
+    });
 
-    } catch (err) {
-      console.error("Error fetching AnswerEarn data:", err);
-      setError("Failed to load data. Please try again later.");
-      toast({
-        title: "Error",
-        description: "Failed to load data. Please try again later.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-      setRetrying(false);
+    return Object.values(userMap);
+  }, [topics, allReplies]);
+
+  // Transform users into leaderboard data using useMemo
+  const leaderboardData = useMemo(() => {
+    if (!userStatsFromTopics || userStatsFromTopics.length === 0) {
+      return fallbackLeaderboardData;
     }
-  };
 
-  useEffect(() => {
-    fetchData();
-  }, [toast]);
+    const userStats = userStatsFromTopics.map(user => {
+      const userReplies = user.repliesCount;
+      // Calculate points: topics created (10 points each) + replies (5 points each) + likes received (1 point each)
+      const totalPoints = (user.topicsCreated * 10) + (userReplies * 5) + (user.totalLikes || 0);
+      
+      // Calculate level based on total points
+      let level = "Beginner";
+      if (totalPoints >= 2000) level = "Master";
+      else if (totalPoints >= 1500) level = "Expert";
+      else if (totalPoints >= 1000) level = "Advanced";
+      else if (totalPoints >= 500) level = "Intermediate";
+
+      // Generate badges based on activity
+      const badges = [];
+      if (totalPoints >= 1000) badges.push("Gold");
+      else if (totalPoints >= 500) badges.push("Silver");
+      else if (totalPoints >= 100) badges.push("Bronze");
+      if (userReplies >= 10) badges.push("Helper");
+      if (user.topicsCreated >= 5) badges.push("Contributor");
+
+      // Calculate streak (mock data for now)
+      const streak = Math.floor(Math.random() * 30) + 1;
+
+      return {
+        id: user.id,
+        name: user.username,
+        avatar: user.avatar,
+        points: totalPoints,
+        answers: userReplies,
+        badges,
+        rank: 0, // Will be set after sorting
+        streak,
+        level
+      };
+    });
+
+    // Sort by points and assign ranks
+    return userStats
+      .sort((a, b) => b.points - a.points)
+      .slice(0, 5) // Only show top 5 for the preview
+      .map((user, index) => ({
+        ...user,
+        rank: index + 1
+      }));
+  }, [userStatsFromTopics]);
 
   const getInitials = (username: string) => {
     return username
@@ -311,7 +315,13 @@ const AnswerEarn = () => {
     }
   ];
 
-  if (loading) {
+  // Combine loading states
+  const isLoading = topicsLoading || repliesLoading;
+  
+  // Use topicsError for error handling
+  const error = topicsError ? "Failed to load leaderboard data. Please try again later." : null;
+  
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
@@ -386,11 +396,11 @@ const AnswerEarn = () => {
                 <p className="text-muted-foreground mb-4">{error}</p>
                 <div className="flex gap-2 justify-center">
                   <Button
-                    onClick={() => fetchData(true)}
-                    disabled={retrying}
+                    onClick={() => refetchTopics()}
+                    disabled={topicsLoading}
                     className="flex items-center gap-2"
                   >
-                    {retrying ? (
+                    {topicsLoading ? (
                       <>
                         <RefreshCw className="h-4 w-4 animate-spin" />
                         Retrying...
@@ -568,12 +578,12 @@ const AnswerEarn = () => {
               </div>
 
               {/* Find Open Questions */}
-              <div>
+              {/*<div>
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-2xl font-bold text-foreground">Find Open Questions</h2>
                   <Button 
                     variant="outline" 
-                    onClick={() => navigate("/open-questions")}
+                    onClick={() => navigate("/questions")}
                   >
                     View All Questions
                   </Button>
@@ -619,7 +629,7 @@ const AnswerEarn = () => {
                     </Card>
                   ))}
                 </div>
-              </div>
+              </div>*/}
 
               {/* Call to Action */}
               <Card className="bg-gradient-primary text-white">
@@ -633,7 +643,7 @@ const AnswerEarn = () => {
                     <Button 
                       variant="secondary" 
                       size="lg"
-                      onClick={() => navigate("/open-questions")}
+                      onClick={() => navigate("/questions")}
                     >
                       Find Questions to Answer
                     </Button>

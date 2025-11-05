@@ -112,26 +112,14 @@ const Announcements = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      <Header onMenuClick={() => setSidebarOpen(true)} />
       <div className="flex">
-        {/* Mobile Sidebar Toggle */}
-        <div className="md:hidden fixed top-20 left-4 z-50">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="bg-card"
-          >
-            <Menu className="w-4 h-4" />
-          </Button>
-        </div>
-
         {/* Mobile Sidebar */}
         {sidebarOpen && (
-          <div className="md:hidden fixed inset-0 z-40">
+          <div className="md:hidden fixed inset-0 z-[70]">
             <div className="fixed inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
-            <div className="fixed left-0 top-0 h-full w-64 bg-card border-r border-border z-50">
-              <Sidebar />
+            <div className="fixed left-0 top-0 h-full w-64 bg-card border-r border-border z-[80]">
+              <Sidebar isMobile />
             </div>
           </div>
         )}

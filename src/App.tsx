@@ -21,7 +21,6 @@ import BuiltWithFastn from "./pages/BuiltWithFastn";
 import Community from "./pages/Community";
 import AnswerEarn from "./pages/AnswerEarn";
 import Leaderboard from "./pages/Leaderboard";
-import OpenQuestions from "./pages/OpenQuestions";
 import UnifiedForm from "./pages/UnifiedForm";
 import AdminDashboard from "./pages/AdminDashboard";
 import UserTopics from "./pages/UserTopics";
@@ -51,7 +50,6 @@ const App = () => (
                 <Route path="/community" element={<Community />} />
                 <Route path="/answer-earn" element={<AnswerEarn />} />
                 <Route path="/leaderboard" element={<Leaderboard />} />
-                <Route path="/open-questions" element={<OpenQuestions />} />
                 <Route path="/create" element={<UnifiedForm />} />
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/my-topics" element={<UserTopics />} />
