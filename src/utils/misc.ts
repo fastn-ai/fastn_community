@@ -427,11 +427,11 @@ export function extractServiceUrl(service: string) {
   // Handle community subdomains specifically
   if (hostname === "community.qa.fastn.ai" || hostname.includes("community.qa.fastn.ai")) {
     if (service === "api") {
-      return "https://live.fastn.ai/api";
+      return "https://qa.fastn.ai/api";
     } else if (service === "auth") {
-      return "https://live.fastn.ai/auth";
+      return "https://qa.fastn.ai/auth";
     } else if (service === "widget") {
-      return "https://live.fastn.ai/widget";
+      return "https://qa.fastn.ai/widget";
     }
   } else if (hostname === "community.live.fastn.ai" || hostname.includes("community.live.fastn.ai")) {
     if (service === "api") {
