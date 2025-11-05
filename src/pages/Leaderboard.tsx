@@ -538,7 +538,7 @@ const Leaderboard = () => {
                     <Button 
                       variant="secondary" 
                       size="lg"
-                      onClick={() => navigate("/open-questions")}
+                      onClick={() => navigate("/questions")}
                     >
                       Find Questions to Answer
                     </Button>

@@ -959,7 +959,7 @@ const TopicDetail = () => {
                   <p className="text-muted-foreground mb-4">
                     {error || "Topic not found"}
                   </p>
-                  <Button onClick={() => navigate(-1)}>Go Back</Button>
+                  <Button onClick={() => navigate("/")}>Go Back</Button>
                 </div>
               </div>
             </div>
@@ -998,7 +998,7 @@ const TopicDetail = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => navigate(-1)}
+                  onClick={() => navigate("/")}
                   className="flex items-center space-x-2"
                 >
                   <ArrowLeft className="w-4 h-4" />
@@ -1041,7 +1041,25 @@ const TopicDetail = () => {
                         {new Date(topic.created_at).toLocaleDateString()}
                       </span>
                     </span>
-                    {/* stats hidden for now */}
+                    {/* Like Button */}
+                    <button
+                      onClick={handleLike}
+                      disabled={!isAuthenticated || isLiking}
+                      className={`flex items-center transition-colors ${
+                        liked 
+                          ? "text-primary" 
+                          : "text-muted-foreground hover:text-primary"
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      title={!isAuthenticated ? "Please sign in to like" : liked ? "Click to unlike" : "Click to like"}
+                    >
+                      <Heart
+                        className={`h-4 w-4 transition-all ${
+                          liked 
+                            ? "text-primary fill-primary" 
+                            : "text-muted-foreground"
+                        }`}
+                      />
+                    </button>
                   </div>
                 </div>
               </div>

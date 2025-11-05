@@ -5,6 +5,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "react-oidc-context";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 import {
   Pagination,
@@ -798,204 +807,172 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
         {/* Topics Table */}
         <Card className="mb-6">
           <CardContent className="p-0">
-            {/* Table Header */}
-            <div className="hidden md:flex items-center justify-between px-4 py-3 border-b text-sm font-semibold text-muted-foreground">
-              <span>Topic</span>
-              <div className="flex items-center gap-10 pr-2">
-                <span className="w-16 text-right">Replies</span>
-                <span className="w-16 text-right">Likes</span>
-                <span className="w-24 text-right">Activity</span>
-              </div>
-            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Topic</TableHead>
+                  <TableHead className="text-right">Replies</TableHead>
+                  <TableHead className="text-right">Likes</TableHead>
+                  <TableHead className="text-right">Activity</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedTopics.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-8">
+                      <p className="text-muted-foreground">
+                        {searchQuery || selectedFilter !== "all" || selectedTag
+                          ? "No topics match your search criteria."
+                          : "No topics found."}
+                      </p>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedTopics.map((topic) => (
+                    <TableRow
+                      key={topic.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => navigate(`/topic/${topic.id.toString()}`)}
+                    >
+                      {/* Topic Column */}
+                      <TableCell>
+                        <div className="flex items-start gap-3">
+                          {/* Avatar */}
+                          <Avatar className="w-10 h-10 flex-shrink-0">
+                            <AvatarFallback className="bg-indigo-50 text-indigo-600 text-sm">
+                              {getInitials(topic.author_username)}
+                            </AvatarFallback>
+                          </Avatar>
 
-            {/* Topics List */}
-            {paginatedTopics.length === 0 ? (
-              <div className="p-8 text-center">
-                <p className="text-muted-foreground">
-                  {searchQuery || selectedFilter !== "all" || selectedTag
-                    ? "No topics match your search criteria."
-                    : "No topics found."}
-                </p>
-              </div>
-            ) : (
-              <div className="divide-y">
-                {paginatedTopics.map((topic) => (
-                  <div
-                    key={topic.id}
-                    className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 p-3 sm:p-4 hover:bg-gray-50 cursor-pointer transition-colors"
-                    onClick={() => navigate(`/topic/${topic.id.toString()}`)}
-                  >
-                    {/* Topic Content */}
-                    <div className="md:col-span-6 col-span-1">
-                      <div className="flex items-start gap-3">
-                        {/* Avatar */}
-                        <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600 flex-shrink-0">
-                          {getInitials(topic.author_username)}
-                        </div>
+                          {/* Topic Details */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 mb-2">
+                              <h3 className="font-semibold text-sm sm:text-base text-foreground break-words">
+                                {topic.title}
+                              </h3>
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                {/* Category Badge */}
+                                <Badge
+                                  className={`${getCategoryBadge(
+                                    topic.category_name,
+                                    topic.category_color
+                                  )} text-xs flex items-center gap-1`}
+                                >
+                                  {getCategoryDisplayName(topic.category_name)}
+                                </Badge>
+                                {/* Tags beside category */}
+                                {topic.is_hot && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="bg-orange-100 text-orange-800 border-orange-200 text-xs"
+                                  >
+                                    <Zap className="w-3 h-3 mr-1 text-orange-600" />
+                                    Hot
+                                  </Badge>
+                                )}
+                                {topic.is_featured && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="bg-yellow-100 text-yellow-800 border-yellow-200 text-xs"
+                                  >
+                                    <Star className="w-3 h-3 mr-1 text-yellow-600" />
+                                    Featured
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
 
-                        {/* Topic Details */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-2 mb-2">
-                            <h3 className="font-semibold text-sm sm:text-base text-foreground break-words">
-                              {topic.title}
-                            </h3>
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              {/* Category Badge */}
-                              <Badge
-                                className={`${getCategoryBadge(
-                                  topic.category_name,
-                                  topic.category_color
-                                )} text-xs flex items-center gap-1`}
-                              >
-                                {getCategoryDisplayName(topic.category_name)}
-                              </Badge>
-                              {/* Tags beside category */}
-                              {topic.is_hot && (
-                                <Badge
-                                  variant="secondary"
-                                  className="bg-orange-100 text-orange-800 border-orange-200 text-xs"
-                                >
-                                  <Zap className="w-3 h-3 mr-1 text-orange-600" />
-                                  Hot
-                                </Badge>
-                              )}
-                              {topic.is_featured && (
-                                <Badge
-                                  variant="secondary"
-                                  className="bg-yellow-100 text-yellow-800 border-yellow-200 text-xs"
-                                >
-                                  <Star className="w-3 h-3 mr-1 text-yellow-600" />
-                                  Featured
-                                </Badge>
-                              )}
+                            <p className="text-xs sm:text-sm text-gray-600 line-clamp-2 mb-2">
+                              {topic.description}
+                            </p>
+
+                            <div className="flex items-center flex-wrap gap-1.5 sm:gap-2 text-xs text-gray-500">
+                              <span className="font-medium">
+                                {topic.author_username}
+                              </span>
+                              <span className="hidden sm:inline">•</span>
+                              <span>
+                                {topic.created_at
+                                  ? formatDate(topic.created_at)
+                                  : "Unknown"}
+                              </span>
+                              {/* Tags beside author */}
+                              {topic.tags && (() => {
+                                const tags = parseTags(topic.tags);
+                               
+                                return tags.slice(0, 3).map((tag, index) => (
+                                  <span
+                                    key={index}
+                                    className={`inline-block px-2 py-0.5 text-xs rounded-full border ${getTagColor(tag)}`}
+                                  >
+                                    {tag}
+                                  </span>
+                                ));
+                              })()}
                             </div>
                           </div>
-
-                          <p className="text-xs sm:text-sm text-gray-600 line-clamp-2 mb-2">
-                            {topic.description}
-                          </p>
-
-                          <div className="flex items-center flex-wrap gap-1.5 sm:gap-2 text-xs text-gray-500">
-                            <span className="font-medium">
-                              {topic.author_username}
-                            </span>
-                            <span className="hidden sm:inline">•</span>
-                            <span>
-                              {topic.created_at
-                                ? formatDate(topic.created_at)
-                                : "Unknown"}
-                            </span>
-                            {/* Tags beside author */}
-                            {topic.tags && (() => {
-                              const tags = parseTags(topic.tags);
-                             
-                              return tags.slice(0, 3).map((tag, index) => (
-                                <span
-                                  key={index}
-                                  className={`inline-block px-2 py-0.5 text-xs rounded-full border ${getTagColor(tag)}`}
-                                >
-                                  {tag}
-                                </span>
-                              ));
-                            })()}
-                          </div>
-
-                          {/* Tags */}
-                         
                         </div>
-                      </div>
-                    </div>
+                      </TableCell>
 
-                    {/* Desktop Stats */}
-                    <div className="hidden md:flex col-span-2 items-center justify-end">
-                      <div className="flex items-center gap-1 text-sm text-gray-600">
-                        <MessageSquare
-                          className={`h-4 w-4 ${getStatsIconColor("replies")}`}
-                        />
-                        <span>{topic.reply_count || 0}</span>
-                      </div>
-                    </div>
+                      {/* Replies Column */}
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1 text-sm text-gray-600">
+                          <MessageSquare className="h-4 w-4" />
+                          <span>{topic.reply_count || 0}</span>
+                        </div>
+                      </TableCell>
 
-                    <div className="hidden md:flex col-span-2 items-center justify-end">
-                      {(() => {
-                        const userId = auth.user?.profile?.sub || auth.user?.profile?.sid || auth.user?.profile?.email;
-                        const likedTopics = JSON.parse(localStorage.getItem('likedTopics') || '{}');
-                        const likeKey = userId ? `${userId}-${topic.id.toString()}` : '';
-                        const isLiked = userId ? !!likedTopics[likeKey] : false;
-                        
-                        return (
-                          <button
-                            onClick={(e) => handleLike(topic.id.toString(), e)}
-                            className={`flex items-center gap-1 text-sm transition-colors ${
-                              isLiked 
-                                ? "text-primary" 
-                                : "text-gray-600 hover:text-primary"
-                            }`}
-                            disabled={!isAuthenticated}
-                            title={!isAuthenticated ? "Please sign in to like" : isLiked ? "Click to unlike" : "Click to like"}
-                          >
-                            <Heart
-                              className={`h-4 w-4 transition-all ${
-                                isLiked 
-                                  ? "text-primary" 
-                                  : "text-gray-600"
-                              }`}
-                            />
-                            <span key={`like-count-${topic.id}-${topic.like_count}`}>{topic.like_count || 0}</span>
-                          </button>
-                        );
-                      })()}
-                    </div>
-
-                    <div className="hidden md:flex col-span-2 items-center justify-end">
-                      <div className="flex items-center gap-1 text-sm text-gray-600">
-                        <Clock
-                          className={`h-4 w-4 ${getStatsIconColor("activity")}`}
-                        />
-                        <span>
-                          {topic.created_at
-                            ? formatDate(topic.created_at)
-                            : "Unknown"}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Mobile Stats Row */}
-                    <div className="flex md:hidden items-center justify-between mt-3 pt-3 border-t border-gray-200 text-xs sm:text-sm text-gray-600">
-                      <div className="flex items-center gap-1">
-                        <MessageSquare className={`h-3 w-3 sm:h-4 sm:w-4 ${getStatsIconColor("replies")}`} />
-                        <span>{topic.reply_count || 0}</span>
-                      </div>
-                      <div>
+                      {/* Likes Column */}
+                      <TableCell className="text-right">
                         {(() => {
                           const userId = auth.user?.profile?.sub || auth.user?.profile?.sid || auth.user?.profile?.email;
                           const likedTopics = JSON.parse(localStorage.getItem('likedTopics') || '{}');
                           const likeKey = userId ? `${userId}-${topic.id.toString()}` : '';
                           const isLiked = userId ? !!likedTopics[likeKey] : false;
+                          
                           return (
                             <button
-                              onClick={(e) => handleLike(topic.id.toString(), e)}
-                              className={`flex items-center gap-1 transition-colors ${
-                                isLiked ? "text-primary" : "text-gray-600 hover:text-primary"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleLike(topic.id.toString(), e);
+                              }}
+                              className={`flex items-center gap-1 text-sm transition-colors ml-auto ${
+                                isLiked 
+                                  ? "text-primary" 
+                                  : "text-gray-600 hover:text-primary"
                               }`}
                               disabled={!isAuthenticated}
                               title={!isAuthenticated ? "Please sign in to like" : isLiked ? "Click to unlike" : "Click to like"}
                             >
-                              <Heart className={`h-3 w-3 sm:h-4 sm:w-4 ${isLiked ? "text-primary" : "text-gray-600"}`} />
-                              <span key={`like-count-mobile-${topic.id}-${topic.like_count}`}>{topic.like_count || 0}</span>
+                              <Heart
+                                className={`h-4 w-4 transition-all ${
+                                  isLiked 
+                                    ? "text-primary fill-primary" 
+                                    : "text-gray-600"
+                                }`}
+                              />
+                              <span key={`like-count-${topic.id}-${topic.like_count}`}>{topic.like_count || 0}</span>
                             </button>
                           );
                         })()}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className={`h-3 w-3 sm:h-4 sm:w-4 ${getStatsIconColor("activity")}`} />
-                        <span className="text-xs sm:text-sm">{topic.created_at ? formatDate(topic.created_at) : "Unknown"}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                      </TableCell>
+
+                      {/* Activity Column */}
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1 text-sm text-gray-600">
+                          <Clock className="h-4 w-4" />
+                          <span>
+                            {topic.created_at
+                              ? formatDate(topic.created_at)
+                              : "Unknown"}
+                          </span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
 

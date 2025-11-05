@@ -583,7 +583,7 @@ const AnswerEarn = () => {
                   <h2 className="text-2xl font-bold text-foreground">Find Open Questions</h2>
                   <Button 
                     variant="outline" 
-                    onClick={() => navigate("/open-questions")}
+                    onClick={() => navigate("/questions")}
                   >
                     View All Questions
                   </Button>
@@ -643,7 +643,7 @@ const AnswerEarn = () => {
                     <Button 
                       variant="secondary" 
                       size="lg"
-                      onClick={() => navigate("/open-questions")}
+                      onClick={() => navigate("/questions")}
                     >
                       Find Questions to Answer
                     </Button>

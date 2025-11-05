@@ -27,19 +27,19 @@ const Community = () => {
 
   const socialPlatforms = [
     {
-      name: "Slack",
-      description: "Join our Slack workspace for real-time discussions",
-      icon: "💬",
-      color: "bg-blue-500",
-      url: "https://slack.fastn.ai",
-      members: "2,847"
+      name: "Twitter/X",
+      description: "Follow us for the latest updates and announcements",
+      icon: "🐦",
+      color: "bg-indigo-50",
+      url: "https://x.com/fastn_ai",
+      members: "1,234"
     },
     {
       name: "Discord",
       description: "Connect with developers in our Discord server",
       icon: "🎮",
       color: "bg-purple-500",
-      url: "https://discord.gg/fastn",
+      url: "https://discord.gg/Nvd5p8axU3",
       members: "1,234"
     },
     {
@@ -47,15 +47,15 @@ const Community = () => {
       description: "Follow us for professional updates and networking",
       icon: "💼",
       color: "bg-indigo-500",
-      url: "https://linkedin.com/company/fastn",
-      members: "5,678"
+      url: "https://www.linkedin.com/company/fastnai",
+      members: "6,710"
     },
     {
       name: "Instagram",
       description: "Stay updated with visual content and stories",
       icon: "📸",
       color: "bg-pink-500",
-      url: "https://instagram.com/fastn_ai",
+      url: "https://www.instagram.com/fastn_ai/",
       members: "3,456"
     }
   ];
@@ -426,7 +426,7 @@ const Community = () => {
                     <Card key={index} className="hover:shadow-lg transition-shadow cursor-pointer">
                       <CardContent className="p-6">
                         <div className="text-center space-y-4">
-                          <div className={`w-16 h-16 ${platform.color} rounded-full flex items-center justify-center mx-auto text-2xl`}>
+                          <div className={`w-16 h-16 ${platform.name === "Twitter/X" ? "bg-indigo-50 text-indigo-600" : `${platform.color} text-white`} rounded-full flex items-center justify-center mx-auto text-2xl`}>
                             {platform.icon}
                           </div>
                           <div>
@@ -464,7 +464,7 @@ const Community = () => {
                           return (
                             <div key={activity.id} className="flex items-start space-x-3">
                               <Avatar className="w-8 h-8">
-                                <AvatarFallback className="text-xs">{getInitials(activity.avatar)}</AvatarFallback>
+                                <AvatarFallback className="text-xs bg-indigo-50 text-indigo-600">{getInitials(activity.avatar)}</AvatarFallback>
                               </Avatar>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center space-x-2 mb-1">
@@ -495,7 +495,7 @@ const Community = () => {
                               <div className="flex items-center space-x-2">
                                 <Avatar className="w-8 h-8">
                                   <AvatarImage src={contributor.avatar} alt={contributor.username} />
-                                  <AvatarFallback className="text-xs">{getInitials(contributor.username)}</AvatarFallback>
+                                  <AvatarFallback className="text-xs bg-indigo-50 text-indigo-600">{getInitials(contributor.username)}</AvatarFallback>
                                 </Avatar>
                                 <div>
                                   <div className="flex items-center space-x-2">
@@ -539,15 +539,8 @@ const Community = () => {
                             <span className="text-xs text-muted-foreground">{event.attendees} attending</span>
                           </div>
                           <h3 className="font-semibold text-foreground">{event.title}</h3>
-                          <div className="space-y-1 text-sm text-muted-foreground">
-                            <div className="flex items-center space-x-2">
-                              <Calendar className="w-4 h-4" />
-                              <span>{event.date}</span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <TrendingUp className="w-4 h-4" />
-                              <span>{event.time}</span>
-                            </div>
+                          <div className="text-sm text-muted-foreground">
+                            <span>Soon</span>
                           </div>
                         </div>
                       </CardContent>
