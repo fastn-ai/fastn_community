@@ -97,17 +97,66 @@ const Community = () => {
       }
       setError(null);
 
-      // Fetch users and topics in parallel
-      const [fetchedUsers, fetchedTopics] = await Promise.all([
-        ApiService.getAllUsers(),
-        ApiService.getAllTopics(),
-      ]);
+      // Fetch only topics
+      const fetchedTopics = await ApiService.getAllTopics();
 
-      setUsers(fetchedUsers);
       setTopics(fetchedTopics);
 
+      // Extract unique users from topics
+      const userMap: Record<string, {
+        id: string;
+        username: string;
+        avatar?: string;
+        topicsCreated: number;
+        repliesCount: number;
+        totalLikes: number;
+        reputation_score: number;
+      }> = {};
+
+      fetchedTopics.forEach((topic) => {
+        // Use author_id if available, otherwise fallback to author_username or author_name
+        const authorId = topic.author_id || topic.author_username || topic.author_name;
+        if (authorId) {
+          if (!userMap[authorId]) {
+            userMap[authorId] = {
+              id: authorId,
+              username: topic.author_username || topic.author_name || 'anonymous',
+              avatar: topic.author_avatar,
+              topicsCreated: 0,
+              repliesCount: 0,
+              totalLikes: 0,
+              reputation_score: 0,
+            };
+          }
+          userMap[authorId].topicsCreated += 1;
+          // Accumulate likes from all topics
+          userMap[authorId].totalLikes += (topic.like_count || 0);
+        }
+      });
+
+      // Calculate reputation score for each user based on topics created
+      // Since we're only using getAllTopics, we can't accurately count replies per user
+      // So we'll calculate points based on topics created and likes received
+      Object.values(userMap).forEach((user) => {
+        // Points: topics created (10 points each) + likes received (1 point each)
+        user.reputation_score = (user.topicsCreated * 10) + (user.totalLikes || 0);
+      });
+
+      const extractedUsers = Object.values(userMap).map(user => ({
+        ...user,
+        topics_count: user.topicsCreated,
+        replies_count: user.repliesCount,
+      }));
+
+      setUsers(extractedUsers as any);
+
+      // Debug logging
+      console.log('Fetched topics:', fetchedTopics.length);
+      console.log('Extracted users:', extractedUsers.length);
+      console.log('User map:', userMap);
+
       // Calculate community statistics
-      const totalMembers = fetchedUsers.length;
+      const totalMembers = extractedUsers.length;
       const activeDiscussions = fetchedTopics.length;
       const totalReplies = fetchedTopics.reduce((sum, topic) => sum + topic.reply_count, 0);
       const totalLikes = fetchedTopics.reduce((sum, topic) => sum + topic.like_count, 0);
@@ -165,12 +214,13 @@ const Community = () => {
 
       setRecentActivities(activities);
 
-      // Get top contributors (users with highest reputation scores)
-      const sortedUsers = fetchedUsers
+      // Get top contributors (users with highest reputation scores calculated from topics)
+      const sortedUsers = extractedUsers
         .sort((a, b) => b.reputation_score - a.reputation_score)
         .slice(0, 5);
 
-      setTopContributors(sortedUsers);
+      console.log('Top contributors:', sortedUsers);
+      setTopContributors(sortedUsers as any);
 
     } catch (err) {
       console.error("Error fetching community data:", err);
@@ -315,26 +365,14 @@ const Community = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      <Header onMenuClick={() => setSidebarOpen(true)} />
       <div className="flex">
-        {/* Mobile Sidebar Toggle */}
-        <div className="md:hidden fixed top-20 left-4 z-50">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="bg-card"
-          >
-            <Menu className="w-4 h-4" />
-          </Button>
-        </div>
-
         {/* Mobile Sidebar */}
         {sidebarOpen && (
-          <div className="md:hidden fixed inset-0 z-40">
+          <div className="md:hidden fixed inset-0 z-[70]">
             <div className="fixed inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
-            <div className="fixed left-0 top-0 h-full w-64 bg-card border-r border-border z-50">
-              <Sidebar />
+            <div className="fixed left-0 top-0 h-full w-64 bg-card border-r border-border z-[80]">
+              <Sidebar isMobile />
             </div>
           </div>
         )}
@@ -451,31 +489,37 @@ const Community = () => {
                   <Card>
                     <CardContent className="p-6">
                       <div className="space-y-4">
-                        {topContributors.map((contributor, index) => (
-                          <div key={contributor.id} className="flex items-center space-x-3">
-                            <div className="flex items-center space-x-2">
-                              <Avatar className="w-8 h-8">
-                                <AvatarImage src={contributor.avatar} alt={contributor.username} />
-                                <AvatarFallback className="text-xs">{getInitials(contributor.username)}</AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <div className="flex items-center space-x-2">
-                                  <span className="text-sm font-medium text-foreground">{contributor.username}</span>
-                                  {index < 3 && (
-                                    <Badge className="bg-yellow-100 text-yellow-800 text-xs">
-                                      #{index + 1}
-                                    </Badge>
-                                  )}
-                                </div>
-                                <div className="flex items-center space-x-4 text-xs text-muted-foreground">
-                                  <span>{contributor.reputation_score} points</span>
-                                  <span>{contributor.topics_count} topics</span>
-                                  <span>{contributor.replies_count} replies</span>
+                        {topContributors && topContributors.length > 0 ? (
+                          topContributors.map((contributor, index) => (
+                            <div key={contributor.id} className="flex items-center space-x-3">
+                              <div className="flex items-center space-x-2">
+                                <Avatar className="w-8 h-8">
+                                  <AvatarImage src={contributor.avatar} alt={contributor.username} />
+                                  <AvatarFallback className="text-xs">{getInitials(contributor.username)}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-sm font-medium text-foreground">{contributor.username}</span>
+                                    {index < 3 && (
+                                      <Badge className="bg-yellow-100 text-yellow-800 text-xs">
+                                        #{index + 1}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                                    <span>{contributor.reputation_score || 0} points</span>
+                                    <span>{contributor.topics_count || 0} topics</span>
+                                    <span>{contributor.replies_count || 0} replies</span>
+                                  </div>
                                 </div>
                               </div>
                             </div>
+                          ))
+                        ) : (
+                          <div className="text-center py-8">
+                            <p className="text-sm text-muted-foreground">No contributors yet. Be the first to create a topic!</p>
                           </div>
-                        ))}
+                        )}
                       </div>
                     </CardContent>
                   </Card>

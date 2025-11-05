@@ -127,6 +127,8 @@ const ReplyItem = React.memo(({
 }: ReplyItemProps) => {
   const isSubReply = depth > 0;
   
+  // Temporarily hide topic stats and action buttons
+
   return (
     <div className={isSubReply ? "ml-6 border-l-2 border-border pl-4" : ""}>
       <Card
@@ -969,29 +971,17 @@ const TopicDetail = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      <Header onMenuClick={() => setSidebarOpen(true)} />
       <div className="flex">
-        {/* Mobile Sidebar Toggle */}
-        <div className="md:hidden fixed top-20 left-4 z-50">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="bg-card"
-          >
-            <Menu className="w-4 h-4" />
-          </Button>
-        </div>
-
         {/* Mobile Sidebar */}
         {sidebarOpen && (
-          <div className="md:hidden fixed inset-0 z-40">
+          <div className="md:hidden fixed inset-0 z-[70]">
             <div
               className="fixed inset-0 bg-black/50"
               onClick={() => setSidebarOpen(false)}
             />
-            <div className="fixed left-0 top-0 h-full w-64 bg-card border-r border-border z-50">
-              <Sidebar />
+            <div className="fixed left-0 top-0 h-full w-64 bg-card border-r border-border z-[80]">
+              <Sidebar isMobile />
             </div>
           </div>
         )}
@@ -1051,46 +1041,11 @@ const TopicDetail = () => {
                         {new Date(topic.created_at).toLocaleDateString()}
                       </span>
                     </span>
-                    <span className="flex items-center space-x-1">
-                      <Eye className="w-4 h-4" />
-                      <span>{topic.view_count} views</span>
-                    </span>
-                    <span className="flex items-center space-x-1">
-                      <MessageSquare className="w-4 h-4" />
-                      <span>{topic.reply_count} replies</span>
-                    </span>
-                    <span className="flex items-center space-x-1">
-                      <Heart className="w-4 h-4 text-gray-600" />
-                      <span>{topic.like_count || 0} likes</span>
-                    </span>
+                    {/* stats hidden for now */}
                   </div>
                 </div>
               </div>
-
-              <div className="flex space-x-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={handleLike}
-                  disabled={!isAuthenticated || isLiking}
-                  className={liked ? "border-primary text-primary" : ""}
-                >
-                  <Heart className={`w-4 h-4 mr-2 transition-all ${
-                    liked 
-                      ? "text-primary" 
-                      : "text-gray-600"
-                  }`} />
-                  {isLiking ? (liked ? "Unliking..." : "Liking...") : (liked ? "Unlike" : "Like")}
-                </Button>
-                <Button variant="outline" size="sm">
-                  <Share className="w-4 h-4 mr-2" />
-                  Share
-                </Button>
-                <Button variant="outline" size="sm">
-                  <Bookmark className="w-4 h-4 mr-2" />
-                  Bookmark
-                </Button>
-              </div>
+              {/* actions hidden for now */}
             </div>
           </div>
 

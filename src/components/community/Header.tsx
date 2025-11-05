@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Search, Bell, User, Menu, Plus, Settings, MessageSquare, LogOut, LogIn, Shield } from "lucide-react";
+import { Search, User, Menu, Plus, Settings, MessageSquare, LogOut, LogIn, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -17,8 +17,16 @@ import CreateTopicModal from "@/components/ui/create-topic-modal";
 import { useAuth } from "react-oidc-context";
 import { signOut } from "@/services/users/user-manager";
 import { useUserRole } from "@/context/UserRoleContext";
+// Notifications temporarily disabled
+// import { useQuery, useMutation } from "@tanstack/react-query";
+// import { fetchNotifications, markAllNotificationsRead, markNotificationRead, NotificationItem } from "@/services/notifications";
+// import { queryKeys } from "@/services/queryClient";
 
-const Header = () => {
+interface HeaderProps {
+  onMenuClick?: () => void;
+}
+
+const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
@@ -51,73 +59,68 @@ const Header = () => {
     }
   };
 
-  const notifications = [
-    {
-      id: 1,
-      title: "New reply to your topic",
-      message: "Sarah Chen replied to 'How to implement OAuth2 with fastn?'",
-      time: "2 minutes ago",
-      isRead: false,
-      type: "reply"
-    },
-    {
-      id: 2,
-      title: "Topic marked as solved",
-      message: "Your topic 'Database connection pooling' was marked as solved",
-      time: "1 hour ago",
-      isRead: false,
-      type: "solved"
-    },
-    {
-      id: 3,
-      title: "New follower",
-      message: "Alex Rodriguez started following you",
-      time: "3 hours ago",
-      isRead: true,
-      type: "follow"
-    },
-    {
-      id: 4,
-      title: "Weekly digest",
-      message: "Here's what happened in the fastn community this week",
-      time: "1 day ago",
-      isRead: true,
-      type: "digest"
-    }
-  ];
+  // Provide token to service (temporary bridge without tight coupling)
+  useEffect(() => {
+    (window as any).authAccessToken = auth.user?.access_token;
+  }, [auth.user?.access_token]);
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  // Notifications temporarily disabled
+  // const { data: notifications = [], refetch } = useQuery<NotificationItem[]>({
+  //   queryKey: queryKeys.notifications,
+  //   queryFn: fetchNotifications,
+  //   enabled: Boolean(auth?.isAuthenticated),
+  // });
+  // const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const unreadCount = 0;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     // Implement search functionality
   };
 
-  const handleNotificationClick = (notificationId: number) => {
-    // Handle notification click
-  };
+  // Notifications temporarily disabled
+  // const markReadMutation = useMutation({
+  //   mutationFn: (id: string) => markNotificationRead(id),
+  //   onSuccess: () => {
+  //     refetch();
+  //   }
+  // });
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case "reply":
-        return "💬";
-      case "solved":
-        return "✅";
-      case "follow":
-        return "👤";
-      case "digest":
-        return "📧";
-      default:
-        return "🔔";
-    }
-  };
+  // const markAllReadMutation = useMutation({
+  //   mutationFn: () => markAllNotificationsRead(),
+  //   onSuccess: () => {
+  //     refetch();
+  //   }
+  // });
+
+  // const handleNotificationClick = (notificationId: string, link?: string) => {
+  //   markReadMutation.mutate(notificationId);
+  //   if (link) {
+  //     navigate(link);
+  //   }
+  // };
+
+  // const getNotificationIcon = (type: string) => {
+  //   switch (type) {
+  //     case "reply":
+  //       return "💬";
+  //     case "solved":
+  //       return "✅";
+  //     case "follow":
+  //       return "👤";
+  //     case "digest":
+  //       return "📧";
+  //     default:
+  //       return "🔔";
+  //   }
+  // };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between px-4">
+      <div className="flex h-16 items-center justify-between px-2 sm:px-4 gap-2 w-full">
         {/* Logo */}
         <div 
-          className="flex items-center space-x-2 cursor-pointer"
+          className="flex items-center cursor-pointer flex-shrink-0"
           onClick={() => navigate("/")}
         >
           <svg
@@ -126,7 +129,7 @@ const Header = () => {
             height="524"
             version="1"
             viewBox="0 0 641 393"
-            className="w-24 h-24"
+            className="w-8 h-8 sm:w-10 sm:h-10 md:w-14 md:h-14"
           >
             <path
               d="M481 2644c-37-26-54-77-39-114 7-17 236-270 508-561 272-292 495-537 495-543 0-7-229-239-510-516-280-277-515-513-522-525-36-60 15-145 87-145 25 0 499 189 588 234 439 223 669 722 562 1217-63 293-252 554-507 700-106 60-580 269-612 269-15 0-37-7-50-16zm436-307c68-31 155-77 194-103 170-113 303-288 368-484 24-74 42-162 32-158-6 2-675 718-745 796l-21 23 25-9c14-6 80-35 147-65zm578-1138c-58-222-212-431-407-553-71-44-345-162-355-153-2 3 171 176 384 385s389 380 390 378c1-1-4-27-12-57zM2283 2220c-56-12-96-33-139-77-61-61-85-128-98-271l-11-126-35-8c-19-5-52-14-72-19l-38-10v-129h150V850h190v730h280v170h-282l3 113c4 95 7 117 27 149 39 63 115 80 227 52l26-6-3 68-3 69-35 11c-52 18-139 24-187 14zM4528 1868l-3-122-62-18-63-19v-129h130v-237c0-321 14-396 87-465 58-55 155-72 270-48 74 16 74 16 54 89l-18 64-71-2c-68-2-74-1-102 28l-30 29v542h240v170h-240v240h-189l-3-122z"
@@ -137,52 +140,63 @@ const Header = () => {
               transform="matrix(.1 0 0 -.1 0 393)"
             ></path>
           </svg>
-          
         </div>
 
-        {/* Navigation */}
-      
-
-        {/* Search */}
-        <div className="flex-1 max-w-md mx-4">
-          <form onSubmit={handleSearch} className="relative">
+        {/* Search - Hidden on mobile, shown on tablet and up */}
+        <div className="hidden md:flex flex-1 max-w-md mx-2 lg:mx-4">
+          <form onSubmit={handleSearch} className="relative w-full">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
               type="text"
               placeholder="Search community..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-background/50 backdrop-blur-sm border-border/50 focus:border-primary"
+              className="pl-10 bg-background/50 backdrop-blur-sm border-border/50 focus:border-primary w-full"
             />
           </form>
         </div>
 
         {/* Right side actions */}
-        <div className="flex items-center space-x-4">
-          {/* New Topic Button - Only show when authenticated and NOT on topic pages */}
-          {/*{isAuthenticated && !isOnTopicPage && (
-            <Button 
-              onClick={() => setIsCreateTopicModalOpen(true)}
-              className="hidden sm:flex items-center space-x-2"
-            >
-              <Plus className="w-4 h-4" />
-              <span>New Topic </span>
-            </Button>
-          )}*/}
-
-          {/* Notifications */}
+        <div className="flex items-center gap-1 sm:gap-2 md:gap-4 flex-shrink-0">
+          {/* Mobile Search Button */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="md:hidden">
+                <Search className="w-4 h-4 sm:w-5 sm:h-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80">
+              <DropdownMenuLabel>Search</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <div className="p-2">
+                <form onSubmit={handleSearch} className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                  <Input
+                    type="text"
+                    placeholder="Search community..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                    autoFocus
+                  />
+                </form>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Notifications - Temporarily disabled */}
+          {/* <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="relative">
-                <Bell className="w-5 h-5" />
+                <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
                 {unreadCount > 0 && (
-                  <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-xs flex items-center justify-center">
+                  <Badge className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 rounded-full bg-red-500 text-xs flex items-center justify-center p-0">
                     {unreadCount > 9 ? "9+" : unreadCount}
                   </Badge>
                 )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80">
+            <DropdownMenuContent align="end" className="w-80 max-w-[calc(100vw-2rem)]">
               <DropdownMenuLabel className="flex items-center justify-between">
                 <span>Notifications</span>
                 {unreadCount > 0 && (
@@ -197,10 +211,10 @@ const Header = () => {
                   <DropdownMenuItem 
                     key={notification.id}
                     className={`cursor-pointer ${!notification.isRead ? 'bg-blue-50 dark:bg-blue-950/20' : ''}`}
-                    onClick={() => handleNotificationClick(notification.id)}
+                    onClick={() => handleNotificationClick(notification.id, notification.link)}
                   >
                     <div className="flex items-start space-x-3 w-full">
-                      <div className="text-lg">{getNotificationIcon(notification.type)}</div>
+                      <div className="text-lg">{getNotificationIcon(notification.type || '')}</div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center space-x-2">
                           <p className="text-sm font-medium text-foreground line-clamp-1">
@@ -214,7 +228,7 @@ const Header = () => {
                           {notification.message}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {notification.time}
+                          {new Date(notification.createdAt).toLocaleString()}
                         </p>
                       </div>
                     </div>
@@ -226,30 +240,30 @@ const Header = () => {
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-center cursor-pointer">
+              <DropdownMenuItem className="text-center cursor-pointer" onClick={() => markAllReadMutation.mutate()}>
                 <span className="text-sm text-blue-600 hover:text-blue-700">
-                  View all notifications
+                  Mark all as read
                 </span>
               </DropdownMenuItem>
             </DropdownMenuContent>
-          </DropdownMenu>
+          </DropdownMenu> */}
 
           {/* User Menu / Auth Buttons */}
           {isAuthenticated ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="flex items-center space-x-2">
-                  <Avatar className="w-6 h-6">
+                <Button variant="ghost" size="sm" className="flex items-center gap-1 sm:gap-2">
+                  <Avatar className="w-5 h-5 sm:w-6 sm:h-6">
                     <AvatarFallback className="bg-gradient-primary text-white text-xs">
                       {user?.username?.charAt(0).toUpperCase() || 'U'}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="hidden sm:inline text-sm font-medium">
+                  <span className="hidden lg:inline text-sm font-medium">
                     {user?.username || 'User'}
                   </span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel className="flex items-center space-x-2">
                   <Avatar className="w-8 h-8">
                     <AvatarFallback className="bg-gradient-primary text-white">
@@ -287,29 +301,32 @@ const Header = () => {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <Button 
                 variant="outline" 
+                size="sm"
                 onClick={() => navigate('/login')} 
-                className="flex items-center space-x-2"
+                className="flex items-center gap-1 sm:gap-2"
               >
                 <LogIn className="w-4 h-4" />
                 <span className="hidden sm:inline">Sign In</span>
               </Button>
               <Button 
+                size="sm"
                 onClick={() => navigate('/login')} 
-                className="flex items-center space-x-2"
+                className="flex items-center gap-1 sm:gap-2"
               >
                 <User className="w-4 h-4" />
                 <span className="hidden sm:inline">Sign Up</span>
               </Button>
             </div>
           )}
-
-          {/* Mobile menu */}
-          <Button variant="ghost" size="sm" className="md:hidden">
-            <Menu className="w-5 h-5" />
-          </Button>
+          {/* Mobile menu (opens sidebar) */}
+          {onMenuClick && (
+            <Button variant="ghost" size="sm" className="md:hidden" onClick={onMenuClick} aria-label="Open menu">
+              <Menu className="w-5 h-5" />
+            </Button>
+          )}
         </div>
       </div>
       

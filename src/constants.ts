@@ -40,3 +40,7 @@ export const DELETE_TOPIC_API_URL = import.meta.env.VITE_DELETE_TOPIC_API_URL ||
 export const GET_ALL_USERS_API_URL = import.meta.env.VITE_GET_ALL_USERS_API_URL || API_URL +"getAllUsers";
 export const SUBMIT_LIKES_API_URL = import.meta.env.VITE_SUBMIT_LIKES_API_URL || API_URL +"submitLikes";
 export const REMOVE_LIKE_FROM_TOPIC_API_URL = import.meta.env.VITE_REMOVE_LIKE_FROM_TOPIC_API_URL || API_URL +"removeLikeFromTopic";
+// Notifications
+export const GET_NOTIFICATIONS_API_URL = import.meta.env.VITE_GET_NOTIFICATIONS_API_URL || API_URL + "notifications";
+export const MARK_NOTIFICATION_READ_API_URL = import.meta.env.VITE_MARK_NOTIFICATION_READ_API_URL || API_URL + "notifications/read";
+export const MARK_ALL_NOTIFICATIONS_READ_API_URL = import.meta.env.VITE_MARK_ALL_NOTIFICATIONS_READ_API_URL || API_URL + "notifications/markAllRead";

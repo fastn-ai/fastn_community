@@ -22,7 +22,11 @@ import { useAuth } from "react-oidc-context";
 import { ApiService, Topic } from "@/services/api";
 import { queryKeys } from "@/services/queryClient";
 
-const Sidebar = () => {
+interface SidebarProps {
+  isMobile?: boolean;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ isMobile = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
@@ -133,8 +137,12 @@ const Sidebar = () => {
     navigate(path);
   };
 
+  const asideClassName = isMobile
+    ? "w-64 bg-card border-r border-border h-full"
+    : "w-64 bg-card border-r border-border h-screen fixed top-16 left-0 z-30 hidden md:block";
+
   return (
-    <aside className="w-64 bg-card border-r border-border h-screen fixed top-16 left-0 z-30 hidden md:block">
+    <aside className={asideClassName}>
       <div className="p-4 space-y-6 h-full overflow-y-auto">
         
         {/* Quick Navigation */}

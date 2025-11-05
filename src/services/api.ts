@@ -155,6 +155,22 @@ export interface CrudTagsPayload {
   };
 }
 
+// Generic helper: run a fetch; if it returns 401, try guarded silent sign-in and retry once
+async function fetchWith401Retry(doRequest: () => Promise<Response>): Promise<Response> {
+  let response = await doRequest();
+  if (response && response.status === 401) {
+    try {
+      const { handleAuthErrorWithCheck } = await import("@/services/users/user-manager");
+      await handleAuthErrorWithCheck();
+      // retry once after silent sign-in
+      response = await doRequest();
+    } catch {
+      return response; // bubble original 401
+    }
+  }
+  return response;
+}
+
 
 // Separate payload interfaces for the extracted endpoints
 export interface GetTopicByUserPayload {
@@ -2036,10 +2052,14 @@ export async function insertUser(payload: InsertUserPayload, authToken: string) 
     headers["authorization"] = `Bearer ${authToken}`;
   }
 
-  const res = await fetch(INSERT_USER_API_URL, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ input: finalPayload }),
+  const res = await fetchWith401Retry(async () => {
+    // Rebuild headers in case token changed during silent sign-in
+    const rebuiltHeaders: Record<string, string> = { ...headers };
+    return fetch(INSERT_USER_API_URL, {
+      method: "POST",
+      headers: rebuiltHeaders,
+      body: JSON.stringify({ input: finalPayload }),
+    });
   });
 
   if (!res.ok) {
@@ -2071,10 +2091,14 @@ export async function crudCategories(payload: CrudCategoriesPayload, authToken: 
     headers["authorization"] = `Bearer ${authToken}`;
   }
 
-  const res = await fetch(CRUD_CATEGORIES_API_URL, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ input: payload }),
+  const res = await fetchWith401Retry(async () => {
+    // Rebuild dynamic headers on retry
+    const rebuiltHeaders: Record<string, string> = { ...headers };
+    return fetch(CRUD_CATEGORIES_API_URL, {
+      method: "POST",
+      headers: rebuiltHeaders,
+      body: JSON.stringify({ input: payload }),
+    });
   });
 
   if (!res.ok) {
@@ -2116,10 +2140,13 @@ export async function crudTags(payload: CrudTagsPayload, authToken: string, apiK
 
   // Create the request promise
   const requestPromise = (async () => {
-    const res = await fetch(CRUD_TAGS_API_URL, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ input: payload }),
+    const res = await fetchWith401Retry(async () => {
+      const rebuiltHeaders: Record<string, string> = { ...headers };
+      return fetch(CRUD_TAGS_API_URL, {
+        method: "POST",
+        headers: rebuiltHeaders,
+        body: JSON.stringify({ input: payload }),
+      });
     });
 
     if (!res.ok) {
@@ -2162,10 +2189,13 @@ export async function getTopicByUser(payload: GetTopicByUserPayload, authToken: 
     headers["authorization"] = `Bearer ${authToken}`;
   }
 
-  const res = await fetch(GET_TOPIC_BY_USER_API_URL, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ input: payload }),
+  const res = await fetchWith401Retry(async () => {
+    const rebuiltHeaders: Record<string, string> = { ...headers };
+    return fetch(GET_TOPIC_BY_USER_API_URL, {
+      method: "POST",
+      headers: rebuiltHeaders,
+      body: JSON.stringify({ input: payload }),
+    });
   });
 
   if (!res.ok) {
@@ -2195,10 +2225,13 @@ export async function insertTopics(payload: InsertTopicsPayload, authToken: stri
     headers["authorization"] = `Bearer ${authToken}`;
   }
 
-  const res = await fetch(INSERT_TOPICS_API_URL, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ input: payload }),
+  const res = await fetchWith401Retry(async () => {
+    const rebuiltHeaders: Record<string, string> = { ...headers };
+    return fetch(INSERT_TOPICS_API_URL, {
+      method: "POST",
+      headers: rebuiltHeaders,
+      body: JSON.stringify({ input: payload }),
+    });
   });
 
   if (!res.ok) {
@@ -2228,10 +2261,13 @@ export async function insertTopicTags(payload: InsertTopicTagsPayload, authToken
     headers["authorization"] = `Bearer ${authToken}`;
   }
 
-  const res = await fetch(INSERT_TOPIC_TAGS_API_URL, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ input: payload }),
+  const res = await fetchWith401Retry(async () => {
+    const rebuiltHeaders: Record<string, string> = { ...headers };
+    return fetch(INSERT_TOPIC_TAGS_API_URL, {
+      method: "POST",
+      headers: rebuiltHeaders,
+      body: JSON.stringify({ input: payload }),
+    });
   });
 
   if (!res.ok) {
@@ -2287,13 +2323,16 @@ export async function getAllTopics(payload: any, authToken: string, apiKey?: str
 
   // Create the request promise
   const requestPromise = (async () => {
-    const res = await fetch(GET_TOPICS_API_URL, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ 
-        input: forceRefresh ? { cacheBust: Date.now() } : {} 
-      }),
-      cache: forceRefresh ? 'no-store' : 'default'
+    const res = await fetchWith401Retry(async () => {
+      const rebuiltHeaders: Record<string, string> = { ...headers };
+      return fetch(GET_TOPICS_API_URL, {
+        method: "POST",
+        headers: rebuiltHeaders,
+        body: JSON.stringify({ 
+          input: forceRefresh ? { cacheBust: Date.now() } : {} 
+        }),
+        cache: forceRefresh ? 'no-store' : 'default'
+      });
     });
 
     if (!res.ok) {
@@ -2342,10 +2381,13 @@ export async function createReplyApi(payload: CrudRepliesPayload, authToken: str
   }
 
 
-  const res = await fetch(CREATE_REPLY_API_URL, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ input: payload }),
+  const res = await fetchWith401Retry(async () => {
+    const rebuiltHeaders: Record<string, string> = { ...headers };
+    return fetch(CREATE_REPLY_API_URL, {
+      method: "POST",
+      headers: rebuiltHeaders,
+      body: JSON.stringify({ input: payload }),
+    });
   });
 
 
@@ -2391,10 +2433,13 @@ export async function getRepliesApi(payload: CrudRepliesPayload, authToken: stri
 
   // Create the request promise
   const requestPromise = (async () => {
-    const res = await fetch(GET_REPLIES_API_URL, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ input: payload }),
+    const res = await fetchWith401Retry(async () => {
+      const rebuiltHeaders: Record<string, string> = { ...headers };
+      return fetch(GET_REPLIES_API_URL, {
+        method: "POST",
+        headers: rebuiltHeaders,
+        body: JSON.stringify({ input: payload }),
+      });
     });
 
     if (!res.ok) {
@@ -2440,10 +2485,13 @@ export async function updateReply(payload: CrudRepliesPayload, authToken: string
   }
 
 
-  const res = await fetch(UPDATE_REPLY_API_URL, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ input: payload }),
+  const res = await fetchWith401Retry(async () => {
+    const rebuiltHeaders: Record<string, string> = { ...headers };
+    return fetch(UPDATE_REPLY_API_URL, {
+      method: "POST",
+      headers: rebuiltHeaders,
+      body: JSON.stringify({ input: payload }),
+    });
   });
 
 
@@ -2479,10 +2527,13 @@ export async function deleteReply(payload: CrudRepliesPayload, authToken: string
     headers["authorization"] = `Bearer ${authToken}`;
   }
 
-  const res = await fetch(DELETE_REPLY_API_URL, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ input: payload }),
+  const res = await fetchWith401Retry(async () => {
+    const rebuiltHeaders: Record<string, string> = { ...headers };
+    return fetch(DELETE_REPLY_API_URL, {
+      method: "POST",
+      headers: rebuiltHeaders,
+      body: JSON.stringify({ input: payload }),
+    });
   });
 
   if (!res.ok) {
@@ -2514,10 +2565,13 @@ export async function updateTopicStatusApi(payload: any, authToken: string) {
   }
 
 
-  const res = await fetch(UPDATE_TOPIC_STATUS_API_URL, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ input: payload }),
+  const res = await fetchWith401Retry(async () => {
+    const rebuiltHeaders: Record<string, string> = { ...headers };
+    return fetch(UPDATE_TOPIC_STATUS_API_URL, {
+      method: "POST",
+      headers: rebuiltHeaders,
+      body: JSON.stringify({ input: payload }),
+    });
   });
 
 
@@ -2555,10 +2609,13 @@ export async function deleteTopicApi(payload: { action: string; data: { id: stri
   }
 
 
-  const res = await fetch(DELETE_TOPIC_API_URL, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ input: payload }),
+  const res = await fetchWith401Retry(async () => {
+    const rebuiltHeaders: Record<string, string> = { ...headers };
+    return fetch(DELETE_TOPIC_API_URL, {
+      method: "POST",
+      headers: rebuiltHeaders,
+      body: JSON.stringify({ input: payload }),
+    });
   });
 
 
@@ -2596,10 +2653,13 @@ export async function getAllUsersApi(payload: { action: string }, authToken: str
   }
 
 
-  const res = await fetch(GET_ALL_USERS_API_URL, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ input: payload }),
+  const res = await fetchWith401Retry(async () => {
+    const rebuiltHeaders: Record<string, string> = { ...headers };
+    return fetch(GET_ALL_USERS_API_URL, {
+      method: "POST",
+      headers: rebuiltHeaders,
+      body: JSON.stringify({ input: payload }),
+    });
   });
 
 
