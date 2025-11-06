@@ -425,7 +425,11 @@ export function extractServiceUrl(service: string) {
   const hostname = window.location.hostname;
   
   // Handle community subdomains specifically
-  if (hostname === "community.qa.fastn.ai" || hostname.includes("community.qa.fastn.ai")) {
+  if (
+    hostname === "community.qa.fastn.ai" ||
+    hostname.includes("community.qa.fastn.ai") ||
+    hostname.includes("communit.qa.fastn.ai") // handle typo subdomain
+  ) {
     if (service === "api") {
       return "https://qa.fastn.ai/api";
     } else if (service === "auth") {
@@ -476,8 +480,12 @@ export const getKeyCloakUri = () => {
   const hostname = window.location.hostname;
   
   // Handle community subdomains specifically
-  if (hostname === "community.qa.fastn.ai" || hostname.includes("community.qa.fastn.ai")) {
-    return "https://live.fastn.ai/auth";
+  if (
+    hostname === "community.qa.fastn.ai" ||
+    hostname.includes("community.qa.fastn.ai") ||
+    hostname.includes("communit.qa.fastn.ai") // handle typo subdomain
+  ) {
+    return "https://qa.fastn.ai/auth";
   } else if (hostname === "community.live.fastn.ai" || hostname.includes("community.live.fastn.ai")) {
     return "https://live.fastn.ai/auth";
   }
@@ -489,13 +497,13 @@ export const getKeyCloakUri = () => {
       return envKeycloakUrl;
     }
     // Fallback if environment variable is not set
-    return "https://live.fastn.ai/auth";
+    return "https://qa.fastn.ai/auth";
   }
   
   // For other fastn.ai domains, determine auth URL based on subdomain
-  if (hostname.includes("qa.fastn.ai")) {
+  if (hostname.includes("community.qa.fastn.ai")) {
     return "https://qa.fastn.ai/auth";
-  } else if (hostname.includes("fastn.ai")) {
+  } else if (hostname.includes("community.live.fastn.ai")) {
     return "https://live.fastn.ai/auth";
   }
   
@@ -516,6 +524,7 @@ const fastn = [
   "https://api.qa.fastn.ai",
   "http://localhost:8443",
   "https://api.live.fastn.ai",
+  "community.qa.fastn.ai",
 ];
 
 export const getBackendEnpoint = () => {
