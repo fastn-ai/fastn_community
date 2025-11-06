@@ -161,13 +161,8 @@ export function LoginPage() {
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">
         <Spinner size="lg" center={false} />
-        <p className="mt-4 text-gray-600">
-          {sessionState ? "Processing authentication..." : "Redirecting to Keycloak authentication..."}
-        </p>
-        {!sessionState && (
-          <p className="mt-2 text-sm text-gray-500">
-            If you're not redirected automatically, please wait a moment...
-          </p>
+        {sessionState && (
+          <p className="mt-4 text-gray-600">Processing authentication...</p>
         )}
       </div>
     </div>
