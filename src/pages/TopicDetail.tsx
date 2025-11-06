@@ -37,10 +37,11 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useApi } from "@/services/api";
+import { useApi, insertUser, ApiService, removeLikeFromTopicApi, submitLikesApi } from "@/services/api";
 import { getUser } from "@/services/users/user-manager";
 import type { Topic, Reply as ReplyType } from "@/services/api";
 import { getTagColor } from "@/lib/utils";
+import { FASTN_API_KEY } from "@/constants";
 
 
 // Reply Item Component - Extracted outside to prevent re-creation on every render
@@ -426,7 +427,6 @@ const TopicDetail = () => {
     }
 
     try {
-      const { insertUser } = await import("@/services/api");
       const authToken = user.access_token;
       
       const userPayload = {
@@ -519,7 +519,6 @@ const TopicDetail = () => {
           }
           // Load replies for this topic
           try {
-            const { ApiService } = await import("@/services/api");
             // Convert topic ID to number if it's a string
             const topicId = id ? (isNaN(Number(id)) ? id : Number(id)) : "";
             const topicReplies = await ApiService.getRepliesByTopicId(topicId.toString());
@@ -807,9 +806,6 @@ const TopicDetail = () => {
           }
         };
 
-        const { removeLikeFromTopicApi } = await import("@/services/api");
-        const { FASTN_API_KEY } = await import("@/constants");
-        
         await removeLikeFromTopicApi(payload, user.access_token, FASTN_API_KEY);
         
         // Remove from localStorage
@@ -846,9 +842,6 @@ const TopicDetail = () => {
           }
         };
 
-        const { submitLikesApi } = await import("@/services/api");
-        const { FASTN_API_KEY } = await import("@/constants");
-        
         await submitLikesApi(payload, user.access_token, FASTN_API_KEY);
         
         // Save to localStorage

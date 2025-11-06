@@ -49,10 +49,11 @@ import {
   Folder,
 
 } from "lucide-react";
-import { ApiService, Topic, Category } from "@/services/api";
+import { ApiService, Topic, Category, removeLikeFromTopicApi, submitLikesApi } from "@/services/api";
 import { getTagColor } from "@/lib/utils";
 import CreateTopicModal from "@/components/ui/create-topic-modal";
 import { queryKeys } from "@/services/queryClient";
+import { FASTN_API_KEY } from "@/constants";
 
 interface TopicListProps {
   sidebarOpen: boolean;
@@ -258,8 +259,6 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
         };
 
         const authToken = auth.user.access_token || "";
-        const { removeLikeFromTopicApi } = await import("@/services/api");
-        const { FASTN_API_KEY } = await import("@/constants");
         
         await removeLikeFromTopicApi(payload, authToken, FASTN_API_KEY);
         
@@ -293,8 +292,6 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
         };
 
         const authToken = auth.user.access_token || "";
-        const { submitLikesApi } = await import("@/services/api");
-        const { FASTN_API_KEY } = await import("@/constants");
         
         await submitLikesApi(payload, authToken, FASTN_API_KEY);
         

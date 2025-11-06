@@ -4,6 +4,8 @@
 import { INSERT_USER_API_URL, FASTN_SPACE_ID, FASTN_API_KEY, CUSTOM_AUTH_KEY, CUSTOM_AUTH_TOKEN_KEY, TENANT_ID_KEY, CRUD_CATEGORIES_API_URL, CRUD_TAGS_API_URL, GET_TOPIC_BY_USER_API_URL, INSERT_TOPIC_TAGS_API_URL, INSERT_TOPICS_API_URL, GET_TOPICS_API_URL, CREATE_REPLY_API_URL, GET_REPLIES_API_URL, UPDATE_REPLY_API_URL, DELETE_REPLY_API_URL, UPDATE_TOPIC_STATUS_API_URL, DELETE_TOPIC_API_URL, GET_ALL_USERS_API_URL, SUBMIT_LIKES_API_URL, REMOVE_LIKE_FROM_TOPIC_API_URL } from "@/constants";
 import { getCookie } from "@/routes/login/oauth";
 import { generateConsistentColor, PREDEFINED_COLORS } from "@/lib/utils";
+import { getUser, handleAuthErrorWithCheck } from "@/services/users/user-manager";
+import { queryClient } from "@/services/queryClient";
 
 // Mock data interfaces
 export interface Topic {
@@ -160,7 +162,6 @@ async function fetchWith401Retry(doRequest: () => Promise<Response>): Promise<Re
   let response = await doRequest();
   if (response && response.status === 401) {
     try {
-      const { handleAuthErrorWithCheck } = await import("@/services/users/user-manager");
       await handleAuthErrorWithCheck();
       // retry once after silent sign-in
       response = await doRequest();
@@ -369,7 +370,6 @@ export class ApiService {
   static async getAllCategories(): Promise<Category[]> {
     try {
       // Try to get auth token from user manager
-      const { getUser } = await import("@/services/users/user-manager");
       const user = getUser();
       const authToken = user?.access_token || "";
       
@@ -426,7 +426,6 @@ export class ApiService {
     is_active?: boolean;
   }): Promise<Category> {
     try {
-      const { getUser } = await import("@/services/users/user-manager");
       const user = getUser();
       const authToken = user?.access_token || "";
       
@@ -476,7 +475,6 @@ export class ApiService {
     is_active?: boolean;
   }): Promise<Category> {
     try {
-      const { getUser } = await import("@/services/users/user-manager");
       const user = getUser();
       const authToken = user?.access_token || "";
       
@@ -519,7 +517,6 @@ export class ApiService {
   // Delete a category
   static async deleteCategory(categoryId: string): Promise<boolean> {
     try {
-      const { getUser } = await import("@/services/users/user-manager");
       const user = getUser();
       const authToken = user?.access_token || "";
       
@@ -545,7 +542,6 @@ export class ApiService {
   static async getAllTopics(forceRefresh: boolean = false): Promise<Topic[]> {
     try {
       // Try to get auth token from user manager
-      const { getUser } = await import("@/services/users/user-manager");
       const user = getUser();
       const authToken = user?.access_token || "";
       
@@ -590,7 +586,6 @@ export class ApiService {
     const { forceRefresh = false, includePending = true, categoryId, userId } = options;
     
     try {
-      const { getUser } = await import("@/services/users/user-manager");
       const user = getUser();
       const authToken = user?.access_token || "";
       
@@ -780,7 +775,6 @@ export class ApiService {
   static async getAllTopicById(topicId: string): Promise<Topic> {
     try {
       // Try to get auth token from user manager
-      const { getUser } = await import("@/services/users/user-manager");
       const user = getUser();
       const authToken = user?.access_token || "";
       
@@ -852,7 +846,6 @@ export class ApiService {
   static async getAllUsers(): Promise<User[]> {
     try {
       // Try to get auth token from user manager
-      const { getUser } = await import("@/services/users/user-manager");
       const user = getUser();
       const authToken = user?.access_token || "";
       
@@ -944,7 +937,6 @@ export class ApiService {
   static async getAllReplies(): Promise<Reply[]> {
     try {
       // Try to get auth token from user manager
-      const { getUser } = await import("@/services/users/user-manager");
       const user = getUser();
       const authToken = user?.access_token || "";
       
@@ -1037,7 +1029,6 @@ export class ApiService {
   static async getRepliesByTopicId(topicId: string): Promise<Reply[]> {
     try {
       // Try to get auth token from user manager
-      const { getUser } = await import("@/services/users/user-manager");
       const user = getUser();
       const authToken = user?.access_token || "";
       
@@ -1185,7 +1176,6 @@ export class ApiService {
   static async getAllTags(): Promise<Tag[]> {
     try {
       // Try to get auth token from user manager
-      const { getUser } = await import("@/services/users/user-manager");
       const user = getUser();
       const authToken = user?.access_token || "";
       
@@ -1241,7 +1231,6 @@ export class ApiService {
   static async createTopic(topicData: Partial<Topic>): Promise<Topic> {
     try {
       // Try to get auth token from user manager
-      const { getUser } = await import("@/services/users/user-manager");
       const user = getUser();
       const authToken = user?.access_token || "";
       
@@ -1358,7 +1347,6 @@ export class ApiService {
   // Get topics by user
   static async getTopicByUser(userId: string): Promise<Topic[]> {
     try {
-      const { getUser } = await import("@/services/users/user-manager");
       const user = getUser();
       const authToken = user?.access_token || "";
       
@@ -1420,7 +1408,6 @@ export class ApiService {
   // Insert topic tags
   static async insertTopicTags(topicId: number, tagIds: number[]): Promise<void> {
     try {
-      const { getUser } = await import("@/services/users/user-manager");
       const user = getUser();
       const authToken = user?.access_token || "";
       
@@ -1473,7 +1460,6 @@ export class ApiService {
   static async createReply(replyData: Partial<Reply>): Promise<Reply> {
     try {
       // Try to get auth token from user manager
-      const { getUser } = await import("@/services/users/user-manager");
       const user = getUser();
       const authToken = user?.access_token || "";
       
@@ -1573,7 +1559,6 @@ export class ApiService {
   static async editReply(replyData: { id: string; content: string }): Promise<Reply> {
     try {
       // Try to get auth token from user manager
-      const { getUser } = await import("@/services/users/user-manager");
       const user = getUser();
       const authToken = user?.access_token || "";
       
@@ -1678,7 +1663,6 @@ export class ApiService {
   static async deleteReply(replyId: string): Promise<boolean> {
     try {
       // Try to get auth token from user manager
-      const { getUser } = await import("@/services/users/user-manager");
       const user = getUser();
       const authToken = user?.access_token || "";
       
@@ -1742,7 +1726,6 @@ export class ApiService {
   // Update topic status with proper cache invalidation
   static async updateTopicStatus(topicId: string | number, status: 'pending' | 'approved' | 'rejected'): Promise<Topic> {
     try {
-      const { getUser } = await import("@/services/users/user-manager");
       const user = getUser();
       const authToken = user?.access_token || "";
       
@@ -1859,7 +1842,6 @@ export class ApiService {
   // Update topic using insertTopics API (since we don't have a dedicated update endpoint)
   static async updateTopic(topicId: string, topicData: Partial<Topic>): Promise<Topic> {
     try {
-      const { getUser } = await import("@/services/users/user-manager");
       const user = getUser();
       const authToken = user?.access_token || "";
       
@@ -1907,7 +1889,6 @@ export class ApiService {
   // Delete topic using the DeleteTopic API endpoint
   static async deleteTopic(topicId: string): Promise<boolean> {
     try {
-      const { getUser } = await import("@/services/users/user-manager");
       const user = getUser();
       const authToken = user?.access_token || "";
       
@@ -1949,8 +1930,6 @@ export class ApiService {
   }> {
     try {
       // Use the admin topics query to get all topics including pending
-      const { queryClient } = await import('@/services/queryClient');
-      
       // Try to get cached admin topics first
       const cachedTopics = queryClient.getQueryData(['topics', 'admin']);
       
