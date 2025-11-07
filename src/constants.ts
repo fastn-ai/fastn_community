@@ -17,9 +17,9 @@ export const DEV_MODE_AUTH = import.meta.env.VITE_DEV_MODE_AUTH === 'true' || fa
 export const DEFAULT_PAGE_SIZE = 20;
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-// Shared API configuration for all endpoints
-export const FASTN_API_KEY = import.meta.env.VITE_FASTN_API_KEY || "238fb6b9-4e58-45b9-b49c-67ef5840ad21";
-export const FASTN_SPACE_ID = import.meta.env.VITE_FASTN_SPACE_ID || "ee68d96c-075b-44a3-9847-44b74889f635";
+// Shared API configuration for all endpoints 
+export const FASTN_API_KEY = import.meta.env.VITE_FASTN_API_KEY || "4f9ed28a-e9de-4096-a715-d09118ff4f63";
+export const FASTN_SPACE_ID = import.meta.env.VITE_FASTN_SPACE_ID || "dce5d31a-5b34-437f-abcf-af40cb7fd6a9";
 export const API_URL = import.meta.env.VITE_API_URL|| "https://qa.fastn.ai/api/v1/"
 // API URLs
 export const INSERT_USER_API_URL = import.meta.env.VITE_INSERT_USER_API_URL || API_URL +"crudUser";
