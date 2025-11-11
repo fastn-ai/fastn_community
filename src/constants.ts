@@ -1,3 +1,4 @@
+
 // Authentication constants
 export const KEYCLOAK_CLIENT_ID = "fastn-app";
 export const USER_SIGN_IN_FLAG_NAME = "user_sign_in_flag";
@@ -20,7 +21,36 @@ export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 // Shared API configuration for all endpoints 
 export const FASTN_API_KEY = import.meta.env.VITE_FASTN_API_KEY || "4f9ed28a-e9de-4096-a715-d09118ff4f63";
 export const FASTN_SPACE_ID = import.meta.env.VITE_FASTN_SPACE_ID || "dce5d31a-5b34-437f-abcf-af40cb7fd6a9";
-export const API_URL = import.meta.env.VITE_API_URL|| "https://qa.fastn.ai/api/v1/"
+export const getEnvironmentFromHostname = () => {
+    const hostname = window.location.hostname;
+    
+    // Handle community subdomains specifically
+    if (hostname === "community.qa.fastn.ai" || hostname.includes("community.qa.fastn.ai")) {
+      return "QA";
+    } else if (hostname === "community.live.fastn.ai" || hostname.includes("community.live.fastn.ai")) {
+      return "Live";
+    } else if (hostname.includes("qa.fastn.ai")) {
+      return "QA";
+    } else if (hostname.includes("live.fastn.ai") || hostname.includes("fastn.ai")) {
+      return "Live";
+    }
+    
+    switch (hostname) {
+      case "localhost":
+        return "QA";
+      case "app.dev.fastn.ai":
+      case "Dev":
+        return "Live";
+      case "app.hp-poc.fastn.ai":
+        return "HP";
+      default:
+        return "unknown";
+    }
+  };
+  
+export const env = getEnvironmentFromHostname();
+
+export const API_URL = import.meta.env.VITE_API_URL || `https://${env}.fastn.ai/api/v1/`;
 // API URLs
 export const INSERT_USER_API_URL = import.meta.env.VITE_INSERT_USER_API_URL || API_URL +"crudUser";
 export const CRUD_CATEGORIES_API_URL = import.meta.env.VITE_CRUD_CATEGORIES_API_URL || API_URL +"crudCategories";
