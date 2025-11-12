@@ -301,10 +301,11 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                   <MessageSquare className="w-4 h-4 mr-2.5" />
                   <span>My Topics</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer rounded-md px-2 py-1.5 hover:bg-accent transition-colors">
+                {/* Settings temporarily hidden */}
+                {/* <DropdownMenuItem className="cursor-pointer rounded-md px-2 py-1.5 hover:bg-accent transition-colors">
                   <Settings className="w-4 h-4 mr-2.5" />
                   <span>Settings</span>
-                </DropdownMenuItem>
+                </DropdownMenuItem> */}
                 <DropdownMenuSeparator className="my-1.5" />
                 <DropdownMenuItem 
                   onClick={logout}

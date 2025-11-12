@@ -880,6 +880,9 @@ export class ApiService {
               reputation_score: user.reputation_score || 0,
               created_at: user.created_at || user.createdAt || new Date().toISOString(),
               updated_at: user.updated_at || user.updatedAt || new Date().toISOString(),
+              // Include name and preferred_username for display name logic (same as Header component)
+              name: user.name,
+              preferred_username: user.preferred_username,
             }));
           }
         } catch (error) {
@@ -917,6 +920,9 @@ export class ApiService {
           reputation_score: user.reputation_score || 0,
           created_at: user.created_at || user.createdAt || new Date().toISOString(),
           updated_at: user.updated_at || user.updatedAt || new Date().toISOString(),
+          // Include name and preferred_username for display name logic (same as Header component)
+          name: user.name,
+          preferred_username: user.preferred_username,
         }));
       }
       

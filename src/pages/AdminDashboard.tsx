@@ -79,6 +79,15 @@ import {
   OnboardingProgress 
 } from '@/services/onboarding';
 
+// Helper function to get display name from user (same logic as Header component lines 42-47)
+const getUserDisplayName = (user: User): string => {
+  // Use the exact same logic as Header component: name || preferred_username || email?.split('@')[0] || 'user'
+  const name = (user as any).name;
+  const preferredUsername = (user as any).preferred_username;
+  
+  return name || preferredUsername || user.email?.split('@')[0] || 'user';
+};
+
 const AdminDashboard = () => {
   const queryClient = useQueryClient();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -788,7 +797,7 @@ const AdminDashboard = () => {
                       <Table>
                         <TableHeader>
                           <TableRow className="hover:bg-transparent">
-                            <TableHead className="font-semibold">Username</TableHead>
+                            <TableHead className="font-semibold">Name</TableHead>
                             <TableHead className="font-semibold">Email</TableHead>
                             <TableHead className="font-semibold">Status</TableHead>
                             <TableHead className="font-semibold">Reputation</TableHead>
@@ -800,7 +809,7 @@ const AdminDashboard = () => {
                         <TableBody>
                           {users?.map((user) => (
                             <TableRow key={user.id} className="hover:bg-muted/50 transition-colors">
-                              <TableCell className="font-semibold text-foreground">{user.username}</TableCell>
+                              <TableCell className="font-semibold text-foreground">{getUserDisplayName(user)}</TableCell>
                               <TableCell className="text-muted-foreground">{user.email}</TableCell>
                               <TableCell>
                                 <Badge 
@@ -1060,7 +1069,7 @@ const OnboardingTrackingTab: React.FC<{ users: User[] }> = ({ users }) => {
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <p className="font-medium">{user.username || user.email}</p>
+                            <p className="font-medium">{getUserDisplayName(user)}</p>
                             <Badge variant={status.variant} className="text-xs">
                               {status.label}
                             </Badge>
@@ -1092,7 +1101,7 @@ const OnboardingTrackingTab: React.FC<{ users: User[] }> = ({ users }) => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5" />
-              {selectedUser ? `${selectedUser.username || selectedUser.email}'s Tasks` : 'Select a User'}
+              {selectedUser ? `${getUserDisplayName(selectedUser)}'s Tasks` : 'Select a User'}
             </CardTitle>
           </CardHeader>
           <CardContent>
