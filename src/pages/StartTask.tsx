@@ -81,7 +81,7 @@ const StartTask = () => {
   });
 
   // Fetch journey to get task status
-  const { data: journeyData } = useQuery({
+  const { data: journeyData, isLoading: isLoadingProgress } = useQuery({
     queryKey: ['onboarding', userId],
     queryFn: () => getJourneyWithTasks(userId, 1),
     enabled: !!userId,
@@ -121,15 +121,21 @@ const StartTask = () => {
   }, [progress]);
 
   // Mark as in progress if not already
+  // Wait for progress query to finish loading before checking, to prevent overwriting completed status
   useEffect(() => {
-    if (task && !progress && taskId) {
+    // Only proceed if:
+    // 1. Progress query has finished loading (not loading)
+    // 2. Task data is available
+    // 3. No existing progress found (meaning task hasn't been started)
+    // 4. TaskId is available
+    if (!isLoadingProgress && task && !progress && taskId) {
       updateProgressMutation.mutate({
         taskId: task.id,
         status: 'in_progress',
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [task?.id, progress, taskId]);
+  }, [task?.id, progress, taskId, isLoadingProgress]);
 
   const handleComplete = (completed: boolean) => {
     if (!task) return;
