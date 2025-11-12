@@ -671,6 +671,23 @@ const StartTask = () => {
                                   </div>
                                 </div>
                               )}
+
+                              {/* Final Task Section */}
+                              {task.final_task_requirement && (
+                                <div className="mt-6 pt-6 border-t border-border">
+                                  <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+                                    <div className="flex items-start gap-3">
+                                      <Target className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                                      <div className="flex-1">
+                                        <h4 className="font-semibold text-base mb-2 text-foreground">Final Task</h4>
+                                        <p className="text-sm text-muted-foreground leading-relaxed">
+                                          {task.final_task_requirement}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
                             </CardContent>
                           </Card>
                         )}
