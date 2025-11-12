@@ -187,6 +187,39 @@ const Onboarding = () => {
     );
   }
 
+  // Check if user is not logged in
+  if (!currentUser || !userId) {
+    return (
+      <div className="min-h-screen">
+        <Header onMenuClick={() => setSidebarOpen(true)} />
+        <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Login Required
+              </CardTitle>
+              <CardDescription>
+                Please log in to access your onboarding journey.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                You need to be logged in to view and complete onboarding tasks.
+              </p>
+              <Button 
+                onClick={() => navigate('/login?return_to=/onboarding')} 
+                className="w-full"
+              >
+                Go to Login
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   if (error || !selectedJourney) {
     return (
       <div className="min-h-screen">
@@ -199,8 +232,10 @@ const Onboarding = () => {
                 We couldn't load your onboarding journey. Please try again later.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <Button onClick={() => window.location.reload()}>Retry</Button>
+            <CardContent className="space-y-4">
+              <Button onClick={() => window.location.reload()} className="w-full">
+                Retry
+              </Button>
             </CardContent>
           </Card>
         </div>
