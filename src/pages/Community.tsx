@@ -401,10 +401,17 @@ const Community = () => {
               {/* Stats Overview */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {communityStats.map((stat, index) => (
-                  <Card key={index}>
+                  <Card 
+                    key={index}
+                    style={{
+                      animationDelay: `${index * 0.1}s`,
+                      opacity: 0,
+                    }}
+                    className="animate-fade-in-up hover:shadow-lg transition-all duration-300 hover:scale-105"
+                  >
                     <CardContent className="p-4">
                       <div className="flex items-center space-x-2">
-                        <stat.icon className={`w-5 h-5 ${stat.color}`} />
+                        <stat.icon className={`w-5 h-5 ${stat.color} transition-transform duration-300 hover:scale-110`} />
                         <div>
                           <p className="text-2xl font-bold">
                             {stat.value}
@@ -420,13 +427,20 @@ const Community = () => {
 
               {/* Social Platforms */}
               <div>
-                <h2 className="text-2xl font-bold text-foreground mb-6">Connect With Us</h2>
+                <h2 className="text-2xl font-bold text-foreground mb-6 animate-fade-in">Connect With Us</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   {socialPlatforms.map((platform, index) => (
-                    <Card key={index} className="hover:shadow-lg transition-shadow cursor-pointer">
+                    <Card 
+                      key={index} 
+                      style={{
+                        animationDelay: `${index * 0.15}s`,
+                        opacity: 0,
+                      }}
+                      className="animate-scale-in hover:shadow-lg transition-all duration-300 cursor-pointer hover:scale-105"
+                    >
                       <CardContent className="p-6">
                         <div className="text-center space-y-4">
-                          <div className={`w-16 h-16 ${platform.name === "Twitter/X" ? "bg-indigo-50 text-indigo-600" : `${platform.color} text-white`} rounded-full flex items-center justify-center mx-auto text-2xl`}>
+                          <div className={`w-16 h-16 ${platform.name === "Twitter/X" ? "bg-indigo-50 text-indigo-600" : `${platform.color} text-white`} rounded-full flex items-center justify-center mx-auto text-2xl transition-transform duration-300 hover:scale-110 hover:rotate-6`}>
                             {platform.icon}
                           </div>
                           <div>
@@ -438,9 +452,10 @@ const Community = () => {
                                 variant="outline" 
                                 size="sm"
                                 onClick={() => window.open(platform.url, "_blank")}
+                                className="transition-all duration-300 hover:scale-105"
                               >
                                 Join
-                                <ExternalLink className="w-3 h-3 ml-1" />
+                                <ExternalLink className="w-3 h-3 ml-1 transition-transform duration-300 group-hover:translate-x-1" />
                               </Button>
                             </div>
                           </div>
@@ -455,20 +470,27 @@ const Community = () => {
                 
                 {/* Recent Activity */}
                 <div>
-                  <h2 className="text-2xl font-bold text-foreground mb-6">Recent Activity</h2>
-                  <Card>
+                  <h2 className="text-2xl font-bold text-foreground mb-6 animate-fade-in">Recent Activity</h2>
+                  <Card className="animate-slide-in-left">
                     <CardContent className="p-6">
                       <div className="space-y-4">
-                        {recentActivities.map((activity) => {
+                        {recentActivities.map((activity, index) => {
                           const ActivityIcon = getActivityIcon(activity.type);
                           return (
-                            <div key={activity.id} className="flex items-start space-x-3">
-                              <Avatar className="w-8 h-8">
+                            <div 
+                              key={activity.id} 
+                              style={{
+                                animationDelay: `${index * 0.1}s`,
+                                opacity: 0,
+                              }}
+                              className="flex items-start space-x-3 animate-fade-in-up hover:bg-accent/50 p-2 rounded-lg transition-colors duration-200"
+                            >
+                              <Avatar className="w-8 h-8 transition-transform duration-300 hover:scale-110">
                                 <AvatarFallback className="text-xs bg-indigo-50 text-indigo-600">{getInitials(activity.avatar)}</AvatarFallback>
                               </Avatar>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center space-x-2 mb-1">
-                                  <ActivityIcon className="w-4 h-4 text-muted-foreground" />
+                                  <ActivityIcon className="w-4 h-4 text-muted-foreground transition-transform duration-300 hover:scale-110" />
                                   <span className="text-sm font-medium text-foreground">{activity.title}</span>
                                   {getCategoryBadge(activity.category)}
                                 </div>
@@ -485,15 +507,22 @@ const Community = () => {
 
                 {/* Top Contributors */}
                 <div>
-                  <h2 className="text-2xl font-bold text-foreground mb-6">Top Contributors</h2>
-                  <Card>
+                  <h2 className="text-2xl font-bold text-foreground mb-6 animate-fade-in">Top Contributors</h2>
+                  <Card className="animate-slide-in-right">
                     <CardContent className="p-6">
                       <div className="space-y-4">
                         {topContributors && topContributors.length > 0 ? (
                           topContributors.map((contributor, index) => (
-                            <div key={contributor.id} className="flex items-center space-x-3">
+                            <div 
+                              key={contributor.id} 
+                              style={{
+                                animationDelay: `${index * 0.1}s`,
+                                opacity: 0,
+                              }}
+                              className="flex items-center space-x-3 animate-fade-in-up hover:bg-accent/50 p-2 rounded-lg transition-all duration-200 hover:scale-[1.02]"
+                            >
                               <div className="flex items-center space-x-2">
-                                <Avatar className="w-8 h-8">
+                                <Avatar className="w-8 h-8 transition-transform duration-300 hover:scale-110">
                                   <AvatarImage src={contributor.avatar} alt={contributor.username} />
                                   <AvatarFallback className="text-xs bg-indigo-50 text-indigo-600">{getInitials(contributor.username)}</AvatarFallback>
                                 </Avatar>
@@ -501,7 +530,7 @@ const Community = () => {
                                   <div className="flex items-center space-x-2">
                                     <span className="text-sm font-medium text-foreground">{contributor.username}</span>
                                     {index < 3 && (
-                                      <Badge className="bg-yellow-100 text-yellow-800 text-xs">
+                                      <Badge className="bg-yellow-100 text-yellow-800 text-xs transition-transform duration-300 hover:scale-110">
                                         #{index + 1}
                                       </Badge>
                                     )}
@@ -528,14 +557,21 @@ const Community = () => {
 
               {/* Upcoming Events */}
               <div>
-                <h2 className="text-2xl font-bold text-foreground mb-6">Upcoming Events</h2>
+                <h2 className="text-2xl font-bold text-foreground mb-6 animate-fade-in">Upcoming Events</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {upcomingEvents.map((event) => (
-                    <Card key={event.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+                  {upcomingEvents.map((event, index) => (
+                    <Card 
+                      key={event.id} 
+                      style={{
+                        animationDelay: `${index * 0.15}s`,
+                        opacity: 0,
+                      }}
+                      className="animate-scale-in hover:shadow-lg transition-all duration-300 cursor-pointer hover:scale-105"
+                    >
                       <CardContent className="p-6">
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
-                            <Badge variant="outline">{event.type}</Badge>
+                            <Badge variant="outline" className="transition-transform duration-300 hover:scale-110">{event.type}</Badge>
                             <span className="text-xs text-muted-foreground">{event.attendees} attending</span>
                           </div>
                           <h3 className="font-semibold text-foreground">{event.title}</h3>
@@ -550,17 +586,30 @@ const Community = () => {
               </div>
 
               {/* Call to Action */}
-              <Card className="bg-muted/50">
+              <Card 
+                style={{
+                  animationDelay: '0.3s',
+                  opacity: 0,
+                }}
+                className="bg-muted/50 animate-fade-in-up"
+              >
                 <CardContent className="p-8 text-center">
                   <h2 className="text-2xl font-bold mb-2">Join the Fastn Community</h2>
                   <p className="text-muted-foreground mb-6">
                     Connect with developers, share your knowledge, and help build the future of AI-powered applications.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                    <Button onClick={() => navigate("/create")}>
+                    <Button 
+                      onClick={() => navigate("/create")}
+                      className="transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                    >
                       Start a Discussion
                     </Button>
-                    <Button variant="outline" onClick={() => navigate("/answer-earn")}>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => navigate("/answer-earn")}
+                      className="transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                    >
                       Answer & Earn
                     </Button>
                   </div>

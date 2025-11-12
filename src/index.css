@@ -203,6 +203,8 @@
   /* Smooth scrolling */
   html {
     scroll-behavior: smooth;
+    /* Prevent layout shift when scrollbars appear/disappear (e.g., dropdowns) */
+    scrollbar-gutter: stable;
   }
 
   /* Improved text rendering */
@@ -227,6 +229,124 @@
     transform: translateY(-2px);
     box-shadow: var(--shadow-modern);
   }
+
+  /* Card entrance animations */
+  @keyframes cardSlideIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes cardPulse {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.02);
+    }
+  }
+
+  .animate-card-in {
+    animation: cardSlideIn 0.5s ease-out forwards;
+  }
+
+  .card-hover-animate {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+.card-hover-animate:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Community Page Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Optimized animations - using GPU-accelerated properties only */
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+  /* GPU acceleration hint - browser will optimize */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.5s ease-out forwards;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.6s ease-out forwards;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.6s ease-out forwards;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
 
   /* Loading animation */
   .loading-pulse {
@@ -255,6 +375,119 @@
     to {
       opacity: 1;
       transform: translateY(0);
+    }
+  }
+
+  /* Celebration animations */
+  @keyframes bounce {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-20px);
+    }
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.7;
+      transform: scale(1.1);
+    }
+  }
+
+  .animate-bounce {
+    animation: bounce 1s ease-in-out infinite;
+  }
+
+  .animate-pulse {
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  .delay-75 {
+    animation-delay: 0.75s;
+  }
+
+  .delay-150 {
+    animation-delay: 1.5s;
+  }
+
+  .delay-200 {
+    animation-delay: 2s;
+  }
+
+  /* Scale in animation - starts big and gets smaller */
+  @keyframes scaleIn {
+    0% {
+      transform: scale(2);
+      opacity: 0;
+    }
+    50% {
+      transform: scale(1.2);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  @keyframes scaleBounce {
+    0% {
+      transform: scale(2.5);
+    }
+    40% {
+      transform: scale(0.9);
+    }
+    60% {
+      transform: scale(1.1);
+    }
+    80% {
+      transform: scale(0.95);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  .animate-scale-bounce {
+    animation: scaleBounce 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  .animate-scale-in-delay {
+    animation: scaleIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s forwards;
+    opacity: 0;
+  }
+
+  .animate-scale-in-delay-2 {
+    animation: scaleIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s forwards;
+    opacity: 0;
+  }
+
+  .animate-scale-in-delay-3 {
+    animation: scaleIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.6s forwards;
+    opacity: 0;
+  }
+
+  /* Confetti animation */
+  @keyframes confettiFall {
+    0% {
+      transform: translateY(-10px) translateX(0) rotate(0deg) scale(1);
+      opacity: 1;
+    }
+    50% {
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(110vh) translateX(calc((var(--random-x, 0)) * 150px)) rotate(720deg) scale(0.3);
+      opacity: 0;
     }
   }
 

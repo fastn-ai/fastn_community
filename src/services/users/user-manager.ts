@@ -39,18 +39,12 @@ export function getUser() {
 }
 
 export async function refreshToken() {
-  if (isSignInSilentInProgress) {
-    await waitForSilentSignInToComplete();
-    return;
-  }
-  isSignInSilentInProgress = true;
   try {
     await userManager.signinSilent();
+    return;
   } catch (error) {
-    notify.error("Your session has expired. Please log in again.");
-    await userManager.signinRedirect();
-  } finally {
-    isSignInSilentInProgress = false;
+    userManager.signoutRedirect();
+    sessionStorage.clear();
   }
 }
 

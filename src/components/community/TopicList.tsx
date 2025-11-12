@@ -658,7 +658,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
     <div className="flex-1 ml-0 transition-all duration-300">
       <div className="mx-auto w-full max-w-screen-2xl px-6 lg:px-10 py-4 sm:py-8">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 sm:mb-8">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 sm:mb-8 animate-fade-in">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">Topics</h1>
             <p className="text-sm sm:text-base text-muted-foreground">
@@ -669,10 +669,10 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
             <Button
               variant="outline"
               size="sm"
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 transition-all duration-300 hover:scale-105 hover:shadow-md"
               onClick={() => navigate("/categories")}
             >
-              <FolderOpen className="h-4 w-4 text-blue-600" />
+              <FolderOpen className="h-4 w-4 text-blue-600 transition-transform duration-300 hover:scale-110" />
               <span className="hidden sm:inline">Categories</span>
               <span className="sm:hidden">Cat</span>
             </Button>
@@ -738,10 +738,14 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
             variant={selectedFilter === "all" ? "default" : "outline"}
             size="sm"
             onClick={() => setSelectedFilter("all")}
-            className="flex items-center gap-2 flex-shrink-0"
+            style={{
+              animationDelay: '0.1s',
+              opacity: 0,
+            }}
+            className="flex items-center gap-2 flex-shrink-0 animate-fade-in-up transition-all duration-300 hover:scale-105"
           >
             <MessageSquare
-              className={`h-4 w-4 ${
+              className={`h-4 w-4 transition-transform duration-300 hover:scale-110 ${
                 selectedFilter === "all"
                   ? "text-white"
                   : getFilterIconColor("all")
@@ -755,10 +759,14 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
             variant={selectedFilter === "top" ? "default" : "outline"}
             size="sm"
             onClick={() => setSelectedFilter("top")}
-            className="flex items-center gap-2 flex-shrink-0"
+            style={{
+              animationDelay: '0.15s',
+              opacity: 0,
+            }}
+            className="flex items-center gap-2 flex-shrink-0 animate-fade-in-up transition-all duration-300 hover:scale-105"
           >
             <Trophy
-              className={`h-4 w-4 ${
+              className={`h-4 w-4 transition-transform duration-300 hover:scale-110 ${
                 selectedFilter === "top"
                   ? "text-white"
                   : getFilterIconColor("top")
@@ -768,16 +776,20 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
           </Button>
           
           {/* Dynamic Category Buttons */}
-          {categories.map((category) => (
+          {categories.map((category, index) => (
             <Button
               key={category.id}
               variant={selectedFilter === category.name ? "default" : "outline"}
               size="sm"
               onClick={() => setSelectedFilter(category.name)}
-              className="flex items-center gap-2 flex-shrink-0"
+              style={{
+                animationDelay: `${0.2 + index * 0.05}s`,
+                opacity: 0,
+              }}
+              className="flex items-center gap-2 flex-shrink-0 animate-fade-in-up transition-all duration-300 hover:scale-105"
             >
               {React.cloneElement(getCategoryIcon(category.name), {
-                className: `h-4 w-4 ${
+                className: `h-4 w-4 transition-transform duration-300 hover:scale-110 ${
                   selectedFilter === category.name
                     ? "text-white"
                     : getCategoryIconColor(category.name)
@@ -802,7 +814,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
         </div>
 
         {/* Topics Table */}
-        <Card className="mb-6">
+        <Card className="mb-6 animate-fade-in-up" style={{ animationDelay: '0.3s', opacity: 0 }}>
           <CardContent className="p-0">
             <Table>
               <TableHeader>
@@ -825,17 +837,21 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  paginatedTopics.map((topic) => (
+                  paginatedTopics.map((topic, index) => (
                     <TableRow
                       key={topic.id}
-                      className="cursor-pointer hover:bg-muted/50"
+                      style={{
+                        animationDelay: `${0.4 + index * 0.05}s`,
+                        opacity: 0,
+                      }}
+                      className="cursor-pointer hover:bg-muted/50 animate-fade-in-up transition-all duration-200 hover:shadow-sm"
                       onClick={() => navigate(`/topic/${topic.id.toString()}`)}
                     >
                       {/* Topic Column */}
                       <TableCell>
                         <div className="flex items-start gap-3">
                           {/* Avatar */}
-                          <Avatar className="w-10 h-10 flex-shrink-0">
+                          <Avatar className="w-10 h-10 flex-shrink-0 transition-transform duration-300 hover:scale-110">
                             <AvatarFallback className="bg-indigo-50 text-indigo-600 text-sm">
                               {getInitials(topic.author_username)}
                             </AvatarFallback>
@@ -914,7 +930,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                       {/* Replies Column */}
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1 text-sm text-gray-600">
-                          <MessageSquare className="h-4 w-4" />
+                          <MessageSquare className="h-4 w-4 transition-transform duration-300 hover:scale-110" />
                           <span>{topic.reply_count || 0}</span>
                         </div>
                       </TableCell>
@@ -933,7 +949,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                                 e.stopPropagation();
                                 handleLike(topic.id.toString(), e);
                               }}
-                              className={`flex items-center gap-1 text-sm transition-colors ml-auto ${
+                              className={`flex items-center gap-1 text-sm transition-all duration-300 ml-auto hover:scale-110 ${
                                 isLiked 
                                   ? "text-primary" 
                                   : "text-gray-600 hover:text-primary"
@@ -942,9 +958,9 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                               title={!isAuthenticated ? "Please sign in to like" : isLiked ? "Click to unlike" : "Click to like"}
                             >
                               <Heart
-                                className={`h-4 w-4 transition-all ${
+                                className={`h-4 w-4 transition-all duration-300 ${
                                   isLiked 
-                                    ? "text-primary fill-primary" 
+                                    ? "text-primary fill-primary scale-110" 
                                     : "text-gray-600"
                                 }`}
                               />
@@ -957,7 +973,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                       {/* Activity Column */}
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1 text-sm text-gray-600">
-                          <Clock className="h-4 w-4" />
+                          <Clock className="h-4 w-4 transition-transform duration-300 hover:scale-110" />
                           <span>
                             {topic.created_at
                               ? formatDate(topic.created_at)
@@ -975,7 +991,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="mt-8">
+          <div className="mt-8 animate-fade-in" style={{ animationDelay: '0.5s', opacity: 0 }}>
             <Pagination>
               <PaginationContent>
                 <PaginationItem>
@@ -983,11 +999,11 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                     onClick={() =>
                       setCurrentPage((prev) => Math.max(1, prev - 1))
                     }
-                    className={
+                    className={`transition-all duration-300 hover:scale-110 ${
                       currentPage === 1
                         ? "pointer-events-none opacity-50"
-                        : "cursor-pointer"
-                    }
+                        : "cursor-pointer hover:shadow-md"
+                    }`}
                   />
                 </PaginationItem>
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map(
@@ -996,7 +1012,7 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                       <PaginationLink
                         onClick={() => setCurrentPage(page)}
                         isActive={currentPage === page}
-                        className="cursor-pointer"
+                        className="cursor-pointer transition-all duration-300 hover:scale-110 hover:shadow-md"
                       >
                         {page}
                       </PaginationLink>
@@ -1008,11 +1024,11 @@ const TopicList: React.FC<TopicListProps> = ({ sidebarOpen }) => {
                     onClick={() =>
                       setCurrentPage((prev) => Math.min(totalPages, prev + 1))
                     }
-                    className={
+                    className={`transition-all duration-300 hover:scale-110 ${
                       currentPage === totalPages
                         ? "pointer-events-none opacity-50"
-                        : "cursor-pointer"
-                    }
+                        : "cursor-pointer hover:shadow-md"
+                    }`}
                   />
                 </PaginationItem>
               </PaginationContent>

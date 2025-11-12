@@ -62,8 +62,15 @@ export function LoginPage() {
         } catch (e) {
           console.warn("insertUser error", e);
         }
+        // Check if user should be redirected to onboarding
+        const onboardingCompleted = localStorage.getItem("onboarding_completed");
+        const isNewUser = !onboardingCompleted;
+        
         if (returnTo) {
           navigate(returnTo);
+        } else if (isNewUser) {
+          // Redirect new users to onboarding
+          navigate("/onboarding");
         } else {
           navigate(AppRoutes.getBaseRoute());
         }
@@ -123,8 +130,15 @@ export function LoginPage() {
           }
         }
       }
+      // Check if user should be redirected to onboarding
+      const onboardingCompleted = localStorage.getItem("onboarding_completed");
+      const isNewUser = !onboardingCompleted;
+      
       if (returnTo) {
         navigate(returnTo);
+      } else if (isNewUser) {
+        // Redirect new users to onboarding
+        navigate("/onboarding");
       } else {
         navigate(AppRoutes.getBaseRoute());
       }
