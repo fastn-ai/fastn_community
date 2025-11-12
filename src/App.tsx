@@ -24,6 +24,8 @@ import Leaderboard from "./pages/Leaderboard";
 import UnifiedForm from "./pages/UnifiedForm";
 import AdminDashboard from "./pages/AdminDashboard";
 import UserTopics from "./pages/UserTopics";
+import Onboarding from "./pages/Onboarding";
+import StartTask from "./pages/StartTask";
 
 import { LoginPage } from "./routes/login/login.page";
 import { ConnectorActivateRedirectHandler } from "./routes/login/oauth";
@@ -53,6 +55,8 @@ const App = () => (
                 <Route path="/create" element={<UnifiedForm />} />
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/my-topics" element={<UserTopics />} />
+                <Route path="/onboarding" element={<Onboarding />} />
+                <Route path="/onboarding/task/:taskId" element={<StartTask />} />
                 {/* Auth routes */}
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/oauth" element={<ConnectorActivateRedirectHandler />} />

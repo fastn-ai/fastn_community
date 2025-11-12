@@ -4,7 +4,7 @@
 import { INSERT_USER_API_URL, FASTN_SPACE_ID, FASTN_API_KEY, CUSTOM_AUTH_KEY, CUSTOM_AUTH_TOKEN_KEY, TENANT_ID_KEY, CRUD_CATEGORIES_API_URL, CRUD_TAGS_API_URL, GET_TOPIC_BY_USER_API_URL, INSERT_TOPIC_TAGS_API_URL, INSERT_TOPICS_API_URL, GET_TOPICS_API_URL, CREATE_REPLY_API_URL, GET_REPLIES_API_URL, UPDATE_REPLY_API_URL, DELETE_REPLY_API_URL, UPDATE_TOPIC_STATUS_API_URL, DELETE_TOPIC_API_URL, GET_ALL_USERS_API_URL, SUBMIT_LIKES_API_URL, REMOVE_LIKE_FROM_TOPIC_API_URL } from "@/constants";
 import { getCookie } from "@/routes/login/oauth";
 import { generateConsistentColor, PREDEFINED_COLORS } from "@/lib/utils";
-import { getUser, handleAuthErrorWithCheck } from "@/services/users/user-manager";
+import { getUser, refreshToken } from "@/services/users/user-manager";
 import { queryClient } from "@/services/queryClient";
 
 // Mock data interfaces
@@ -162,7 +162,7 @@ async function fetchWith401Retry(doRequest: () => Promise<Response>): Promise<Re
   let response = await doRequest();
   if (response && response.status === 401) {
     try {
-      await handleAuthErrorWithCheck();
+      await refreshToken();
       // retry once after silent sign-in
       response = await doRequest();
     } catch {

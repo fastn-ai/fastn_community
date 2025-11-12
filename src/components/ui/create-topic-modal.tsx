@@ -792,7 +792,7 @@ const CreateTopicModal = ({ isOpen, onClose, onSuccess, position = 'bottom' }: C
                   const error = validateField('content', formData.content)
                   setValidationErrors(prev => ({ ...prev, content: error }))
                 }}
-                className={`min-h-[300px] resize-none border-border focus:border-primary ${
+                className={`min-h-[150px] resize-y border-border focus:border-primary ${
                   validationErrors.content ? 'border-red-500 focus:border-red-500' : ''
                 }`}
               />

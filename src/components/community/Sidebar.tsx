@@ -12,7 +12,8 @@ import {
   ChevronDown,
   Loader2,
   User,
-  X
+  X,
+  Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -167,14 +168,24 @@ const Sidebar: React.FC<SidebarProps> = ({ isMobile = false }) => {
           
           {/* Only show My Topics button when user is authenticated */}
           {isAuthenticated && (
-            <Button 
-              variant={isActive("/my-topics") ? "default" : "ghost"} 
-              className="w-full justify-start hover:bg-accent hover:text-accent-foreground"
-              onClick={() => navigate("/my-topics")}
-            >
-              <User className="w-4 h-4 mr-3" />
-              My Topics
-            </Button>
+            <>
+              <Button 
+                variant={isActive("/onboarding") ? "default" : "ghost"} 
+                className="w-full justify-start hover:bg-accent hover:text-accent-foreground"
+                onClick={() => navigate("/onboarding")}
+              >
+                <Sparkles className="w-4 h-4 mr-3" />
+                Onboarding
+              </Button>
+              <Button 
+                variant={isActive("/my-topics") ? "default" : "ghost"} 
+                className="w-full justify-start hover:bg-accent hover:text-accent-foreground"
+                onClick={() => navigate("/my-topics")}
+              >
+                <User className="w-4 h-4 mr-3" />
+                My Topics
+              </Button>
+            </>
           )}
         </div>
 

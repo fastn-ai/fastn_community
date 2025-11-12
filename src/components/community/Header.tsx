@@ -116,71 +116,71 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   // };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-16 items-center justify-between px-2 sm:px-4 gap-2 w-full">
+    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 shadow-sm">
+      <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8 gap-3 w-full max-w-[1920px] mx-auto">
         {/* Logo */}
         <div 
-          className="flex items-center cursor-pointer flex-shrink-0"
+          className="flex items-center cursor-pointer flex-shrink-0 group transition-transform hover:scale-105"
           onClick={() => navigate("/")}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="854.667"
-            height="524"
-            version="1"
-            viewBox="0 0 641 393"
-            className="w-8 h-8 sm:w-10 sm:h-10 md:w-14 md:h-14"
-          >
-            <path
-              d="M481 2644c-37-26-54-77-39-114 7-17 236-270 508-561 272-292 495-537 495-543 0-7-229-239-510-516-280-277-515-513-522-525-36-60 15-145 87-145 25 0 499 189 588 234 439 223 669 722 562 1217-63 293-252 554-507 700-106 60-580 269-612 269-15 0-37-7-50-16zm436-307c68-31 155-77 194-103 170-113 303-288 368-484 24-74 42-162 32-158-6 2-675 718-745 796l-21 23 25-9c14-6 80-35 147-65zm578-1138c-58-222-212-431-407-553-71-44-345-162-355-153-2 3 171 176 384 385s389 380 390 378c1-1-4-27-12-57zM2283 2220c-56-12-96-33-139-77-61-61-85-128-98-271l-11-126-35-8c-19-5-52-14-72-19l-38-10v-129h150V850h190v730h280v170h-282l3 113c4 95 7 117 27 149 39 63 115 80 227 52l26-6-3 68-3 69-35 11c-52 18-139 24-187 14zM4528 1868l-3-122-62-18-63-19v-129h130v-237c0-321 14-396 87-465 58-55 155-72 270-48 74 16 74 16 54 89l-18 64-71-2c-68-2-74-1-102 28l-30 29v542h240v170h-240v240h-189l-3-122z"
-              transform="matrix(.1 0 0 -.1 0 393)"
-            ></path>
-            <path
-              d="M388 1823c-86-9-105-113-27-141 13-5 120-6 237-3 209 6 214 7 233 30 27 34 24 75-7 100-25 20-38 21-213 19-102-1-203-3-223-5zM2921 1754c-80-21-144-60-205-124-225-236-161-619 129-761 66-32 74-34 180-34 100 0 115 2 161 27 27 14 64 40 81 56l32 29 11-49 12-48h158v900h-156l-13-50-13-50-45 40c-81 71-212 96-332 64zm226-184c195-112 189-448-11-553-57-30-155-29-212 0-50 27-100 82-128 142-32 71-30 207 5 281 49 106 128 159 234 160 48 0 70-6 112-30zM5445 1757c-55-18-106-45-133-70l-22-21-17 42-16 42h-147V850h180v283c0 163 4 298 10 319 41 145 265 198 367 87 44-48 47-70 51-386l4-303h169l-3 333-3 332-26 55c-58 123-157 189-295 196-50 2-94-1-119-9zM3843 1746c-86-28-158-89-192-166-28-61-26-115 4-177 42-84 111-126 287-173 133-37 178-65 178-113 0-88-122-141-242-105-35 10-90 58-100 88-4 13-158-53-158-68 0-25 70-110 113-139 164-109 420-73 526 74 74 102 69 225-13 301-64 59-121 84-308 136-71 20-118 58-118 95 0 111 210 139 268 36 9-17 18-32 19-34 2-2 39 4 83 14 88 20 91 24 61 83-28 54-78 101-141 131-66 31-198 39-267 17zM297 1500l-249-5-24-28c-26-31-30-54-13-90 22-48 34-49 487-42l422 8 25 23c41 38 33 104-16 129-30 16-109 17-632 5zM432 1161c-72-5-86-9-103-30-22-27-23-41-8-74 20-44 45-48 272-41 195 6 214 8 235 27 32 29 30 79-4 106-24 19-39 21-168 19-77-1-179-4-224-7z"
-              transform="matrix(.1 0 0 -.1 0 393)"
-            ></path>
-          </svg>
+          <div className="flex items-center gap-2">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="1000"
+              height="700"
+              version="1"
+              viewBox="0 0 641 393"
+              className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 transition-all duration-300 group-hover:opacity-90"
+            >
+              <path
+                d="M481 2644c-37-26-54-77-39-114 7-17 236-270 508-561 272-292 495-537 495-543 0-7-229-239-510-516-280-277-515-513-522-525-36-60 15-145 87-145 25 0 499 189 588 234 439 223 669 722 562 1217-63 293-252 554-507 700-106 60-580 269-612 269-15 0-37-7-50-16zm436-307c68-31 155-77 194-103 170-113 303-288 368-484 24-74 42-162 32-158-6 2-675 718-745 796l-21 23 25-9c14-6 80-35 147-65zm578-1138c-58-222-212-431-407-553-71-44-345-162-355-153-2 3 171 176 384 385s389 380 390 378c1-1-4-27-12-57zM2283 2220c-56-12-96-33-139-77-61-61-85-128-98-271l-11-126-35-8c-19-5-52-14-72-19l-38-10v-129h150V850h190v730h280v170h-282l3 113c4 95 7 117 27 149 39 63 115 80 227 52l26-6-3 68-3 69-35 11c-52 18-139 24-187 14zM4528 1868l-3-122-62-18-63-19v-129h130v-237c0-321 14-396 87-465 58-55 155-72 270-48 74 16 74 16 54 89l-18 64-71-2c-68-2-74-1-102 28l-30 29v542h240v170h-240v240h-189l-3-122z"
+                transform="matrix(.1 0 0 -.1 0 393)"
+              ></path>
+              <path
+                d="M388 1823c-86-9-105-113-27-141 13-5 120-6 237-3 209 6 214 7 233 30 27 34 24 75-7 100-25 20-38 21-213 19-102-1-203-3-223-5zM2921 1754c-80-21-144-60-205-124-225-236-161-619 129-761 66-32 74-34 180-34 100 0 115 2 161 27 27 14 64 40 81 56l32 29 11-49 12-48h158v900h-156l-13-50-13-50-45 40c-81 71-212 96-332 64zm226-184c195-112 189-448-11-553-57-30-155-29-212 0-50 27-100 82-128 142-32 71-30 207 5 281 49 106 128 159 234 160 48 0 70-6 112-30zM5445 1757c-55-18-106-45-133-70l-22-21-17 42-16 42h-147V850h180v283c0 163 4 298 10 319 41 145 265 198 367 87 44-48 47-70 51-386l4-303h169l-3 333-3 332-26 55c-58 123-157 189-295 196-50 2-94-1-119-9zM3843 1746c-86-28-158-89-192-166-28-61-26-115 4-177 42-84 111-126 287-173 133-37 178-65 178-113 0-88-122-141-242-105-35 10-90 58-100 88-4 13-158-53-158-68 0-25 70-110 113-139 164-109 420-73 526 74 74 102 69 225-13 301-64 59-121 84-308 136-71 20-118 58-118 95 0 111 210 139 268 36 9-17 18-32 19-34 2-2 39 4 83 14 88 20 91 24 61 83-28 54-78 101-141 131-66 31-198 39-267 17zM297 1500l-249-5-24-28c-26-31-30-54-13-90 22-48 34-49 487-42l422 8 25 23c41 38 33 104-16 129-30 16-109 17-632 5zM432 1161c-72-5-86-9-103-30-22-27-23-41-8-74 20-44 45-48 272-41 195 6 214 8 235 27 32 29 30 79-4 106-24 19-39 21-168 19-77-1-179-4-224-7z"
+                transform="matrix(.1 0 0 -.1 0 393)"
+              ></path>
+            </svg>
+          
+          </div>
         </div>
 
         {/* Search - Hidden on mobile, shown on tablet and up */}
-        <div className="hidden md:flex flex-1 max-w-md mx-2 lg:mx-4">
-          <form onSubmit={handleSearch} className="relative w-full">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+        <div className="hidden md:flex flex-1 max-w-xl mx-4 lg:mx-6">
+          <form onSubmit={handleSearch} className="relative w-full group">
+            <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4 transition-colors group-focus-within:text-primary" />
             <Input
               type="text"
               placeholder="Search community..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-background/50 backdrop-blur-sm border-border/50 focus:border-primary w-full"
+              className="pl-10 pr-4 h-9 bg-muted/50 hover:bg-muted/70 border-border/50 focus:border-primary/50 focus:bg-background transition-all duration-200 w-full shadow-sm"
             />
           </form>
         </div>
 
         {/* Right side actions */}
-        <div className="flex items-center gap-1 sm:gap-2 md:gap-4 flex-shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 flex-shrink-0">
           {/* Mobile Search Button */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="md:hidden">
+              <Button variant="ghost" size="sm" className="md:hidden h-9 w-9 p-0 hover:bg-muted/70 transition-colors">
                 <Search className="w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80">
-              <DropdownMenuLabel>Search</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <div className="p-2">
-                <form onSubmit={handleSearch} className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                  <Input
-                    type="text"
-                    placeholder="Search community..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                    autoFocus
-                  />
-                </form>
-              </div>
+            <DropdownMenuContent align="end" className="w-80 p-3">
+              <DropdownMenuLabel className="px-0 mb-2">Search</DropdownMenuLabel>
+              <form onSubmit={handleSearch} className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Input
+                  type="text"
+                  placeholder="Search community..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 h-9"
+                  autoFocus
+                />
+              </form>
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -252,78 +252,97 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
           {isAuthenticated ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="flex items-center gap-1 sm:gap-2">
-                  <Avatar className="w-5 h-5 sm:w-6 sm:h-6">
-                    <AvatarFallback className="bg-gradient-primary text-white text-xs">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="flex items-center gap-2 h-9 px-2 sm:px-3 hover:bg-muted/70 transition-all duration-200 rounded-lg"
+                >
+                  <Avatar className="w-6 h-6 sm:w-7 sm:h-7 ring-2 ring-border/50 ring-offset-0 transition-all hover:ring-primary/50">
+                    <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-white text-xs font-semibold">
                       {user?.username?.charAt(0).toUpperCase() || 'U'}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="hidden lg:inline text-sm font-medium">
+                  <span className="hidden lg:inline text-sm font-medium text-foreground">
                     {user?.username || 'User'}
                   </span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel className="flex items-center space-x-2">
-                  <Avatar className="w-8 h-8">
-                    <AvatarFallback className="bg-gradient-primary text-white">
+              <DropdownMenuContent align="end" className="w-56 p-2">
+                <DropdownMenuLabel className="flex items-center space-x-3 px-2 py-2.5">
+                  <Avatar className="w-9 h-9 ring-2 ring-primary/20">
+                    <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-white font-semibold">
                       {user?.username?.charAt(0).toUpperCase() || 'U'}
                     </AvatarFallback>
                   </Avatar>
-                  <div>
-                    <p className="text-sm font-medium">{user?.username || 'User'}</p>
-                    <p className="text-xs text-muted-foreground">{user?.email || 'user@example.com'}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold truncate">{user?.username || 'User'}</p>
+                    <p className="text-xs text-muted-foreground truncate">{user?.email || 'user@example.com'}</p>
                   </div>
                 </DropdownMenuLabel>
-                <DropdownMenuSeparator />
+                <DropdownMenuSeparator className="my-1.5" />
                 {isAdmin && (
                   <>
-                    <DropdownMenuItem onClick={() => navigate("/admin")}>
-                      <Shield className="w-4 h-4 mr-2" />
-                      Admin Dashboard
+                    <DropdownMenuItem 
+                      onClick={() => navigate("/admin")}
+                      className="cursor-pointer rounded-md px-2 py-1.5 hover:bg-accent transition-colors"
+                    >
+                      <Shield className="w-4 h-4 mr-2.5" />
+                      <span>Admin Dashboard</span>
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
+                    <DropdownMenuSeparator className="my-1.5" />
                   </>
                 )}
-                <DropdownMenuItem onClick={() => navigate("/my-topics")}>
-                  <MessageSquare className="w-4 h-4 mr-2" />
-                  My Topics
+                <DropdownMenuItem 
+                  onClick={() => navigate("/my-topics")}
+                  className="cursor-pointer rounded-md px-2 py-1.5 hover:bg-accent transition-colors"
+                >
+                  <MessageSquare className="w-4 h-4 mr-2.5" />
+                  <span>My Topics</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Settings className="w-4 h-4 mr-2" />
-                  Settings
+                <DropdownMenuItem className="cursor-pointer rounded-md px-2 py-1.5 hover:bg-accent transition-colors">
+                  <Settings className="w-4 h-4 mr-2.5" />
+                  <span>Settings</span>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout}>
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Log out
+                <DropdownMenuSeparator className="my-1.5" />
+                <DropdownMenuItem 
+                  onClick={logout}
+                  className="cursor-pointer rounded-md px-2 py-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors focus:text-red-600"
+                >
+                  <LogOut className="w-4 h-4 mr-2.5" />
+                  <span>Log out</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <div className="flex items-center gap-1 sm:gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <Button 
                 variant="outline" 
                 size="sm"
                 onClick={() => navigate('/login')} 
-                className="flex items-center gap-1 sm:gap-2"
+                className="flex items-center gap-1.5 sm:gap-2 h-9 px-3 sm:px-4 hover:bg-accent transition-all duration-200"
               >
                 <LogIn className="w-4 h-4" />
-                <span className="hidden sm:inline">Sign In</span>
+                <span className="hidden sm:inline text-sm">Sign In</span>
               </Button>
               <Button 
                 size="sm"
                 onClick={() => navigate('/login')} 
-                className="flex items-center gap-1 sm:gap-2"
+                className="flex items-center gap-1.5 sm:gap-2 h-9 px-3 sm:px-4 bg-gradient-primary hover:opacity-90 transition-all duration-200 shadow-sm"
               >
                 <User className="w-4 h-4" />
-                <span className="hidden sm:inline">Sign Up</span>
+                <span className="hidden sm:inline text-sm">Sign Up</span>
               </Button>
             </div>
           )}
           {/* Mobile menu (opens sidebar) */}
           {onMenuClick && (
-            <Button variant="ghost" size="sm" className="md:hidden" onClick={onMenuClick} aria-label="Open menu">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="md:hidden h-9 w-9 p-0 hover:bg-muted/70 transition-colors" 
+              onClick={onMenuClick} 
+              aria-label="Open menu"
+            >
               <Menu className="w-5 h-5" />
             </Button>
           )}
