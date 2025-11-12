@@ -38,9 +38,11 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const isOnTopicPage = location.pathname === '/' || location.pathname === '/top';
   
   // Get user data from authentication context
+  // Prioritize name over username/email
   const user = auth.user ? {
     id: auth.user.profile.sub,
-    username: auth.user.profile.preferred_username || auth.user.profile.name || auth.user.profile.email?.split('@')[0] || 'user',
+    username: auth.user.profile.name || auth.user.profile.preferred_username || auth.user.profile.email?.split('@')[0] || 'user',
+    name: auth.user.profile.name || auth.user.profile.preferred_username || auth.user.profile.email?.split('@')[0] || 'user',
     email: auth.user.profile.email
   } : null;
   
@@ -263,7 +265,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                     </AvatarFallback>
                   </Avatar>
                   <span className="hidden lg:inline text-sm font-medium text-foreground">
-                    {user?.username || 'User'}
+                    {user?.name || user?.username || 'User'}
                   </span>
                 </Button>
               </DropdownMenuTrigger>
@@ -275,7 +277,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate">{user?.username || 'User'}</p>
+                    <p className="text-sm font-semibold truncate">{user?.name || user?.username || 'User'}</p>
                     <p className="text-xs text-muted-foreground truncate">{user?.email || 'user@example.com'}</p>
                   </div>
                 </DropdownMenuLabel>
