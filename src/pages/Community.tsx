@@ -10,6 +10,35 @@ import Header from "@/components/community/Header";
 import Sidebar from "@/components/community/Sidebar";
 import { ApiService, Topic, User } from "@/services/api";
 
+// Helper function to get display name from user (same logic as Header component lines 42-47)
+const getUserDisplayName = (user: User): string => {
+  // Use the exact same logic as Header component: name || preferred_username || email?.split('@')[0] || 'user'
+  const name = (user as any).name;
+  const preferredUsername = (user as any).preferred_username;
+  
+  // Priority: name > preferred_username > username (if not email) > email prefix > username > 'user'
+  if (name) return name;
+  if (preferredUsername) return preferredUsername;
+  
+  // If username is not an email, use it directly
+  if (user.username && !user.username.includes('@')) {
+    return user.username;
+  }
+  
+  // If username is an email, extract the name part
+  if (user.username && user.username.includes('@')) {
+    return user.username.split('@')[0];
+  }
+  
+  // Extract from email (same as Header component)
+  if (user.email && user.email.includes('@')) {
+    return user.email.split('@')[0];
+  }
+  
+  // Fallback
+  return user.username || user.email || 'user';
+};
+
 const Community = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -523,12 +552,12 @@ const Community = () => {
                             >
                               <div className="flex items-center space-x-2">
                                 <Avatar className="w-8 h-8 transition-transform duration-300 hover:scale-110">
-                                  <AvatarImage src={contributor.avatar} alt={contributor.username} />
-                                  <AvatarFallback className="text-xs bg-indigo-50 text-indigo-600">{getInitials(contributor.username)}</AvatarFallback>
+                                  <AvatarImage src={contributor.avatar} alt={getUserDisplayName(contributor)} />
+                                  <AvatarFallback className="text-xs bg-indigo-50 text-indigo-600">{getUserDisplayName(contributor).charAt(0).toUpperCase()}</AvatarFallback>
                                 </Avatar>
                                 <div>
                                   <div className="flex items-center space-x-2">
-                                    <span className="text-sm font-medium text-foreground">{contributor.username}</span>
+                                    <span className="text-sm font-medium text-foreground">{getUserDisplayName(contributor)}</span>
                                     {index < 3 && (
                                       <Badge className="bg-yellow-100 text-yellow-800 text-xs transition-transform duration-300 hover:scale-110">
                                         #{index + 1}

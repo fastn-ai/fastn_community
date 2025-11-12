@@ -11,6 +11,35 @@ import Header from "@/components/community/Header";
 import Sidebar from "@/components/community/Sidebar";
 import { ApiService, User, Topic } from "@/services/api";
 
+// Helper function to get display name from user (same logic as Header component lines 42-47)
+const getUserDisplayName = (user: User): string => {
+  // Use the exact same logic as Header component: name || preferred_username || email?.split('@')[0] || 'user'
+  const name = (user as any).name;
+  const preferredUsername = (user as any).preferred_username;
+  
+  // Priority: name > preferred_username > username (if not email) > email prefix > username > 'user'
+  if (name) return name;
+  if (preferredUsername) return preferredUsername;
+  
+  // If username is not an email, use it directly
+  if (user.username && !user.username.includes('@')) {
+    return user.username;
+  }
+  
+  // If username is an email, extract the name part
+  if (user.username && user.username.includes('@')) {
+    return user.username.split('@')[0];
+  }
+  
+  // Extract from email (same as Header component)
+  if (user.email && user.email.includes('@')) {
+    return user.email.split('@')[0];
+  }
+  
+  // Fallback
+  return user.username || user.email || 'user';
+};
+
 const Leaderboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -72,7 +101,7 @@ const Leaderboard = () => {
 
         return {
           id: user.id,
-          name: user.username,
+          name: getUserDisplayName(user),
           avatar: user.avatar,
           points: totalPoints,
           answers: userReplies,

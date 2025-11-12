@@ -12,6 +12,16 @@ import { useAllTopics } from "@/hooks/useApi";
 import { useQuery } from "@tanstack/react-query";
 import { ApiService } from "@/services/api";
 
+// Helper function to get display name (extract from email if needed)
+const getDisplayName = (username: string): string => {
+  // If username is an email, extract the name part
+  if (username && username.includes('@')) {
+    return username.split('@')[0];
+  }
+  // Otherwise use the username as-is
+  return username || 'user';
+};
+
 // Static open questions data
 const staticOpenQuestions = [
   {
@@ -219,7 +229,7 @@ const AnswerEarn = () => {
 
       return {
         id: user.id,
-        name: user.username,
+        name: getDisplayName(user.username),
         avatar: user.avatar,
         points: totalPoints,
         answers: userReplies,
